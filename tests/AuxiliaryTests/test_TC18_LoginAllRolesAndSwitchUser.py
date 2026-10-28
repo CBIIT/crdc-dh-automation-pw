@@ -37,9 +37,10 @@ def test_TC18_LoginAllRolesAndSwitchUser(hub: Hub) -> None:
     log.info("Assert %s: header username is non-empty (actual: %r)", hub.role, username)
     assert username, f"{hub.role}: expected a username in the Hub header after login"
 
-    # 2. URL is Data Commons Hub, not login.gov
+    # 2. URL is this profile's Hub, not login.gov
     log.info("Assert %s: URL is Hub, not Login.gov (actual: %s)", hub.role, url)
-    assert "datacommons.cancer.gov" in url, f"{hub.role}: expected Hub URL, got {url}"
+    hub_origin = hub.settings.base_url.rstrip("/")
+    assert url.startswith(hub_origin), f"{hub.role}: expected Hub {hub.settings.base_url}, got {url}"
     assert "login.gov" not in url.lower(), f"{hub.role}: still on Login.gov ({url})"
 
     log.info("PASS %s: signed in as %r on %s", hub.role, username, url)

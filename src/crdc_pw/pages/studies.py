@@ -67,15 +67,17 @@ class StudiesListPage(BasePage):
 
     def select_program(self, program: str) -> None:
         """Open the Program dropdown and click that option."""
-        self._select_dropdown(_PROGRAM_DDN, _PROGRAM_OPTION, program=program)
+        self._select_dropdown(self._loc(_PROGRAM_DDN), self._loc(_PROGRAM_OPTION, program=program))
 
     def select_status(self, status: str) -> None:
         """Open the Status dropdown and click that option."""
-        self._select_dropdown(_STATUS_DDN, _STATUS_OPTION, status=status)
+        self._select_dropdown(self._loc(_STATUS_DDN), self._loc(_STATUS_OPTION, status=status))
 
     def select_access_type(self, access_type: str) -> None:
         """Open the Access Type dropdown and click that option."""
-        self._select_dropdown(_ACCESS_DDN, _ACCESS_OPTION, accessType=access_type)
+        self._select_dropdown(
+            self._loc(_ACCESS_DDN), self._loc(_ACCESS_OPTION, accessType=access_type)
+        )
 
     def apply_filters(
         self,
@@ -89,11 +91,11 @@ class StudiesListPage(BasePage):
 
         Blank or None arguments are skipped, same as Katalon applyManageStudiesFilters.
         """
-        study_name = _trim(study_name)
-        program = _trim(program)
-        dbgap = _trim(dbgap)
-        status = _trim(status)
-        access_type = _trim(access_type)
+        study_name = self._trim(study_name)
+        program = self._trim(program)
+        dbgap = self._trim(dbgap)
+        status = self._trim(status)
+        access_type = self._trim(access_type)
         if not any((study_name, program, dbgap, status, access_type)):
             log.info("Apply Manage Studies filters: no criteria; skipping")
             return
@@ -127,21 +129,4 @@ class StudiesListPage(BasePage):
     def read_table_rows(self) -> list[list[str]]:
         """Each visible data row as a list of td text (header order). Empty list if none."""
         self.wait_for_table_settled()
-        rows: list[list[str]] = []
-        for row in self._loc(_TABLE_ROW).all():
-            cells = [text.strip() for text in row.locator("td").all_inner_texts()]
-            rows.append(cells)
-        return rows
-
-    def _select_dropdown(self, dropdown_path: str, option_path: str, **placeholders: str) -> None:
-        """Click a MUI/select dropdown, then the option whose YAML path uses placeholders."""
-        self._loc(dropdown_path).first.click()
-        option = self._loc(option_path, **placeholders).first
-        option.click()
-
-
-def _trim(value: str | None) -> str | None:
-    if value is None:
-        return None
-    text = value.strip()
-    return text or None
+        return self._read_table_rows(self._loc(_TABLE_ROW))

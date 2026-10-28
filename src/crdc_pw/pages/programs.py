@@ -68,8 +68,8 @@ class ProgramsListPage(BasePage):
 
         Blank or None arguments are skipped, same as Katalon applyManageProgramsFilters.
         """
-        program_name = _trim(program_name)
-        study_name = _trim(study_name)
+        program_name = self._trim(program_name)
+        study_name = self._trim(study_name)
         if not any((program_name, study_name)):
             log.info("Apply Manage Programs filters: no criteria; skipping")
             return
@@ -94,15 +94,4 @@ class ProgramsListPage(BasePage):
     def read_table_rows(self) -> list[list[str]]:
         """Each visible data row as a list of td text (header order). Empty list if none."""
         self.wait_for_table_settled()
-        rows: list[list[str]] = []
-        for row in self._loc(_TABLE_ROW).all():
-            cells = [text.strip() for text in row.locator("td").all_inner_texts()]
-            rows.append(cells)
-        return rows
-
-
-def _trim(value: str | None) -> str | None:
-    if value is None:
-        return None
-    text = value.strip()
-    return text or None
+        return self._read_table_rows(self._loc(_TABLE_ROW))
