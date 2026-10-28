@@ -4,7 +4,7 @@ Playwright Python test framework for **CRDC Data Hub**. This is a behavior-prese
 
 **New to the team?** Start at **[docs/onboarding.md](docs/onboarding.md)** (setup, how the framework works, how to run tests, and what the port is aiming for).
 
-Phase 0 is the scaffold: YAML object repository, profile config, Login.gov OTP, auth `storage_state`, and a six-role login smoke. PBAC and the rest of the suites are later phases. See [`ai/crdc/Playwright-Migration-Plan.md`](../../ai/crdc/Playwright-Migration-Plan.md).
+Phase 0 is the scaffold plus the first live cases: YAML object repository, profile config, Login.gov OTP, auth `storage_state`, six-role login smoke, TC08/TC09 lists, TC01 PBAC Fedlead, and CRDCDH-3974 Release Notes. Remaining suites are later phases. See [`ai/crdc/Playwright-Migration-Plan.md`](../../ai/crdc/Playwright-Migration-Plan.md).
 
 ## Requirements
 
@@ -57,6 +57,7 @@ locators/CRDC/   # YAML object repository (Katalon paths preserved)
 src/crdc_pw/     # loader, config, auth, hub, pages, utils
 tests/unit/      # no browser
 tests/AuxiliaryTests/  # live Hub cases (Katalon area folders, without a CRDC/ prefix)
+tests/Pbac/      # TC01 PBAC defaults
 auth/            # storage_state JSON (gitignored)
 ci/              # GitHub Actions helper that writes the gitignored yaml from secrets
 ```

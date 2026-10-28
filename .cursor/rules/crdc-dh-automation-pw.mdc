@@ -15,6 +15,7 @@ Human walkthrough: `docs/onboarding.md`. Canonical example: **TC08** (`tests/Aux
 
 ```
 fixture hub  →  test (scenario + asserts)  →  page object  →  YAML locators
+                 ↘ utils/ (Excel, GitHub raw, TOTP) when the case needs an oracle
 ```
 
 - **`hub`** (`src/crdc_pw/hub.py`): thin session — `page`, `locators`, `settings`, `role`. No `studies` / `programs` / `login` / `header` fields. Do not grow `Hub` or `conftest.py` when adding a case.
@@ -29,6 +30,7 @@ fixture hub  →  test (scenario + asserts)  →  page object  →  YAML locator
 |------|---------|
 | `tests/conftest.py` | `hub` fixture (browser + login). Default role Admin; parametrize `hub` with `indirect=True` for multi-role (TC18). |
 | `tests/AuxiliaryTests/` | Live Hub cases (Katalon area name, **no** `CRDC/` prefix) |
+| `tests/Pbac/` | TC01 PBAC Fedlead defaults |
 | `tests/unit/` | No browser (`-m unit`) |
 | `src/crdc_pw/pages/` | Screen objects |
 | `src/crdc_pw/auth.py` | Login.gov OTP / Grant (fixture) |
