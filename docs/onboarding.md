@@ -115,7 +115,7 @@ flowchart TB
 | **conftest** | `tests/conftest.py` | Setup for every live test: open browser, log in, HTML report, failure screenshot. Not a page. |
 | **config** | `src/crdc_pw/config.py` + `config/qa.yaml` | Which Hub URL and which Login.gov accounts (was Katalon Profiles) |
 | **locators** | `locators/CRDC/**/*.yaml` + `src/crdc_pw/locators/loader.py` | Katalon path → XPath (was Object Repository) |
-| **auth** | `src/crdc_pw/auth.py` | Login.gov OTP / Grant. Fixture only. Tests do not call this unless the *scenario* switches user |
+| **auth** | `src/crdc_pw/auth.py` | Login.gov OTP / Grant, file-locked `storage_state`. Fixture only. Tests do not call this unless the *scenario* switches user |
 | **hub** | `src/crdc_pw/hub.py` | Thin bag the fixture hands the test: this tab, this role, locators, settings. Not the Hub website |
 | **pages** | `src/crdc_pw/pages/` | One Hub screen each (`StudiesListPage`, `HeaderPage`, …). Clicks and reads. `BasePage` holds locator resolve, Hub timeouts, and shared table / dropdown / snackbar helpers |
 | **tests** | `tests/AuxiliaryTests/`, `tests/Pbac/` | Scenario + pass/fail. Same Katalon suite names (`CRDC_Auxiliary`, `CRDC_PBAC`, `CRDC_Smoke`) |
@@ -132,7 +132,7 @@ sequenceDiagram
   participant PG as page
   P->>C: this test asked for hub
   C->>C: load qa.yaml and YAML locators
-  C->>A: log in or reuse cookies
+  C->>A: ensure_storage_state then land on Hub
   A-->>C: signed in on this tab
   C->>T: here is hub
   T->>PG: open filter read
@@ -256,15 +256,11 @@ Login already happened. Read **down** this list to see the clicks.
 
 1. Role defaults to `"Admin"` (TC08 does not parametrize).
 2. If `AdminEmail` / `AdminPassword` / `AdminSecret` are blank → skip, not fail.
-3. Open a Chromium tab. If `auth/qa/Admin.json` exists, load those cookies (last successful Login.gov).
-4. Build `LoginSession(page, locators, settings)` from `auth.py`. That session builds `LoginPage` and `HeaderPage` on the **same** tab.
-5. `session.navigate()` → `LoginPage` goes to Hub URL, dismisses the system-use banner if it is there.
-6. `session.is_logged_in()` → `HeaderPage` looks for the username button.
-   - Visible → cookies still good; skip Login.gov.
-   - Not visible → `session.login_otp("Admin")` (Katalon `loginToCrdcOtp`), then save `auth/qa/Admin.json`.
-7. `session.ensure_hub_ready()` — dismiss the system-use banner if it paints after the header (cookie reuse often does this).
-8. **Now** pytest calls your test function with `Hub(...)`.
-9. After the test: close the tab (`WebUI.closeBrowser()`). Failure screenshots go on the HTML report under `reports/`.
+3. `ensure_storage_state("Admin")` — file lock on `auth/qa/Admin.json`. If the json is missing or the Hub header is not that role, Login.gov OTP writes it (once per role per worker). Other workers wait on the lock instead of OTPing the same account.
+4. New Chromium context from that json (new tab per test, not a shared page).
+5. `land_on_hub` — goto Hub URL; wait until Continue **or** the username is visible; click Continue only if the banner is what appeared. No 3s header + 5s banner wait on every test.
+6. **Now** pytest calls your test function with `Hub(...)`.
+7. After the test: close the **current** context (`WebUI.closeBrowser()`). `switch_user` may have replaced the page; teardown closes whatever Hub is using. Failure screenshots go on the HTML report under `reports/`.
 
 **3. Inside `login_otp` (only when cookies were dead)** — `src/crdc_pw/auth.py`
 
@@ -460,6 +456,7 @@ Always activate the venv first (`source .venv/bin/activate`).
 | Unit (no browser) | `pytest tests/unit -m unit` |
 | Katalon Auxiliary suite | `pytest -m CRDC_Auxiliary` |
 | Katalon Smoke subset (TC08, TC09 today) | `pytest -m CRDC_Smoke` |
+| Same smoke, four workers (cookies warm) | `pytest -m CRDC_Smoke -n 4` |
 | Katalon PBAC suite | `pytest -m CRDC_PBAC` |
 | Same, watch the browser | `pytest -m CRDC_Auxiliary --headed` |
 | TC18 one role | `pytest -m CRDC_Auxiliary -k Admin` |
@@ -478,7 +475,8 @@ Useful pytest extras:
 
 ```bash
 pytest -m CRDC_Auxiliary --headed --slowmo 300   # slow the UI down to watch
-pytest tests/unit -m unit -q                         # quieter
+pytest -m CRDC_Smoke -n 4                            # parallel; lock serializes OTP per role
+pytest tests/unit -m unit -q                         # quieter (leave -n off)
 ```
 
 Failed live tests keep a Playwright trace under `test-results/` (gitignored). Open it with `playwright show-trace test-results/.../trace.zip`. Locally, `--headed` is usually enough to watch Login.gov.
@@ -495,7 +493,7 @@ auth/<profile>/<Role>.json
 
 Example: `auth/qa/Admin.json`. That folder is gitignored.
 
-The next run loads that file, opens Hub, and checks that the header username is visible. If the Hub session (`connect.sid`) is still valid, OTP is skipped. If it expired, the fixture logs in again and overwrites the file.
+The next run’s first worker for that role opens Hub and checks the header. If the Hub session (`connect.sid`) is still valid, OTP is skipped and later tests only load the json. If it expired, OTP runs once and overwrites the file. Tests do not re-check the header on every case.
 
 If login looks “stuck” on an old user or a bad cookie:
 
@@ -505,7 +503,7 @@ rm -rf auth/qa
 
 Then rerun smoke. You will pay OTP once per role again.
 
-**Do not run two OTP logins for the same account at the same time.** TOTP codes are valid for ~30 seconds; two browsers sharing one secret will collide. Login is meant to be once per role, then reuse `storage_state`.
+A **FileLock** on `auth/<profile>/<Role>.json.lock` serializes OTP for the same account, so `pytest -n 4` is safe. Different roles may OTP in parallel. Do not put `-n` in `pytest.ini` (first-time OTP and unit tests stay serial unless you pass `-n` yourself).
 
 ---
 

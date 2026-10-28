@@ -7,14 +7,16 @@ instead of WebUI.delay. After a successful Grant, Hub sets the connect.sid cooki
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
-from playwright.sync_api import Page
+from filelock import FileLock
+from playwright.sync_api import Browser, BrowserContext, Page, ViewportSize
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from crdc_pw.config import Settings
 from crdc_pw.hub import Hub
-from crdc_pw.locators.loader import LocatorLoader
-from crdc_pw.utils.otp import totp_now
+from crdc_pw.locators.loader import LocatorLoader, repo_root
+from crdc_pw.pages.base import BasePage
 from crdc_pw.pages.header import HeaderPage
 from crdc_pw.pages.login import (
     GRANT,
@@ -24,13 +26,18 @@ from crdc_pw.pages.login import (
     POST_PASSWORD_STEPS,
     RULES_ACCEPT,
     SYSTEM_USE_CONTINUE,
+    SYSTEM_USE_DIALOG,
     USERNAME,
     LoginPage,
 )
+from crdc_pw.utils.otp import totp_now
 
 log = logging.getLogger("crdc_pw.auth")
 
 OTP_MAX_ATTEMPTS = 6  # Katalon used 6; TOTP changes every 30s
+VIEWPORT: ViewportSize = {"width": 1920, "height": 1080}
+_LOCK_TIMEOUT_S = 300
+_validated: set[str] = set()
 OTP_RETRY_WAIT_MS = 30_000
 LOGIN_GOV_STEP_TIMEOUT_MS = 60_000  # Grant can lag 30s+ on a slow Hub
 
@@ -67,7 +74,10 @@ class LoginSession:
         """True if Hub header is visible and the name is this PBAC automation user."""
         if not self.is_logged_in(timeout_ms=2000):
             return False
-        username = self.header.username(timeout_ms=5000)
+        try:
+            username = self.header.username(timeout_ms=5000)
+        except PlaywrightTimeoutError:
+            return False
         return username_matches_role(username, role)
 
     def _drop_browser_session(self) -> None:
@@ -192,18 +202,137 @@ class LoginSession:
             self.header.logout()
 
 
+def storage_state_path(settings: Settings, role: str) -> Path:
+    """auth/<profile>/<Role>.json (gitignored). Lock file sits next to it."""
+    return repo_root() / "auth" / settings.profile / f"{role}.json"
+
+
+def land_on_hub(page: Page, locators: LocatorLoader, settings: Settings) -> None:
+    """goto Hub and dismiss the banner if it is up, without a 5s miss tax.
+
+    Wait until Continue or the username is visible. Click Continue only when
+    that is what appeared. Does not OTP.
+    """
+    login = LoginPage(page, locators)
+    header = HeaderPage(page, locators)
+    login.goto(settings.base_url)
+    continue_btn = login._loc(SYSTEM_USE_CONTINUE).first
+    username = header.username_btn
+    # Both can be visible (banner on top of Hub). or_() without .first is strict-mode.
+    continue_btn.or_(username).first.wait_for(state="visible")
+    if continue_btn.is_visible():
+        continue_btn.click()
+        try:
+            login._loc(SYSTEM_USE_DIALOG).first.wait_for(state="hidden", timeout=10_000)
+        except PlaywrightTimeoutError:
+            pass
+        username.wait_for(state="visible")
+
+
+def ensure_storage_state(
+    browser: Browser,
+    locators: LocatorLoader,
+    settings: Settings,
+    role: str,
+    *,
+    force: bool = False,
+) -> Path:
+    """File-locked: return a valid storage_state json, OTP-writing it if needed.
+
+    The Hub header check runs once per role per worker, not once per test.
+    Workers never OTP the same account at once (one lock file per role).
+    """
+    path = storage_state_path(settings, role)
+    key = f"{settings.profile}:{role}"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lock = FileLock(str(path) + ".lock", timeout=_LOCK_TIMEOUT_S)
+    with lock:
+        if not force and key in _validated and path.is_file():
+            return path
+        if not force and path.is_file() and _storage_is_valid(browser, locators, settings, path, role):
+            log.info("Login %s: saved session %s is valid", role, path.name)
+            _validated.add(key)
+            return path
+        log.info("Login %s: Login.gov OTP to write %s", role, path.name)
+        _otp_write_storage(browser, locators, settings, role, path)
+        _validated.add(key)
+        return path
+
+
+def open_signed_in_page(
+    browser: Browser,
+    locators: LocatorLoader,
+    settings: Settings,
+    role: str,
+) -> Page:
+    """New context from storage_state, then land on Hub. One OTP retry if the cookie died."""
+    path = ensure_storage_state(browser, locators, settings, role)
+    context, page = _new_hub_context(browser, path)
+    try:
+        land_on_hub(page, locators, settings)
+        return page
+    except PlaywrightTimeoutError:
+        context.close()
+        path = ensure_storage_state(browser, locators, settings, role, force=True)
+        context, page = _new_hub_context(browser, path)
+        land_on_hub(page, locators, settings)
+        return page
+
+
 def switch_user(hub: Hub, role: str) -> None:
-    """Katalon switchUser: log out, drop SSO cookies (closeBrowser), Login.gov as role."""
-    session = LoginSession(hub.page, hub.locators, hub.settings)
-    session.logout()
-    session._drop_browser_session()
-    session.login_otp(role)
-    if not session.signed_in_as(role):
-        username = session.header.username(timeout_ms=5000) if session.is_logged_in() else ""
-        raise RuntimeError(
-            f"switch_user({role!r}) landed on Hub as {username!r}, not the requested role"
-        )
+    """Katalon switchUser: new context from that role's storage_state (OTP only if missing)."""
+    browser = hub.page.context.browser
+    if browser is None:
+        raise RuntimeError("switch_user: page has no browser")
+    old = hub.page.context
+    page = open_signed_in_page(browser, hub.locators, hub.settings, role)
+    hub.page = page
     hub.role = role
+    old.close()
+
+
+def _new_hub_context(browser: Browser, path: Path) -> tuple[BrowserContext, Page]:
+    context = browser.new_context(storage_state=str(path), viewport=VIEWPORT)
+    context.set_default_timeout(BasePage.DEFAULT_MS)
+    return context, context.new_page()
+
+
+def _storage_is_valid(
+    browser: Browser,
+    locators: LocatorLoader,
+    settings: Settings,
+    path: Path,
+    role: str,
+) -> bool:
+    context = browser.new_context(storage_state=str(path), viewport=VIEWPORT)
+    context.set_default_timeout(BasePage.DEFAULT_MS)
+    page = context.new_page()
+    try:
+        land_on_hub(page, locators, settings)
+        username = HeaderPage(page, locators).username(timeout_ms=BasePage.PROBE_MS)
+        return username_matches_role(username, role)
+    except PlaywrightTimeoutError:
+        return False
+    finally:
+        context.close()
+
+
+def _otp_write_storage(
+    browser: Browser,
+    locators: LocatorLoader,
+    settings: Settings,
+    role: str,
+    path: Path,
+) -> None:
+    context = browser.new_context(viewport=VIEWPORT)
+    context.set_default_timeout(BasePage.DEFAULT_MS)
+    page = context.new_page()
+    try:
+        LoginSession(page, locators, settings).login_otp(role)
+        context.storage_state(path=str(path))
+        log.info("Login %s: saved session to %s", role, path.name)
+    finally:
+        context.close()
 
 
 def username_matches_role(username: str, role: str) -> bool:

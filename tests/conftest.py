@@ -5,9 +5,8 @@
 Tests write the scenario (navigate, assert). They do not call login_otp;
 the fixture did. Use crdc_pw.auth.switch_user(hub, role) only when the case changes role.
 
-storage_state: after Login.gov succeeds, cookies are written to
-auth/<profile>/<Role>.json. The next run loads that file so we skip OTP if
-the Hub session (connect.sid) is still valid. Files are gitignored.
+OTP is file-locked once per role (`ensure_storage_state`). Each test loads
+auth/<profile>/<Role>.json into a new context and lands on Hub. Files are gitignored.
 """
 
 from __future__ import annotations
@@ -16,7 +15,6 @@ import base64
 import logging
 import re
 from datetime import datetime
-from pathlib import Path
 
 import pytest
 from playwright.sync_api import Browser
@@ -24,7 +22,7 @@ from playwright.sync_api import Page
 from playwright.sync_api import expect
 from pytest_html import extras as html_extras
 
-from crdc_pw.auth import LoginSession
+from crdc_pw.auth import open_signed_in_page
 from crdc_pw.config import ROLES, Settings, load_settings
 from crdc_pw.hub import Hub
 from crdc_pw.locators.loader import LocatorLoader, repo_root
@@ -32,7 +30,6 @@ from crdc_pw.pages.base import BasePage
 
 log = logging.getLogger("crdc_pw")
 
-VIEWPORT = {"width": 1920, "height": 1080}
 _FAILURE_PNG = pytest.StashKey[bytes]()
 
 
@@ -106,10 +103,6 @@ def locators() -> LocatorLoader:
     return LocatorLoader()
 
 
-def _storage_state_path(settings: Settings, role: str) -> Path:
-    return repo_root() / "auth" / settings.profile / f"{role}.json"
-
-
 @pytest.fixture
 def hub(
     request: pytest.FixtureRequest,
@@ -135,37 +128,18 @@ def hub(
             "and fill the Katalon profile values."
         )
     browser: Browser = request.getfixturevalue("browser")
-    path = _storage_state_path(settings, role)
-    reuse = path.is_file()
-    if reuse:
-        log.info("Login %s: opening Hub with saved session %s", role, path.name)
-    else:
-        log.info("Login %s: no saved session, will use Login.gov OTP", role)
-    context = browser.new_context(
-        storage_state=str(path) if reuse else None,
-        viewport=VIEWPORT,
-    )
-    context.set_default_timeout(BasePage.DEFAULT_MS)
-    page = context.new_page()
-    session = LoginSession(page, locators, settings)
+    page: Page | None = None
+    live: Hub | None = None
     try:
-        session.navigate()
-        if session.is_logged_in(timeout_ms=3000):
-            log.info("Login %s: Hub session is valid", role)
-            # Banner often appears after this check; do not skip dismiss on reuse.
-            session.ensure_hub_ready(banner_appear_ms=5000)
-        else:
-            log.info("Login %s: Login.gov OTP", role)
-            session.login_otp(role)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            context.storage_state(path=str(path))
-            log.info("Login %s: saved session to %s", role, path.name)
-            session.ensure_hub_ready(banner_appear_ms=2000)
-        yield Hub(page=page, locators=locators, settings=settings, role=role)
+        page = open_signed_in_page(browser, locators, settings, role)
+        live = Hub(page=page, locators=locators, settings=settings, role=role)
+        yield live
     except Exception:
-        png = _failure_screenshot(page)
+        png = _failure_screenshot(live.page if live is not None else page)
         if png:
             request.node.stash[_FAILURE_PNG] = png
         raise
     finally:
-        context.close()
+        closing = live.page if live is not None else page
+        if closing is not None and not closing.is_closed():
+            closing.context.close()

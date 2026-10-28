@@ -25,15 +25,15 @@ Human walkthrough of how the framework works today: [onboarding.md](onboarding.m
 
 ## Ranked work (scale)
 
-### 1. Auth once per role, then parallel — Open
+### 1. Auth once per role, then parallel — Done
 
-**Problem:** Every live test opens a context, hits Hub, waits up to 3s for the header and 5s for the banner. That is 5–10s of overhead even with a valid cookie. At 300 tests that is 25–50 minutes before any scenario runs. There is no lock on `auth/<profile>/<role>.json`, so `pytest -n 8` races OTP for the same account (onboarding already says never do that).
+**Problem:** Every live test opened a context, hit Hub, waited up to 3s for the header and 5s for the banner. That was 5–10s of overhead even with a valid cookie. At 300 tests that is 25–50 minutes before any scenario runs. There was no lock on `auth/<profile>/<role>.json`, so `pytest -n 8` raced OTP for the same account.
 
-**Target:** One auth setup per role per session, file-locked, before workers start. Tests load `storage_state` and go to the target URL without re-checking the header. Playwright TypeScript “setup project” is the reference. Then enable xdist. Measure wall time before and after.
+**Target:** One auth setup per role per worker, file-locked. Tests load `storage_state` and go to Hub (`locator.or_()` banner vs username) without a 3s+5s miss tax. xdist is opt-in (`-n 4`), not in addopts.
 
-**Where:** `tests/conftest.py`, `src/crdc_pw/auth.py`, later CI.
+**Where:** `src/crdc_pw/auth.py` (`ensure_storage_state`, `land_on_hub`, `switch_user` new context), `tests/conftest.py`. Deps: `filelock`, `pytest-xdist`.
 
-**Plan (not implemented):** [auth-once-then-parallel.md](auth-once-then-parallel.md).
+Warm QA: `CRDC_Smoke` **17.31s** serial / **10.71s** `-n 4`; later tests in the same run land in **~1s**, not ~6s. Parallel is opt-in (`pytest -m CRDC_Smoke -n 4`); do not put `-n` in addopts.
 
 ### 2. Playwright waits, one timeout policy — Done
 
@@ -87,7 +87,7 @@ Keep using YAML for dual-run. Do not block remaining Open items on this.
 | Test logging | `log.info("Assert ...")` / `log.info("PASS TC08 ...")` will be copied 300 times | Leave as-is. Assert/PASS lines and `log_cli = true` are how QA follows live runs (Katalon logInfo). Sweeping tests would not catch a defect. | Rejected |
 | Locator contract test | Typo in a `CRDC/...` string fails after a 15s live timeout | Unit test: every `CRDC/` string in `pages/` exists in the loader. | Done |
 | Hardcoded conventions | `pbac.{role}-automation` in `auth.py`; `datacommons.cancer.gov` in TC18; `autoQA` / `AutoTest-Program` in tests | Leave as-is. Those are the real Hub account and filter names. TC18 already uses `settings.base_url`. Do not add a config scheme. | Rejected |
-| `switch_user` | Reuses a context after clearing cookies | Leave as-is. `switch_user` already exists (TC01 Admin → Fedlead). Same-tab logout + cookie clear works. Do not rewrite auth unless it flakes. | Rejected |
+| `switch_user` | Reuses a context after clearing cookies | Rejected as a standalone rewrite. Enhancement #1 now loads that role’s `storage_state` into a new context (OTP only if missing). | Rejected |
 | Loader dual API | Attribute access (`locators.CRDC...`) is unused, extra duplicate rules | Keep `get(path)` only. | Done |
 | Bare `except Exception` | `HeaderPage.is_logged_in` treats a closed/crashed page as “not logged in” and may trigger OTP | Catch the specific timeout / closed-page errors only. | Done |
 | Filter warnings | `filterwarnings = ignore::DeprecationWarning` | Stop hiding Playwright upgrade signals. | Done |
@@ -98,9 +98,7 @@ Keep using YAML for dual-run. Do not block remaining Open items on this.
 
 Do these in this sequence unless a live flake forces a jump (e.g. banner timeout).
 
-1. **Auth setup once per role with a lock, then xdist.** Measure before and after.
-
-Locator properties (#4), Hub wait policy (#2), shared UI helpers (#5), traces, loader `get()`-only, and ruff/mypy (`dev` extra) are done. PBAC oracle (#6), test logging, hardcoded names, and a `switch_user` rewrite are rejected. Strict mode and retiring `.first` wait until YAML retirement (#3) is in scope.
+Auth once per role then xdist (#1) is done. Remaining ranked work is YAML retirement (#3, deferred). PBAC oracle (#6), test logging, hardcoded names, and a standalone `switch_user` rewrite are rejected. Strict mode and retiring `.first` wait until YAML retirement is in scope.
 
 ## Out of scope here
 

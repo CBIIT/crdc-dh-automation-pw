@@ -82,7 +82,7 @@ hub.locators.get("CRDC/AILocators/Global/Header/Desktop/UserName-Btn")
 
 ## Auth `storage_state`
 
-After a successful Login.gov login, Playwright saves cookies to `auth/<profile>/<role>.json`. Later tests reuse that file so they do not pay OTP every time. The fixture still opens Hub and checks that the header username is visible; if the session expired it logs in again and overwrites the file.
+After a successful Login.gov login, Playwright saves cookies to `auth/<profile>/<Role>.json`. A file lock next to that json means only one process OTPs a given account at a time. Later tests load the file into a new context and go to Hub; they do not re-check the header on every case. If the cookie died, one retry rewrites the json. Parallel (opt-in, not default): `pytest -m CRDC_Smoke -n 4`.
 
 ## CI
 
