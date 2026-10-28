@@ -1,9 +1,9 @@
 """Pytest fixtures shared by unit and live Hub tests.
 
 `settings` and `locators` are session-scoped (load once).
-`app` is per test: one browser context, **already on Hub as that role**.
+`hub` is per test: one browser context, **already on Hub as that role**.
 Tests write the scenario (navigate, assert). They do not call login_otp;
-the fixture did. Use app.login.switch_user only when the case changes role.
+the fixture did. Use crdc_pw.auth.switch_user(hub, role) only when the case changes role.
 
 storage_state: after Login.gov succeeds, cookies are written to
 auth/<profile>/<Role>.json. The next run loads that file so we skip OTP if
@@ -12,24 +12,85 @@ the Hub session (connect.sid) is still valid. Files are gitignored.
 
 from __future__ import annotations
 
+import base64
 import logging
+import re
+from datetime import datetime
 from pathlib import Path
 
 import pytest
 from playwright.sync_api import Browser
+from playwright.sync_api import Page
+from pytest_html import extras as html_extras
 
-from crdc_pw.app import App
+from crdc_pw.auth import LoginSession
 from crdc_pw.config import ROLES, Settings, load_settings
-from crdc_pw.keywords.login import LoginKeywords
-from crdc_pw.keywords.programs import ManageProgramsKeywords
-from crdc_pw.keywords.studies import ManageStudiesKeywords
+from crdc_pw.hub import Hub
 from crdc_pw.locators.loader import LocatorLoader, repo_root
-from crdc_pw.pages.header import HeaderPage
-from crdc_pw.pages.login import LoginPage
 
 log = logging.getLogger("crdc_pw")
 
 VIEWPORT = {"width": 1920, "height": 1080}
+_FAILURE_PNG = pytest.StashKey[bytes]()
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_configure(config: pytest.Config) -> None:
+    """Katalon-style: a new HTML report per run unless --html is already set.
+
+    Writes reports/report-YYYYMMDD-HHMMSS.html (gitignored). tryfirst so
+    pytest-html sees the path when it registers.
+    """
+    if getattr(config.option, "htmlpath", None):
+        return
+    reports = repo_root() / "reports"
+    reports.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    path = reports / f"report-{stamp}.html"
+    config.option.htmlpath = str(path)
+    config.option.self_contained_html = True
+    log.info("HTML report: %s", path)
+
+
+def _failure_screenshot(page: Page | None) -> bytes | None:
+    """Full-page PNG of the Hub tab, or None if the page is already gone."""
+    if page is None:
+        return None
+    try:
+        if page.is_closed():
+            return None
+        return page.screenshot(full_page=True, type="png")
+    except Exception as exc:
+        log.info("Could not take failure screenshot: %s", exc)
+        return None
+
+
+def _attach_failure_screenshot(item: pytest.Item, report: pytest.TestReport, png: bytes) -> None:
+    """Embed the PNG in the HTML report and write a copy under reports/screenshots/."""
+    extras = list(getattr(report, "extras", []) or [])
+    extras.append(html_extras.png(base64.b64encode(png).decode("ascii"), name="Failure screenshot"))
+    report.extras = extras
+    safe = re.sub(r"[^\w.-]+", "_", f"{item.nodeid}-{report.when}")[:180]
+    shot_dir = repo_root() / "reports" / "screenshots"
+    shot_dir.mkdir(parents=True, exist_ok=True)
+    path = shot_dir / f"{safe}.png"
+    path.write_bytes(png)
+    log.info("Failure screenshot: %s", path)
+
+
+@pytest.hookimpl(hookwrapper=True, trylast=True)
+def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo) -> None:
+    """On setup/call failure, attach a Hub screenshot to the HTML report (Katalon-style)."""
+    outcome = yield
+    report = outcome.get_result()
+    if not report.failed or report.when not in ("setup", "call"):
+        return
+    png = item.stash.get(_FAILURE_PNG, None)
+    if png is None and report.when == "call":
+        hub = item.funcargs.get("hub")
+        png = _failure_screenshot(getattr(hub, "page", None))
+    if png:
+        _attach_failure_screenshot(item, report, png)
 
 
 @pytest.fixture(scope="session")
@@ -47,11 +108,11 @@ def _storage_state_path(settings: Settings, role: str) -> Path:
 
 
 @pytest.fixture
-def app(
+def hub(
     request: pytest.FixtureRequest,
     settings: Settings,
     locators: LocatorLoader,
-) -> App:
+) -> Hub:
     """Logged-in Hub session for one role.
 
     This is session setup (Katalon navigate + loginToCrdcOtp), not the test
@@ -83,28 +144,25 @@ def app(
     )
     context.set_default_timeout(15000)
     page = context.new_page()
-    login = LoginKeywords(page, locators, settings)
-    login.navigate()
-    if login.is_logged_in(timeout_ms=3000):
-        log.info("Login %s: Hub session is valid", role)
-    else:
-        # Cookie expired or first run: pay Login.gov, then snapshot cookies.
-        log.info("Login %s: Login.gov OTP", role)
-        login.login_otp(role)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        context.storage_state(path=str(path))
-        log.info("Login %s: saved session to %s", role, path.name)
+    session = LoginSession(page, locators, settings)
     try:
-        yield App(
-            page=page,
-            locators=locators,
-            config=settings,
-            login=login,
-            header=HeaderPage(page, locators),
-            login_page=LoginPage(page, locators),
-            studies=ManageStudiesKeywords(page, locators),
-            programs=ManageProgramsKeywords(page, locators),
-            role=role,
-        )
+        session.navigate()
+        if session.is_logged_in(timeout_ms=3000):
+            log.info("Login %s: Hub session is valid", role)
+            # Banner often appears after this check; do not skip dismiss on reuse.
+            session.ensure_hub_ready(banner_appear_ms=5000)
+        else:
+            log.info("Login %s: Login.gov OTP", role)
+            session.login_otp(role)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            context.storage_state(path=str(path))
+            log.info("Login %s: saved session to %s", role, path.name)
+            session.ensure_hub_ready(banner_appear_ms=2000)
+        yield Hub(page=page, locators=locators, settings=settings, role=role)
+    except Exception:
+        png = _failure_screenshot(page)
+        if png:
+            request.node.stash[_FAILURE_PNG] = png
+        raise
     finally:
         context.close()

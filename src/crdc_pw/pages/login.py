@@ -16,7 +16,10 @@ from crdc_pw.pages.base import BasePage
 from crdc_pw.pages.header import USERNAME
 
 SYSTEM_USE_CONTINUE = "CRDC/AILocators/Global/SystemUseWarning/Continue-Btn"
+SYSTEM_USE_DIALOG = "CRDC/AILocators/Global/SystemUseWarning/Warning-Dialog"
 LOGIN_PAGE_LOGIN_BTN = "CRDC/Login/LoginPageLogin-Btn"
+LOGIN_DIALOG_LOGIN_BTN = "CRDC/AILocators/Home/LoginDialogLogin-Btn"
+LOGIN_DIALOG_CLOSE_BTN = "CRDC/Login/LoginDialogClose-Btn"
 LOGIN_GOV_BTN = "CRDC/Login/Login.gov-Btn"
 EMAIL = "CRDC/Login/Login.gov_UserEmail-TxtBx"
 PASSWORD = "CRDC/Login/Login.gov_UserPass-TxtBx"
@@ -38,6 +41,7 @@ POST_OTP_STEPS = (GRANT, NIH_AGREE, RULES_ACCEPT, SYSTEM_USE_CONTINUE, USERNAME)
 
 class LoginPage(BasePage):
     def goto(self, base_url: str) -> None:
+        """Open Hub (QA / QA2 / Stage). Does not wait for login to finish."""
         self.page.goto(base_url, wait_until="domcontentloaded")
 
     def _is_visible(self, path: str, timeout_ms: int) -> bool:
@@ -48,20 +52,49 @@ class LoginPage(BasePage):
             return False
 
     def dismiss_system_use_warning(self, timeout_ms: int = 1500) -> bool:
-        """Click Continue only if the banner is already on screen."""
+        """Click Continue if the banner shows, then wait until the dialog is gone.
+
+        Cookie reuse often paints this after the header username, so callers should
+        pass a few seconds. No-op if it never appears.
+        """
         if not self._is_visible(SYSTEM_USE_CONTINUE, timeout_ms):
             return False
         self.loc(SYSTEM_USE_CONTINUE).first.click()
+        try:
+            self.loc(SYSTEM_USE_DIALOG).first.wait_for(state="hidden", timeout=10000)
+        except PlaywrightTimeoutError:
+            pass
         return True
 
     def start_login_gov(self) -> None:
-        """Hub Login button, then the Login.gov icon (NIH SSO)."""
-        login_btn = self.loc(LOGIN_PAGE_LOGIN_BTN)
-        login_btn.first.wait_for(state="visible", timeout=15000)
-        login_btn.first.click()
-        gov = self.loc(LOGIN_GOV_BTN)
-        gov.first.wait_for(state="visible", timeout=15000)
-        gov.first.click()
+        """Hub Login button, then the Login.gov icon (NIH SSO).
+
+        Logout from a protected page (Manage Users, etc.) leaves a modal
+        ('Please log in to access User Management') over the header Login
+        button. Click the dialog Login only when that modal is actually showing.
+        After the click, NIH SSO may skip the Login.gov icon and land on email,
+        Grant, or Hub — do not require the icon in those cases.
+        """
+        if self._protected_login_dialog_visible():
+            self.loc(LOGIN_DIALOG_LOGIN_BTN).first.click()
+        else:
+            login_btn = self.loc(LOGIN_PAGE_LOGIN_BTN)
+            login_btn.first.wait_for(state="visible", timeout=15000)
+            login_btn.first.click()
+        step = self.wait_for_any(
+            (LOGIN_GOV_BTN, EMAIL, GRANT, SYSTEM_USE_CONTINUE, USERNAME),
+            20000,
+        )
+        if step == LOGIN_GOV_BTN:
+            self.loc(LOGIN_GOV_BTN).first.click()
+        elif step == SYSTEM_USE_CONTINUE:
+            self.dismiss_system_use_warning()
+
+    def _protected_login_dialog_visible(self) -> bool:
+        """True only if the login modal is on screen (close + Login), not the header button."""
+        return self._is_visible(LOGIN_DIALOG_CLOSE_BTN, 800) and self._is_visible(
+            LOGIN_DIALOG_LOGIN_BTN, 200
+        )
 
     def submit_credentials(self, email: str, password: str) -> None:
         """Login.gov is sometimes email-then-password (two pages), sometimes both at once."""
@@ -135,6 +168,7 @@ class LoginPage(BasePage):
         return True
 
     def submit_otp(self, code: str) -> None:
+        """Fill the six-digit TOTP. Click Submit only if Login.gov did not auto-advance."""
         otp_box = self.loc(OTP)
         otp_box.first.wait_for(state="visible", timeout=10000)
         otp_box.first.fill(code)
@@ -147,6 +181,7 @@ class LoginPage(BasePage):
             self.loc(OTP_SUBMIT).first.click()
 
     def grant_visible(self, timeout_ms: int = 5000) -> bool:
+        """True if the Login.gov Grant (OAuth consent) button is on screen."""
         return self._is_visible(GRANT, timeout_ms)
 
     def click_grant(self) -> None:

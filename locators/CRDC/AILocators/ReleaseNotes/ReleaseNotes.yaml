@@ -1,4 +1,6 @@
 # CRDC/AILocators/ReleaseNotes
+# QA does not yet render data-testid=release-notes-markdown (that lands with CRDCDH-3979).
+# The notes body is the parent of the page h1 until then.
 
 ErrorAlert: "//*[@data-testid='release-notes-error']"
-MarkdownContent: "//*[@data-testid='release-notes-markdown']"
+MarkdownContent: "//main//h1[normalize-space()='Release Notes']/parent::div"

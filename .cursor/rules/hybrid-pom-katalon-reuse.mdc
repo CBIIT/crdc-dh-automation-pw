@@ -1,0 +1,65 @@
+---
+description: Hybrid POM from Katalon verify* reuse — when asserts stay in the test vs a read/compare helper
+alwaysApply: true
+---
+
+# Hybrid POM (Katalon verify reuse)
+
+Katalon has **keyword classes**, not page objects (`Keywords/utilities/*.groovy`). Counted **93** `verify*` methods called from **165** scripts (**325** sites). Use this when deciding where asserts live in a port.
+
+**Most verify APIs are one-off; most executions are a handful of DS / PBAC / generic checks.**
+
+| Area | `verify*` called | 2+ tests | 5+ tests |
+|------|----------------:|--------:|--------:|
+| List pages (Studies / Programs / DS list / SR list) | 18 | **1 (6%)** | 0 |
+| PBAC | 4 | 2 | 2 |
+| Submission Request form | 21 | 13* | 2 |
+| Data Submissions + CLI | 15 | **10 (67%)** | **6 (40%)** |
+| Shared kit (`WebUIUtils` + Mongo) | 21 | 12 | 3 |
+
+\*SR “reuse” is mostly **two** form tests (AllFields + RequiredFields). Not a platform.
+
+**53 / 93 methods (57%) are used by a single test.** The **13 methods used by 5+ tests** are **188 / 325 calls (58%)**. Hot methods: `verifyUploadActivitiesBatchRow` (19), `verifyValidationResultsVsExpectedForTC` (19), `verifyUploadActivitiesFailedErrorsModal` (14), `verifyButtonEnabled` (13), `verifyCliErrorMessages` (10), `Pbac.verifyPermissionsFunctional` (10), `verifyErrorDetailsForSubmittedIdForTC` (9), `verifyStatusBar` (9), `verifyElementText` (9), `verifyNoValidationErrors` (7). List exception: `verifyManageStudiesListPage` is TC08 **and** CSV export.
+
+## Decision (do not fatten pages)
+
+| Katalon `verifyX` | Playwright |
+|---|---|
+| 1 test (most list / export / SR-ticket) | Inline `expect` / `assert` in **that** test. Page `read_*` only. |
+| Role / TC **family** (PBAC defaults × 5, functional × 10) | One helper + same test shape, different role / args. |
+| Many DS cases vs files (batch row, validation TSV, error modal, CLI errors) | Page `read_*` + sheet / TSV helper (hybrid). |
+| `verifyButtonEnabled` / `verifyElementText` | Playwright `expect` in the test. Never a page/`WebUIUtils` wrapper. |
+
+`expect_loaded()` on a page is OK. A `verify_*` options-map is not. Do not recreate Katalon keyword verifies on list pages.
+
+## What new tests look like
+
+**List (TC08 shape) — no reuse:**
+
+```python
+studies.open()
+expect(studies.loc(CONTAINER)).to_be_visible()
+studies.apply_filters(study_name="autoQA", program="AutoTest-Program")
+assert any("autoQA" in cell for row in studies.read_table_rows() for cell in row)
+```
+
+**PBAC family — reuse the sheet, not a fat page** (see `crdc_pw.utils.pbac_sheet`, TC01):
+
+```python
+users.find_and_edit("Submitter")
+users.expand_permission_panels()
+write_expected("Submitter")
+assert compare_actual("Submitter", users.read_permission_rows())
+```
+
+**DS upload — page reads; helper owns expected TSV:**
+
+```python
+ds.open_upload_activities()
+row = ds.read_batch_row()
+assert row["status"] == "Uploaded"
+issues = ds.read_validation_results()
+assert validation_tsv.matches(tc_name="CRDCDH-887", issues)
+```
+
+The test still names case-specific values. The 19-case compare is not pasted 19 times.

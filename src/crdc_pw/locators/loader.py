@@ -28,6 +28,7 @@ def repo_root() -> Path:
 
 
 def default_locators_dir() -> Path:
+    """Root of the converted YAML object repository (locators/CRDC/...)."""
     return repo_root() / "locators"
 
 
@@ -90,9 +91,11 @@ class LocatorLoader:
         return self._fill(xpath, placeholders)
 
     def has(self, path: str) -> bool:
+        """True if this Katalon-style path was loaded from YAML."""
         return path in self._index
 
     def paths(self) -> list[str]:
+        """All loaded paths, sorted. Used by unit tests to check catalog size."""
         return sorted(self._index)
 
     def __getattr__(self, name: str) -> LocatorNode | str:
@@ -124,6 +127,7 @@ class LocatorLoader:
         self._ingest_keys(folder, data, current)
 
     def _ingest_keys(self, folder: str, data: dict[str, Any], node: LocatorNode) -> None:
+        """Register each YAML key as folder/key. Nested mappings become more folders."""
         for key, value in data.items():
             if isinstance(value, dict):
                 nested_folder = f"{folder}/{key}" if folder not in ("", ".") else key
@@ -140,6 +144,7 @@ class LocatorLoader:
                 raise ValueError(f"Duplicate locator path: {path}")
             self._index[path] = xpath
             attr = _attr_name(str(key))
+            # UserName-Btn and UserName.Btn would both become UserName_Btn.
             if attr in node._children and node._children[attr]._xpath is not None:
                 raise ValueError(
                     f"Duplicate attribute '{attr}' under '{node._name}' "
@@ -151,6 +156,7 @@ class LocatorLoader:
 
     @staticmethod
     def _fill(xpath: str, placeholders: dict[str, Any]) -> str:
+        """Replace ${name} and {name} with kwargs. Fail if any placeholder is still there."""
         if not placeholders:
             return xpath
         filled = xpath
