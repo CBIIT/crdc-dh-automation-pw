@@ -1,9 +1,9 @@
 """Pytest fixtures shared by unit and live Hub tests.
 
 `settings` and `locators` are session-scoped (load once).
-`app` is per test: one browser context, **already on Hub as that role**.
+`hub` is per test: one browser context, **already on Hub as that role**.
 Tests write the scenario (navigate, assert). They do not call login_otp;
-the fixture did. Use app.login.switch_user only when the case changes role.
+the fixture did. Use crdc_pw.auth.switch_user(hub, role) only when the case changes role.
 
 storage_state: after Login.gov succeeds, cookies are written to
 auth/<profile>/<Role>.json. The next run loads that file so we skip OTP if
@@ -18,14 +18,10 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import Browser
 
-from crdc_pw.app import App
+from crdc_pw.auth import LoginSession
 from crdc_pw.config import ROLES, Settings, load_settings
-from crdc_pw.keywords.login import LoginKeywords
-from crdc_pw.keywords.programs import ManageProgramsKeywords
-from crdc_pw.keywords.studies import ManageStudiesKeywords
+from crdc_pw.hub import Hub
 from crdc_pw.locators.loader import LocatorLoader, repo_root
-from crdc_pw.pages.header import HeaderPage
-from crdc_pw.pages.login import LoginPage
 
 log = logging.getLogger("crdc_pw")
 
@@ -47,11 +43,11 @@ def _storage_state_path(settings: Settings, role: str) -> Path:
 
 
 @pytest.fixture
-def app(
+def hub(
     request: pytest.FixtureRequest,
     settings: Settings,
     locators: LocatorLoader,
-) -> App:
+) -> Hub:
     """Logged-in Hub session for one role.
 
     This is session setup (Katalon navigate + loginToCrdcOtp), not the test
@@ -83,28 +79,17 @@ def app(
     )
     context.set_default_timeout(15000)
     page = context.new_page()
-    login = LoginKeywords(page, locators, settings)
-    login.navigate()
-    if login.is_logged_in(timeout_ms=3000):
+    session = LoginSession(page, locators, settings)
+    session.navigate()
+    if session.is_logged_in(timeout_ms=3000):
         log.info("Login %s: Hub session is valid", role)
     else:
-        # Cookie expired or first run: pay Login.gov, then snapshot cookies.
         log.info("Login %s: Login.gov OTP", role)
-        login.login_otp(role)
+        session.login_otp(role)
         path.parent.mkdir(parents=True, exist_ok=True)
         context.storage_state(path=str(path))
         log.info("Login %s: saved session to %s", role, path.name)
     try:
-        yield App(
-            page=page,
-            locators=locators,
-            config=settings,
-            login=login,
-            header=HeaderPage(page, locators),
-            login_page=LoginPage(page, locators),
-            studies=ManageStudiesKeywords(page, locators),
-            programs=ManageProgramsKeywords(page, locators),
-            role=role,
-        )
+        yield Hub(page=page, locators=locators, settings=settings, role=role)
     finally:
         context.close()

@@ -1,4 +1,4 @@
-"""Login.gov OTP login.
+"""Login.gov OTP login used by the hub fixture (not by tests).
 
 Port of Katalon Login.loginToCrdcOtp: same screens and retry idea, Playwright waits
 instead of WebUI.delay. After a successful Grant, Hub sets the connect.sid cookie.
@@ -12,6 +12,7 @@ from playwright.sync_api import Page
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from crdc_pw.config import Settings
+from crdc_pw.hub import Hub
 from crdc_pw.locators.loader import LocatorLoader
 from crdc_pw.otp import totp_now
 from crdc_pw.pages.header import HeaderPage
@@ -27,14 +28,16 @@ from crdc_pw.pages.login import (
     LoginPage,
 )
 
-log = logging.getLogger("crdc_pw.login")
+log = logging.getLogger("crdc_pw.auth")
 
 OTP_MAX_ATTEMPTS = 6  # Katalon used 6; TOTP changes every 30s
 OTP_RETRY_WAIT_MS = 30_000
 LOGIN_GOV_STEP_TIMEOUT_MS = 60_000  # Grant can lag 30s+ on a slow Hub
 
 
-class LoginKeywords:
+class LoginSession:
+    """OTP / Grant flow for the fixture. Tests do not construct this."""
+
     def __init__(self, page: Page, locators: LocatorLoader, settings: Settings) -> None:
         self.page = page
         self.locators = locators
@@ -50,11 +53,7 @@ class LoginKeywords:
         return self.header.is_logged_in(timeout_ms=timeout_ms)
 
     def login_otp(self, role: str) -> None:
-        """Full Login.gov path for one role (Admin, Fedlead, ...).
-
-        Called by the `app` fixture (and by switch_user). Tests do not call this
-        for the initial sign-in; they start already on Hub.
-        """
+        """Full Login.gov path for one role (Admin, Fedlead, ...). Fixture and switch_user only."""
         creds = self.settings.role(role)
         if not creds.is_complete():
             raise ValueError(
@@ -130,10 +129,13 @@ class LoginKeywords:
         if self.is_logged_in(timeout_ms=2000):
             self.header.logout()
 
-    def switch_user(self, role: str) -> None:
-        """Katalon switchUser: log out, then Login.gov as another role in this browser."""
-        self.logout()
-        self.login_otp(role)
+
+def switch_user(hub: Hub, role: str) -> None:
+    """Katalon switchUser: log out, then Login.gov as another role on this tab."""
+    session = LoginSession(hub.page, hub.locators, hub.settings)
+    session.logout()
+    session.login_otp(role)
+    hub.role = role
 
 
 def _step_name(path: str) -> str:

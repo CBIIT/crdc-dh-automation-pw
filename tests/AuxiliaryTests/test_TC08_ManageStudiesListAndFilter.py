@@ -1,6 +1,6 @@
 """Katalon: Test Cases/CRDC/AuxiliaryTests/TC08_ManageStudiesListAndFilter
 
-`app` is already signed in as Admin.
+`hub` is already signed in as Admin.
 """
 
 from __future__ import annotations
@@ -8,20 +8,36 @@ from __future__ import annotations
 import logging
 
 import pytest
+from playwright.sync_api import expect
 
-from crdc_pw.app import App
+from crdc_pw.hub import Hub
+from crdc_pw.pages.studies import ADD_STUDY, CONTAINER, StudiesListPage
 
 log = logging.getLogger("crdc_pw.tc08")
 
 
 @pytest.mark.smoke
-def test_TC08_ManageStudiesListAndFilter(app: App) -> None:
-    app.studies.navigate_to_manage_studies()
+def test_TC08_ManageStudiesListAndFilter(hub: Hub) -> None:
+    studies = StudiesListPage(hub.page, hub.locators)
+    studies.open()
 
-    app.studies.verify_list_page()
+    expect(studies.loc(CONTAINER)).to_be_visible()
+    expect(studies.loc(ADD_STUDY)).to_be_visible()
+    studies.wait_for_table_settled()
+    rows = studies.row_count()
+    log.info("Assert Manage Studies: container and Add Study visible (rows=%s)", rows)
 
-    app.studies.apply_filters(study_name="autoQA", program="AutoTest-Program")
+    studies.apply_filters(study_name="autoQA", program="AutoTest-Program")
 
-    app.studies.verify_filter_results(expect_at_least_rows=1, row_contains="autoQA")
+    filtered = studies.read_table_rows()
+    count = len(filtered)
+    log.info("Manage Studies table row count: %s", count)
+    assert count >= 1, f"expected at least 1 rows, got {count}"
+    log.info("Assert Manage Studies: row count >= 1 (actual=%s)", count)
 
-    log.info("PASS TC08: Manage Studies list filtered to autoQA as %s", app.role)
+    found = any("autoQA" in (cell or "") for row in filtered for cell in row)
+    assert found, "no row contains 'autoQA'"
+    log.info("Assert Manage Studies: a row contains %r", "autoQA")
+    log.info("Assert Manage Studies filter results: completed; rows=%s", count)
+
+    log.info("PASS TC08: Manage Studies list filtered to autoQA as %s", hub.role)

@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import logging
+
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from crdc_pw.pages.base import BasePage
+from crdc_pw.pages.header import HeaderPage
+
+log = logging.getLogger("crdc_pw.studies")
 
 CONTAINER = "CRDC/AILocators/Studies/List/Container"
 ADD_STUDY = "CRDC/AILocators/Studies/List/AddStudy-Btn"
@@ -21,6 +26,13 @@ ACCESS_OPTION = "CRDC/AILocators/Studies/List/Filters/AccessType-Option"
 
 
 class StudiesListPage(BasePage):
+    def open(self) -> None:
+        """User menu → Manage Studies, then wait for the list container."""
+        log.info("Navigate: Manage Studies")
+        HeaderPage(self.page, self.locators).open_manage_studies()
+        self.wait_until_ready()
+        log.info("Manage Studies list page loaded")
+
     def wait_until_ready(self, timeout_ms: int = 30000) -> None:
         self.loc(CONTAINER).wait_for(state="visible", timeout=timeout_ms)
 
@@ -47,6 +59,44 @@ class StudiesListPage(BasePage):
 
     def select_access_type(self, access_type: str) -> bool:
         return self._select_dropdown(ACCESS_DDN, ACCESS_OPTION, accessType=access_type)
+
+    def apply_filters(
+        self,
+        study_name: str | None = None,
+        program: str | None = None,
+        dbgap: str | None = None,
+        status: str | None = None,
+        access_type: str | None = None,
+    ) -> None:
+        """Apply list filters. Blank values are skipped, same as Katalon applyManageStudiesFilters."""
+        study_name = _trim(study_name)
+        program = _trim(program)
+        dbgap = _trim(dbgap)
+        status = _trim(status)
+        access_type = _trim(access_type)
+        if not any((study_name, program, dbgap, status, access_type)):
+            log.info("Apply Manage Studies filters: no criteria; skipping")
+            return
+        log.info(
+            "Apply Manage Studies filters: studyName=%r program=%r dbGaP=%r status=%r accessType=%r",
+            study_name,
+            program,
+            dbgap,
+            status,
+            access_type,
+        )
+        if study_name:
+            self.fill_study_name(study_name)
+        if program:
+            self.select_program(program)
+        if dbgap:
+            self.fill_dbgap(dbgap)
+        if status:
+            self.select_status(status)
+        if access_type:
+            self.select_access_type(access_type)
+        self.wait_for_table_settled()
+        log.info("Apply Manage Studies filters: completed")
 
     def wait_for_table_settled(self, timeout_ms: int = 15000) -> None:
         """Wait until the loading row is gone. Katalon used WebUI.delay after filters."""
@@ -86,3 +136,10 @@ class StudiesListPage(BasePage):
         option.wait_for(state="visible", timeout=timeout_ms)
         option.click()
         return True
+
+
+def _trim(value: str | None) -> str | None:
+    if value is None:
+        return None
+    text = value.strip()
+    return text or None

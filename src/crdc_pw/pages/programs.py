@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import logging
+
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from crdc_pw.pages.base import BasePage
+from crdc_pw.pages.header import HeaderPage
+
+log = logging.getLogger("crdc_pw.programs")
 
 CONTAINER = "CRDC/AILocators/Programs/List/Container"
 ADD_PROGRAM = "CRDC/AILocators/Programs/List/AddProgram-Btn"
@@ -15,6 +20,13 @@ STUDY_NAME = "CRDC/AILocators/Programs/List/Filters/StudyName-TxtBx"
 
 
 class ProgramsListPage(BasePage):
+    def open(self) -> None:
+        """User menu → Manage Programs, then wait for the list container."""
+        log.info("Navigate: Manage Programs")
+        HeaderPage(self.page, self.locators).open_manage_programs()
+        self.wait_until_ready()
+        log.info("Manage Programs list page loaded")
+
     def wait_until_ready(self, timeout_ms: int = 30000) -> None:
         self.loc(CONTAINER).wait_for(state="visible", timeout=timeout_ms)
 
@@ -32,6 +44,29 @@ class ProgramsListPage(BasePage):
 
     def fill_study_name(self, value: str) -> bool:
         return self._fill_if_visible(STUDY_NAME, value)
+
+    def apply_filters(
+        self,
+        program_name: str | None = None,
+        study_name: str | None = None,
+    ) -> None:
+        """Apply list filters. Blank values are skipped, same as Katalon applyManageProgramsFilters."""
+        program_name = _trim(program_name)
+        study_name = _trim(study_name)
+        if not any((program_name, study_name)):
+            log.info("Apply Manage Programs filters: no criteria; skipping")
+            return
+        log.info(
+            "Apply Manage Programs filters: programName=%r studyName=%r",
+            program_name,
+            study_name,
+        )
+        if program_name:
+            self.fill_program_name(program_name)
+        if study_name:
+            self.fill_study_name(study_name)
+        self.wait_for_table_settled()
+        log.info("Apply Manage Programs filters: completed")
 
     def wait_for_table_settled(self, timeout_ms: int = 15000) -> None:
         """Wait until the loading row is gone. Katalon used WebUI.delay after filters."""
@@ -62,3 +97,10 @@ class ProgramsListPage(BasePage):
         box = self.loc(path).first
         box.fill(value)
         return True
+
+
+def _trim(value: str | None) -> str | None:
+    if value is None:
+        return None
+    text = value.strip()
+    return text or None
