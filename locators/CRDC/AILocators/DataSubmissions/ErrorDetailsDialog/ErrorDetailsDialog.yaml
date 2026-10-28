@@ -1,0 +1,13 @@
+# CRDC/AILocators/DataSubmissions/ErrorDetailsDialog
+
+Close-Btn: "//*[@data-testid='error-details-close-button']"
+Close-Icon: "//*[@data-testid='error-details-close-icon']"
+Dialog: "//*[@data-testid='error-details-dialog']"
+ErrorCount-Lbl: "//*[@data-testid='error-details-error-count']"
+ErrorList-Container: "//*[@data-testid='error-details-error-list']"
+ErrorList-Item: "//*[@data-testid='error-details-error-list']//p | //*[@data-testid='error-details-error-list']//*[contains(@class,'MuiTypography')]"
+Header-Lbl: "//*[@data-testid='error-details-header']"
+IssueMessage-Lbl: "//*[@data-testid='error-details-dialog']//*[@data-testid='issue-message']"
+IssueSeverity-Lbl: "//*[@data-testid='error-details-dialog']//*[@data-testid='issue-severity']"
+NodeInfo-Lbl: "//*[@data-testid='error-details-node-info']"
+Title-Lbl: "//*[@data-testid='error-details-title']"

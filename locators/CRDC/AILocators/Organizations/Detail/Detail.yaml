@@ -1,0 +1,9 @@
+# CRDC/AILocators/Organizations/Detail
+
+Abbreviation-TxtBx: "//*[@aria-labelledby='abbreviationLabel']"
+Cancel-Btn: "//button[.='Cancel']"
+DataConcierge-Ddn: "//*[@aria-labelledby='dataConciergeLabel']"
+Description-TxtBx: "//*[@aria-labelledby='descriptionLabel']"
+ProgramName-TxtBx: "//*[@aria-labelledby='organizationName']"
+Save-Btn: "//button[.='Save']"
+Status-Ddn: "//*[@aria-labelledby='statusLabel']"

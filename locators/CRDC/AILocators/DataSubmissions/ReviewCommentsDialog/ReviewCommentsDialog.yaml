@@ -1,0 +1,6 @@
+# CRDC/AILocators/DataSubmissions/ReviewCommentsDialog
+
+Close-Btn: "//*[@data-testid='review-comments-dialog-close']"
+Close-Icon: "//*[@data-testid='review-comments-dialog-close-icon-button']"
+Dialog: "//*[@data-testid='review-comments-dialog']"
+Title-Lbl: "//*[@data-testid='review-comments-dialog-title']"

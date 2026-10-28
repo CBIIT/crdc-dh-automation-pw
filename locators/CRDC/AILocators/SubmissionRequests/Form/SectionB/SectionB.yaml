@@ -1,0 +1,13 @@
+# CRDC/AILocators/SubmissionRequests/Form/SectionB
+
+AddFundingAgency-Btn: "//*[@id='section-b-add-funding-agency-button']"
+AddPlannedPublication-Btn: "//*[@id='section-b-add-planned-publication-button']"
+AddPublication-Btn: "//*[@id='section-b-add-publication-button']"
+AddRepository-Btn: "//*[@id='section-b-add-repository-button']"
+Program-Ddn: "//*[@id='section-b-program']"
+ProgramAbbreviation-TxtBx: "//*[@id='section-b-program-abbreviation']"
+ProgramDescription-TxtBx: "//*[@id='section-b-program-description']"
+ProgramTitle-TxtBx: "//*[@id='section-b-program-title']"
+StudyAbbreviation-TxtBx: "//*[@id='section-b-study-abbreviation-or-acronym']"
+StudyDescription-TxtBx: "//*[@id='section-b-study-description']"
+StudyTitle-TxtBx: "//*[@id='section-b-study-title']"

@@ -1,0 +1,22 @@
+# CRDC/AILocators/Programs/Detail
+
+# Program abbreviation (required)
+Abbreviation-TxtBx: "//form//input[@name='abbreviation']"
+# Cancel button on Add/Edit Program form
+Cancel-Btn: "//form//button[contains(text(),'Cancel')]"
+# Add/Edit Program form container
+Container: "//form[.//input[@name='name']]"
+# Data Concierge dropdown
+DataConcierge-Ddn: '//*[@id="mui-component-select-conciergeID"]'
+# Program description (optional)
+Description-TxtBx: "//form//textarea[@name='description']"
+# Error message when program name already exists
+DuplicateNameError-Msg: "//*[contains(text(),'An organization with the same name already exists')]"
+# Success message after program is added
+ProgramAddedSuccess-Msg: "//*[contains(text(),'This program has been successfully added.')]"
+# Program name (required)
+ProgramName-TxtBx: "//form//input[@name='name']"
+# Save button on Add/Edit Program form
+Save-Btn: "//form//button[contains(text(),'Save')]"
+# Status dropdown (Active/Inactive)
+Status-Ddn: '//*[@id="mui-component-select-status"]'

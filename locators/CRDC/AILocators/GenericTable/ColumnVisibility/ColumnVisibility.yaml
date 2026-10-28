@@ -1,0 +1,7 @@
+# CRDC/AILocators/GenericTable/ColumnVisibility
+
+Close-Btn: "//*[@data-testid='column-visibility-popper-close-button']"
+ColumnList-Container: "//*[@data-testid='column-list']"
+Popper-Container: "//*[@data-testid='column-visibility-popper']"
+Reset-Btn: "//*[@data-testid='reset-button']"
+ToggleAll-Chkbx: "//*[@data-testid='toggle-all-checkbox']"

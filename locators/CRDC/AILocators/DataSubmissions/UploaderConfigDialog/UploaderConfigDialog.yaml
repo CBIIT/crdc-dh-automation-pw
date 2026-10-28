@@ -1,0 +1,10 @@
+# CRDC/AILocators/DataSubmissions/UploaderConfigDialog
+
+ArchiveManifest-TxtBx: "//*[@data-testid='uploader-config-dialog-input-archive-manifest']"
+Cancel-Btn: "//*[@data-testid='uploader-config-dialog-close-button']"
+Close-Icon: "//*[@data-testid='uploader-config-dialog-close-icon']"
+DataFolder-TxtBx: "//*[@data-testid='uploader-config-dialog-input-data-folder']"
+Dialog: "//*[@data-testid='uploader-config-dialog']"
+Download-Btn: "//*[@data-testid='uploader-config-dialog-download-button']"
+Header-Lbl: "//*[@data-testid='uploader-config-dialog-header']"
+Manifest-TxtBx: "//*[@data-testid='uploader-config-dialog-input-manifest']"

@@ -1,0 +1,4 @@
+# CRDC/AILocators/Global
+
+# Notistack snackbar container (id=notistack-snackbar). Shows transient messages e.g. "Validation process is starting; this may take some time. Please wait before initiating another validation." Use waitForElementToDisappear to wait for it to close before taking screenshots.
+Notistack-Snackbar: "//*[@id='notistack-snackbar']"

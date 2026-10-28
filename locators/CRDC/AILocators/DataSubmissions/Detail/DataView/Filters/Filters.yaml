@@ -1,0 +1,7 @@
+# CRDC/AILocators/DataSubmissions/Detail/DataView/Filters
+
+DeleteNodeData-Btn: "//*[@data-testid='delete-node-data-button']"
+ExportNodeData-Btn: "//*[@data-testid='export-node-data-button']"
+NodeType-Ddn: "//*[@data-testid='data-content-node-filter']"
+Status-Ddn: "//*[@data-testid='data-content-status-filter']"
+SubmittedID-TxtBx: "//*[@data-testid='data-content-submitted-id-filter']"

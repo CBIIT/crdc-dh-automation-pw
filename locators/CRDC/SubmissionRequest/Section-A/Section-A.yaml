@@ -1,0 +1,25 @@
+# CRDC/SubmissionRequest/Section-A
+
+AC_Email-Txtbx: '//*[@id="section-aadditionalContacts-0-email"]'
+AC_FirstName-Txtbx: '//*[@id="section-aadditionalContacts-0-first-name"]'
+AC_Institution-Dd: '//*[@id="section-aadditionalContacts-0-institution"]'
+AC_LastName-Txtbx: '//*[@id="section-aadditionalContacts-0-last-name"]'
+AC_Phone-Txtbx: '//*[@id="section-aadditionalContacts-0-phone-number"]'
+AC_Position-Txtbx: '//*[@id="section-aadditionalContacts-0-position"]'
+AddContact-Btn: '//*[@id="section-a-add-additional-contact-button"]'
+PC_Email-Txtbx: '//*[@id="section-a-primary-contact-email"]'
+PC_FirstName-Txtbx: '//*[@id="section-a-primary-contact-first-name"]'
+PC_Institution-Dd: '//*[@id="section-a-primary-contact-institution"]'
+PC_LastName-Txtbx: '//*[@id="section-a-primary-contact-last-name"]'
+PC_Phone-Txtbx: '//*[@id="section-a-primary-contact-phone-number"]'
+PC_Position-Txtbx: '//*[@id="section-a-primary-contact-position"]'
+PI_Email-Txtbx: '//*[@id="section-a-pi-email"]'
+PI_EraCommonsAccount-Txtbx: '//*[@id="section-a-pi-era-commons-account"]'
+PI_FirstName-TxtBx: '//*[@id="section-a-pi-first-name"]'
+PI_InstitAddress-Txtbx: '//*[@id="section-a-pi-institution-address"]'
+PI_Institution-Dd: '//*[@id="section-a-pi-institution"]'
+PI_LastName-Txtbx: '//*[@id="section-a-pi-last-name"]'
+PI_Position-Txtbx: '//*[@id="section-a-pi-position"]'
+RemoveContact-Btn: '//*[@id="section-aadditionalContacts-0-remove-contact-button"]'
+SameAsPrincipaInvestigtr-ChkBx: "//*[@class='PrivateSwitchBase-input css-1m9pwf3' and @type='checkbox']"
+SameAsPrincipal-ChkBx: "//*[@class='PrivateSwitchBase-input css-1m9pwf3' and @type='checkbox']"

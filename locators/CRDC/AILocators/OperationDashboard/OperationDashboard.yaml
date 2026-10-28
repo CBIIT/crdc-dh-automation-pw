@@ -1,0 +1,4 @@
+# CRDC/AILocators/OperationDashboard
+
+Container: "//*[@data-testid='operation-dashboard-container']"
+MetricsType-Ddn: "//*[@id='dashboard-type']"

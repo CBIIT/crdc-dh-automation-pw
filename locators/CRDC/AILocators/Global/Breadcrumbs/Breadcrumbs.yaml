@@ -1,0 +1,4 @@
+# CRDC/AILocators/Global/Breadcrumbs
+
+Breadcrumb-Container: "//*[@data-testid='breadcrumb-container']"
+BreadcrumbEntry: "//*[starts-with(@data-testid,'breadcrumb-entry-')]"

@@ -1,0 +1,18 @@
+# CRDC/Login
+
+ErrorMessage-Txt: "//p[@class='usa-alert__text']"
+Login-Dd: '//*[@id="header-navbar-login-button"]'
+Login.gov-Btn: "//img[contains(@src, 'LoginGov')]/.."
+Login.gov_BackupSecurityCode-TxtBx: '//*[@id="backup_code_verification_form_backup_code"]'
+Login.gov_ConsentGrant-Btn: "//input[@value='Grant']"
+Login.gov_OneTimeCode-TxtBx: '//*[contains(@id,"code-")]'
+Login.gov_OneTimeCode_Submit-Btn: "//button[@type='submit' and text()='Submit']"
+Login.gov_SignIn-Btn: "//*[text()='Submit']"
+Login.gov_UserEmail-TxtBx: '//*[@id="user_email"]'
+Login.gov_UserPass-TxtBx: "//input[contains(@id,'password-toggle-input')]"
+LoginDialogClose-Btn: '//*[@id="loginDialogCloseButton"]'
+LoginDialogLinkToLogin-Link: '//*[@id="loginDialogLinkToLogin"]'
+LoginPageLogin-Btn: '//*[@id="loginPageLoginButton"]'
+Logout-Link: "//button[@id='navbar-dropdown-item-logout']"
+UserProfile-Dd: '//*[@id="navbar-dropdown-name"]'
+UserProfile-Link: '//*[@id="navbar-dropdown-item-user-profile"]'

@@ -1,0 +1,4 @@
+# CRDC/AILocators/SubmissionRequests/ExportRequest
+
+Export-Btn: "//*[@data-testid='export-submission-request-button']"
+Tooltip: "//*[@data-testid='export-submission-request-tooltip']"

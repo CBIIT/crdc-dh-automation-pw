@@ -1,0 +1,7 @@
+# CRDC/AILocators/APITokenDialog
+
+Close-Btn: "//*[@id='api-token-close-button']"
+CopyToken-Btn: "//*[@id='api-token-copy-token-button']"
+CreateToken-Btn: "//*[@id='api-token-create-token-button']"
+Header-Lbl: "//*[@id='api-token-header']"
+TokenInput-TxtBx: "//*[@id='api-token-input']"

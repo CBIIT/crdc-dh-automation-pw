@@ -1,0 +1,7 @@
+# CRDC/AILocators/SubmissionRequests/StatusBar
+
+FullHistory-Btn: "//*[@id='status-bar-full-history-button']"
+LastUpdated-Lbl: "//*[@data-testid='status-bar-last-updated']"
+Status-Icon: "//*[@data-testid='status-bar-icon']"
+Status-Lbl: "//*[@data-testid='status-bar-status']"
+ViewComments-Btn: "//*[@id='status-bar-review-comments-button']"

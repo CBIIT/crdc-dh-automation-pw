@@ -1,0 +1,5 @@
+# CRDC/AILocators/DataSubmissions/Detail/UploadActivity
+
+ErrorCount-Btn: "//*[starts-with(@data-testid,'activity-error-count-')]"
+FileCount-Btn: "//*[starts-with(@data-testid,'activity-file-count-')]"
+UploadedDate-Lbl: "//*[starts-with(@data-testid,'activity-uploaded-date-')]"

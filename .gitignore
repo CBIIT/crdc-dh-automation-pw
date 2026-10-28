@@ -1,0 +1,30 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Leftover from the old .env layout. Credentials now live in config/<profile>.yaml.
+.env
+.env.*
+
+# One file per Katalon profile (URL + Login.gov secrets). Copy from *.yaml.example.
+config/qa.yaml
+config/qa2.yaml
+config/stage.yaml
+
+auth/
+
+test-results/
+playwright-report/
+playwright/.cache/
+blob-report/
+traces/
+.DS_Store
+reports/

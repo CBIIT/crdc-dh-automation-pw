@@ -1,0 +1,14 @@
+# CRDC/AILocators/SubmissionRequests/Form/Review
+
+CancelRequest-Btn: '//*[@data-testid="cancel-application-button"]'
+CancelSubmissionRequest-TxtBx: '//*[@name="comment"]'
+CancelSubmissionRequestConfirm-Btn: '//*[@id="error-dialog-delete-button"]'
+FileTypeTable-Count-Header: "//*[@id='review-file-type-table-number-of-files']"
+FileTypeTable-Extension-Header: "//*[@id='review-file-type-table-file-extension']"
+FileTypeTable-FileType-Header: "//*[@id='review-file-type-table-file-type']"
+FileTypeTable-Size-Header: "//*[@id='review-file-type-table-estimated-data-size']"
+ProgressBar-Review: '//*[@id="progress-bar-section-review"]'
+ProgressBar-SectionA: "//*[@id='progress-bar-section-A']"
+ProgressBar-SectionB: "//*[@id='progress-bar-section-B']"
+ProgressBar-SectionC: "//*[@id='progress-bar-section-C']"
+ProgressBar-SectionD: "//*[@id='progress-bar-section-D']"

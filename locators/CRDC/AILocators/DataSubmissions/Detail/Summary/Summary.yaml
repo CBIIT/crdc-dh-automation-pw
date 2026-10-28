@@ -1,0 +1,11 @@
+# CRDC/AILocators/DataSubmissions/Detail/Summary
+
+Collaborators-Btn: "//*[@data-testid='collaborators-button']"
+CollaboratorsTooltip: "//*[@data-testid='collaborators-button-tooltip']"
+CopyID-Btn: "//*[@data-testid='data-submission-copy-id-button']"
+EditName-Icon: "//*[@data-testid='edit-submission-name-icon']"
+EmailConcierge-Link: "//*[@data-testid='email-primary-contact-link']"
+FullHistory-Btn: "//button[.='Full History']"
+Status-Lbl: "//*[@aria-label='Data Submission status']"
+SubmissionID-Lbl: "//*[@data-testid='data-submission-id-value']"
+SubmissionName-Lbl: "(//*[@data-testid='truncated-text-label'])[1]"

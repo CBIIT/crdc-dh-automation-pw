@@ -1,0 +1,4 @@
+# CRDC/AILocators/ReleaseNotes
+
+ErrorAlert: "//*[@data-testid='release-notes-error']"
+MarkdownContent: "//*[@data-testid='release-notes-markdown']"

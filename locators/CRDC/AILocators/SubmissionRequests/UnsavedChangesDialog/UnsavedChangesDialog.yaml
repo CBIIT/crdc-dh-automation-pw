@@ -1,0 +1,5 @@
+# CRDC/AILocators/SubmissionRequests/UnsavedChangesDialog
+
+Cancel-Btn: "//button[.='Cancel']"
+Discard-Btn: "//button[.='Discard']"
+Save-Btn: "//button[.='Save']"

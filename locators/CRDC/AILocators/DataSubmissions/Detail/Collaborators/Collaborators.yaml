@@ -1,0 +1,12 @@
+# CRDC/AILocators/DataSubmissions/Detail/Collaborators
+
+AccessHeader: "//*[@data-testid='header-access']"
+AddCollaborator-Btn: "//*[@data-testid='add-collaborator-button']"
+Cancel-Btn: "//*[@data-testid='collaborators-dialog-cancel-button']"
+Close-Btn: "//*[@data-testid='collaborators-dialog-close-button']"
+Close-Icon: "//*[@data-testid='collaborators-dialog-close-icon-button']"
+CollaboratorHeader: "//*[@data-testid='header-collaborator']"
+Dialog: "//*[@data-testid='collaborators-dialog']"
+Header-Lbl: "//*[@data-testid='collaborators-dialog-header']"
+Save-Btn: "//*[@data-testid='collaborators-dialog-save-button']"
+Table-Container: "//*[@data-testid='collaborators-table-container']"

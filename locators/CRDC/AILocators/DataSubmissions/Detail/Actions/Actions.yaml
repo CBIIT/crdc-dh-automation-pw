@@ -1,0 +1,16 @@
+# CRDC/AILocators/DataSubmissions/Detail/Actions
+
+AdminSubmit-Btn: "//button[.='Admin Submit']"
+Cancel-Btn: "//button[.='Cancel']"
+Complete-Btn: "//button[.='Complete']"
+CompleteConfirmationYes-Btn: "//button[.='Yes']"
+ConfirmRelease-Btn: '//*[.="Confirm Release"]'
+ConfirmToReject-Btn: "//button[.='Confirm to Reject']"
+Reject-Btn: "//button[.='Reject']"
+RejectDsComment-Txtbx: "//*[@aria-label='Reject justification']"
+Release-Btn: '//*[contains(text(), "Release to")]'
+ReleaseConfirmation-Txt: "//*[contains(text(),'There are other data submissions for the same study')]"
+ReleaseConfirmationYes-Btn: "//button[.='Yes']"
+ReleaseCrossValidationConfirmRelease-Btn: "//button[.='Confirm Release']"
+Submit-Btn: "//button[.='Submit']"
+Withdraw-Btn: "//button[.='Withdraw']"

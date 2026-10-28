@@ -1,0 +1,11 @@
+# CRDC/AILocators/SubmissionRequests/Form/SectionC
+
+CancerTypes-Ddn: "//*[@id='section-c-cancer-types']"
+DbGaPPHSNumber-TxtBx: "//*[@id='section-c-if-yes-provide-dbgap-phs-number']"
+DbGaPRegistered-Switch: "//*[@id='section-c-dbGaP-registration']"
+GPAName-TxtBx: "//*[@id='section-c-genomic-program-administrator-name']"
+NumberOfSubjects-TxtBx: "//*[@id='section-c-number-of-subjects-included-in-the-submission']"
+OtherCancerTypes-TxtBx: "//*[@id='section-c-other-cancer-types']"
+OtherSpecies-TxtBx: "//*[@id='section-c-other-species-of-subjects']"
+PreCancerTypes-TxtBx: "//*[@id='section-c-pre-cancer-types']"
+Species-Ddn: "//*[@id='section-c-species-of-subjects']"

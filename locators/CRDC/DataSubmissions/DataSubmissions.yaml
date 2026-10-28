@@ -1,0 +1,10 @@
+# CRDC/DataSubmissions
+
+ChooseFiles-Btn: "//input[@type='file']"
+CrossValidate-Btn: "//button[.='Cross Validate']"
+DataSubmListTable-Row: "//tbody/tr"
+Loading-Icon: "//*[contains(@class,'Circular')]"
+Release-Btn: "//button[contains(.,'Release')]"
+Upload-Btn: "//button[.='Upload']"
+Uploading-Txt: "//*[.='Uploading']"
+Validate-Btn: "//button[.='Validate']"

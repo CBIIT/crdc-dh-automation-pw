@@ -1,0 +1,10 @@
+# CRDC/AILocators/DataSubmissions/Detail/ValidationResults/Filters
+
+BatchID-Ddn: "//*[@data-testid='quality-control-batchID-filter']"
+ExportValidation-Btn: "//*[@data-testid='export-validation-button']"
+ExportValidationTooltip: "//*[@data-testid='export-validation-tooltip']"
+Filters-Container: "//*[@data-testid='quality-control-filters']"
+IssueType-Ddn: "//*[@data-testid='quality-control-issueType-filter']"
+NodeType-Ddn: "//*[@data-testid='quality-control-nodeType-filter']"
+Severity-Ddn: "//*[@data-testid='quality-control-severity-filter']"
+TableViewSwitch-Switch: "//*[@data-testid='table-view-switch']"

@@ -1,0 +1,15 @@
+# CRDC/NavBar
+
+About_Dd: '//*[@id="navbar-dropdown-about"]'
+BecomeCrdcSubmitter-Link: '//*[@id="navbar-dropdown-item-become-a-crdc-submitter"]'
+DataExplorer-Tab: '//*[@id="navbar-dropdown-data-explorer"]'
+DataSubmissions-Tab: '//*[@id="navbar-dropdown-data-submissions"]'
+Home-Btn: '//*[@id="header-logo-home-link"]'
+ManageInstitutions-Btn: '//*[@id="navbar-dropdown-item-institution-manage"]'
+ManagePrograms-Btn: '//*[@id="navbar-dropdown-item-program-manage"]'
+ManageStudies-Btn: '//*[@id="navbar-dropdown-item-studies-manage"]'
+ManageUsers-Btn: '//*[@id="navbar-dropdown-item-user-manage"]'
+OperationDashboard-Btn: '//*[@id="navbar-dropdown-operation-dashboard"]'
+RemoveLaterApplicationApproved: '//*[@id="root"]/div[2]/div/ul/li[1]/a'
+SubmissionRequest-Tab: '//*[@id="navbar-dropdown-submission-requests"]'
+WarningBanner_Continue-Btn: '//button[contains(text(),"Continue")]'

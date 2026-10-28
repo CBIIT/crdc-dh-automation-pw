@@ -1,0 +1,8 @@
+# CRDC/AILocators/Login
+
+LoginLoader: "//*[@data-testid='login-flow-loader']"
+LoginPageContent: "//main[@id='main-content']"
+NihRequestingInfoAgreeSubmit-Btn: "//button[.='Agree and continue']"
+RulesOfUseAccept-Chkbx: "//input[@id='rules_of_use_form_terms_accepted']"
+RulesOfUseContent: "//main[@id='main-content']"
+RulesOfUseSubmit-Btn: "//button[.='Continue']"

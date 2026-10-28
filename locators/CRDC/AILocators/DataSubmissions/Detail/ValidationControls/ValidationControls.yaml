@@ -1,0 +1,12 @@
+# CRDC/AILocators/DataSubmissions/Detail/ValidationControls
+
+CrossValidate-Btn: "//*[@data-testid='cross-validate-button']"
+StatusChip: "//*[@data-testid='validation-status-chip']"
+Validate-Btn: "//*[@data-testid='validate-controls-validate-button']"
+ValidationTarget-AllUploadedData-RadioBtn: "//*[@data-testid='validate-controls-validation-target']//input[@value='All']"
+ValidationTarget-NewUploadedData-RadioBtn: "//input[@value='New']"
+ValidationTarget-RadioBtn: "//*[@data-testid='validate-controls-validation-target']"
+ValidationType-Both-RadioBtn: "//*[@data-testid='validate-controls-validation-type']//input[@value='All']"
+ValidationType-DataFiles-RadioBtn: "(//input[@value='file'])[1]"
+ValidationType-Metadata-RadioBtn: "//input[@value='metadata']"
+ValidationType-RadioBtn: "//*[@data-testid='validate-controls-validation-type']"

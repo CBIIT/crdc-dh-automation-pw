@@ -1,0 +1,4 @@
+# CRDC/AILocators/Global/SystemUseWarning
+
+Continue-Btn: "//*[@data-testid='system-use-warning-dialog']//button[.='Continue']"
+Warning-Dialog: "//*[@data-testid='system-use-warning-dialog']"

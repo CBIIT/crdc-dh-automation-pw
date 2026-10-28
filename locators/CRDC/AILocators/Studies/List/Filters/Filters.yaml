@@ -1,0 +1,11 @@
+# CRDC/AILocators/Studies/List/Filters
+
+AccessType-Ddn: "//*[@data-testid='accessType-select']"
+AccessType-Option: "//*[@data-testid='accessType-option-{accessType}']"
+DbGaPID-TxtBx: "//*[@data-testid='dbGaPID-input']"
+Filters-Container: "//*[@data-testid='approved-study-filters']"
+Program-Ddn: "//*[@id='mui-component-select-programID']"
+Program-Option: "//li[normalize-space(text())='{program}']"
+Status-Ddn: "//*[@data-testid='status-select']"
+Status-Option: "//*[@data-testid='status-option-{status}']"
+StudyName-TxtBx: "//*[@data-testid='study-input']"

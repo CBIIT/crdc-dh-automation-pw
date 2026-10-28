@@ -1,0 +1,4 @@
+# CRDC/AILocators/DataSubmissions/DbGaPSheetExport
+
+Export-Btn: "//*[@data-testid='dbgap-sheet-export-button']"
+Tooltip: "//*[@data-testid='dbGaP-sheet-export-tooltip']"

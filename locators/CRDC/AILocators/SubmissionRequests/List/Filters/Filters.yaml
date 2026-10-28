@@ -1,0 +1,7 @@
+# CRDC/AILocators/SubmissionRequests/List/Filters
+
+Program-Ddn: "//*[@id='programName-filter']"
+ResetFilters-Btn: "//*[@data-testid='reset-filters-button']"
+Status-Ddn: "//*[@data-testid='application-status-filter']"
+Study-TxtBx: "//*[@id='study-name-filter']"
+SubmitterName-TxtBx: "//*[@id='submitter-name-filter']"

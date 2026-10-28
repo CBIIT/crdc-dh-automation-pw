@@ -1,0 +1,6 @@
+# CRDC/AILocators/Users/List
+
+Container: "//*[@data-testid='list-view-container']"
+RoleFilter-Ddn: "//*[@id='role-filter']"
+StatusFilter-Ddn: "//*[@id='status-filter']"
+UserFilter-TxtBx: "//*[@id='user-filter']"

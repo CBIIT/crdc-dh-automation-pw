@@ -1,0 +1,5 @@
+# CRDC/AILocators/DataSubmissions/Detail/DataUpload
+
+CLIDownload-Link: "//*[@data-testid='uploader-cli-download-button']"
+CLIVersion-Link: "//*[@data-testid='uploader-cli-version-button']"
+DownloadConfig-Btn: "//*[@data-testid='uploader-cli-config-button']"

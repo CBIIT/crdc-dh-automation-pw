@@ -1,0 +1,5 @@
+# CRDC/AILocators/DataSubmissions/HistoryDialog
+
+Close-Btn: "//*[@data-testid='history-dialog-close']"
+Dialog: "//*[@data-testid='history-dialog']"
+HeaderRow: "//*[@data-testid='history-dialog-header-row']"

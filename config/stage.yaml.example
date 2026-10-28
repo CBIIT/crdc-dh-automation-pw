@@ -1,0 +1,29 @@
+# Katalon profile CRDC_STAGE.
+# Copy to stage.yaml and fill Email / Password / Secret from that .glbl.
+# stage.yaml is gitignored. Do not commit secrets.
+name: stage
+base_url: https://hub-stage.datacommons.cancer.gov/
+
+AdminEmail:
+AdminPassword:
+AdminSecret:
+
+FedleadEmail:
+FedleadPassword:
+FedleadSecret:
+
+DcpEmail:
+DcpPassword:
+DcpSecret:
+
+SubmitterEmail:
+SubmitterPassword:
+SubmitterSecret:
+
+UserEmail:
+UserPassword:
+UserSecret:
+
+MasterEmail:
+MasterPassword:
+MasterSecret:

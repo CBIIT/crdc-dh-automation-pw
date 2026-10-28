@@ -1,0 +1,4 @@
+# CRDC/AILocators/Studies/List
+
+AddStudy-Btn: "//a[.='Add Study']"
+Container: "//*[@data-testid='list-studies-container']"

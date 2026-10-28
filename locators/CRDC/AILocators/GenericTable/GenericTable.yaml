@@ -1,0 +1,7 @@
+# CRDC/AILocators/GenericTable
+
+DataCell: "//*[@data-testid='table-body-cell-with-data']"
+LoadingRow: "//*[@data-testid='loading-row']"
+Table: "//*[@data-testid='generic-table']"
+TableBody: "//*[@data-testid='generic-table-body']"
+TableRow: "//*[@data-testid='generic-table-row']"

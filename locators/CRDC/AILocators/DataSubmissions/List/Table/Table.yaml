@@ -1,0 +1,7 @@
+# CRDC/AILocators/DataSubmissions/List/Table
+
+CreateDataSubmission-Btn: "//button[.='Create a Data Submission']"
+SubmissionName-Link: "//a[contains(@href,'/data-submission/')]"
+Table: "//*[@data-testid='generic-table']"
+TableBody: "//*[@data-testid='generic-table-body']"
+TableRow: "//*[@data-testid='generic-table-row']"

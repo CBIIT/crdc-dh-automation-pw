@@ -1,0 +1,11 @@
+# CRDC/ManageUsers
+
+ManageUsersTable-Row: "//table//tr[td]"
+NotificationsPanel-Ddn: "//div[@data-testid='notifications-accordion']/div[1]"
+PbacOptions-Chkbx: "//input[@type='checkbox']"
+PbacOptions-ChkbxLabel: "//input[@type='checkbox']/../following::span[1]"
+PermissionsPanel-Ddn: "//div[@data-testid='permissions-accordion']/div[1]"
+RequestAccess-Btn: "//button[@data-testid='request-access-button']"
+Role-Ddn: "//*[@id='mui-component-select-role']"
+RoleDdn-Option: "//li[text()='${role}']"
+Save-Btn: "//button[text()='Save']"

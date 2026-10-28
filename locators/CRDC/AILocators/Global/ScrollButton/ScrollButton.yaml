@@ -1,0 +1,3 @@
+# CRDC/AILocators/Global/ScrollButton
+
+BackToTop-Btn: "//*[@data-testid='scroll-top-button']"

@@ -1,0 +1,9 @@
+# CRDC/AILocators/DataSubmissions/Detail/EditNameDialog
+
+Cancel-Btn: "//*[@data-testid='edit-submission-name-dialog-cancel-button']"
+Close-Icon: "//*[@data-testid='edit-submission-name-dialog-close-icon']"
+Dialog: "//*[@data-testid='edit-submission-name-dialog']"
+Error-Lbl: "//*[@data-testid='edit-submission-name-dialog-error']"
+Save-Btn: "//*[@data-testid='edit-submission-name-dialog-save-button']"
+SubmissionName-TxtBx: "//*[@data-testid='edit-submission-name-dialog-input']"
+Title-Lbl: "//*[@data-testid='edit-submission-name-dialog-title']"

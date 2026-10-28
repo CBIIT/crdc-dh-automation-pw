@@ -1,0 +1,7 @@
+# CRDC/AILocators/Global/InactivityDialog
+
+ExtendSession-Btn: "//button[.='EXTEND SESSION']"
+Logout-Btn: "//button[.='LOGOUT']"
+TimeoutClose-Btn: "//button[.='CLOSE']"
+TimeoutLogin-Btn: "//button[.='LOGIN']"
+WarningTitle-Lbl: "//*[@id='customized-dialog-title']"

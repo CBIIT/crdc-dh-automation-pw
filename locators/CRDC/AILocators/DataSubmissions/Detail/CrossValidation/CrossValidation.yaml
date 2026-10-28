@@ -1,0 +1,4 @@
+# CRDC/AILocators/DataSubmissions/Detail/CrossValidation
+
+Table-Headers: "//*[starts-with(@data-testid,'generic-table-header-')]"
+Table-Row: "//*[@data-testid='generic-table-row']"

@@ -1,0 +1,6 @@
+# CRDC/AILocators/Institutions/Detail
+
+Cancel-Btn: "//*[@data-testid='cancel-button']"
+InstitutionName-TxtBx: "//*[@data-testid='institutionName-input']"
+Save-Btn: "//*[@data-testid='save-button']"
+Status-Ddn: "//*[@data-testid='status-select']"

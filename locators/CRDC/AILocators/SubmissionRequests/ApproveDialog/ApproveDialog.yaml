@@ -1,0 +1,6 @@
+# CRDC/AILocators/SubmissionRequests/ApproveDialog
+
+ConfirmApprove-Btn: "//*[@data-testid='review-form-dialog-confirm-button']"
+Dialog: "//*[@data-testid='approve-form-dialog']"
+PendingModelChange-Chkbx: "//*[@data-testid='pendingModelChange-checkbox']"
+ReviewComment-TxtBx: '//*[@aria-label="Review comment input"]'

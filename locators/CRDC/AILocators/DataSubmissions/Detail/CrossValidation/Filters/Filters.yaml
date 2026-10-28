@@ -1,0 +1,7 @@
+# CRDC/AILocators/DataSubmissions/Detail/CrossValidation/Filters
+
+BatchID-Ddn: "//*[@data-testid='cross-validation-batchID-filter']"
+ExportCrossValidation-Btn: "//*[@data-testid='export-cross-validation-button']"
+ExportCrossValidationTooltip: "//*[@data-testid='export-cross-validation-tooltip']"
+NodeType-Ddn: "//*[@data-testid='cross-validation-nodeType-filter']"
+Severity-Ddn: "//*[@data-testid='cross-validation-status-filter']"

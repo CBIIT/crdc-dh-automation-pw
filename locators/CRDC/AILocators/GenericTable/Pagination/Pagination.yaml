@@ -1,0 +1,10 @@
+# CRDC/AILocators/GenericTable/Pagination
+
+DisplayedRows-Lbl: "//div[contains(@class,'MuiTablePagination-toolbar')]//p[contains(@class,'MuiTablePagination-displayedRows')]"
+NextPage-Btn: "//button[@aria-label='Go to next page']"
+PaginationActions-Container: "//nav[@aria-label='bottom pagination actions']"
+PaginationToolbar-Container: "//div[contains(@class,'MuiTablePagination-toolbar')]"
+PreviousPage-Btn: "//button[@aria-label='Go to previous page']"
+RowsPerPage-Ddn: "//*[@data-testid='generic-table-rows-per-page-bottom']"
+# Pagination displayed-rows text (e.g. "1–20 of 193") used to read total table entry count.
+TablePagination-DisplayedRows: "//*[contains(@class,'TablePagination-displayedRows')]"

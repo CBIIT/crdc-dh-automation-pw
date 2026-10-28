@@ -1,0 +1,10 @@
+# CRDC/AILocators/DataSubmissions/SubmitDialog
+
+Cancel-Btn: "//*[@data-testid='submit-dialog-cancel-button']"
+Close-Icon: "//*[@data-testid='submit-dialog-close-icon-button']"
+Confirm-Btn: "//*[@data-testid='submit-dialog-confirm-button']"
+Description-Lbl: "//*[@data-testid='submit-dialog-description']"
+Dialog: "//*[@data-testid='submit-dialog']"
+Header-Lbl: "//*[@data-testid='submit-dialog-header']"
+SummaryTableBody: "//*[@data-testid='submit-summary-table-body']"
+Title-Lbl: "//*[@data-testid='submit-dialog-title']"

@@ -1,0 +1,18 @@
+# CRDC/AILocators/Studies/Detail
+
+Abbreviation-TxtBx: "//*[@data-testid='studyAbbreviation-input']"
+Cancel-Btn: "//*[@data-testid='cancel-button']"
+Container: "//*[@data-testid='study-view-container']"
+ControlledAccess-Chkbx: "//*[@data-testid='controlledAccess-checkbox']"
+DataConcierge-Ddn: "//*[@data-testid='primaryContactID-select']"
+DbGaPID-TxtBx: "//*[@data-testid='dbGaPID-input']"
+Form: "//*[@data-testid='study-form']"
+GPAName-TxtBx: "//*[@data-testid='GPAName-input']"
+OpenAccess-Chkbx: "//*[@data-testid='openAccess-checkbox']"
+ORCID-TxtBx: "//*[@data-testid='ORCID-input']"
+PendingConditions-Chkbx: "//*[@data-testid='pendingConditions-checkbox']"
+PI-TxtBx: "//*[@data-testid='PI-input']"
+Program-Ddn: "//*[@data-testid='program-input']"
+SameAsProgramContact-Chkbx: "//*[@data-testid='sameAsProgramPrimaryContact-checkbox']"
+Save-Btn: "//*[@data-testid='save-button']"
+StudyName-TxtBx: "//*[@data-testid='studyName-input']"

@@ -1,0 +1,8 @@
+# CRDC/AILocators/Global/Header/Mobile
+
+BackToMainMenu-Btn: "//*[@id='navbar-back-to-main-menu-button']"
+CloseMenu-Btn: "//*[@id='navbar-close-navbar-button']"
+GreyOverlay-Btn: "//*[@id='navbar-close-navbar-grey-section']"
+HeaderMobile: "//*[@data-testid='navigation-header-mobile']"
+Menu-Btn: "//*[@id='header-navbar-open-menu-button']"
+MobileLogin-Link: "//*[@id='navbar-link-login']"

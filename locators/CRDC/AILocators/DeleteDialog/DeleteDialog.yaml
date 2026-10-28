@@ -1,0 +1,7 @@
+# CRDC/AILocators/DeleteDialog
+
+Cancel-Btn: "//*[@data-testid='delete-dialog-cancel-button']"
+Close-Icon: "//*[@data-testid='delete-dialog-close-icon-button']"
+Confirm-Btn: "//*[@data-testid='delete-dialog-confirm-button']"
+Dialog: "//*[@data-testid='delete-dialog']"
+Header-Lbl: "//*[@data-testid='delete-dialog-header']"

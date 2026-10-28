@@ -1,0 +1,28 @@
+# CRDC/SubmissionRequest/Section-D
+
+AdditionalComnt-TxtBx: "//*[@name='submitterComment']"
+AllSlider-Btns: "//*[contains(@id,'section-d') and @type='checkbox']/preceding::div[1]"
+CalendarTodayDate-Btn: "//button[contains(@class,'MuiPickersDay-today')]"
+ConfirmDataIdentified_no-RdoBtn: '//*[@id="section-d-data-de-identified-no-radio-button"]'
+ConfirmDataIdentified_yes-RdoBtn: '//*[@id="section-d-data-de-identified-yes-radio-button"]'
+DemographicData-SlidrBtn: '//*[@id="section-d-demographic-data"]'
+DiagnosisData-SlidrBtn: '//*[@id="section-d-diagnosis-data"]'
+EstimatedAmountOfData-RowTwo-Txtbx: '//*[@id="section-d-file-type-1-amount-of-data"]'
+EstimDtaSiz-RowOne-Txtbx: '//*[@id="section-d-file-type-0-amount-of-data"]'
+ExpctdPublicationDate-TxtBx: '//*[@id="section-d-expected-publication-date"]'
+ExpctdPubliDate-Clndr: '//*[@id="section-d-expected-publication-date"]//following::button[1]'
+FileExtension-RowOne-Dd: '//*[@id="section-d-file-type-0-file-extension"]'
+FileExtension-RowTwo-Dd: '//*[@id="section-d-file-type-1-file-extension"]'
+FileType-RowOne-Dd: '//*[@id="section-d-file-type-0-file-type"]'
+FileType-RowTwo-Dd: '//*[@id="section-d-file-type-1-file-type"]'
+Genomics-SlidrBtn: '//*[@id="section-d-genomics"]'
+NumOfFiles-RowOne-Txtbx: '//*[@id="section-d-file-type-0-number-of-files"]'
+NumOfFiles-RowTwo-Txtbx: '//*[@id="section-d-file-type-1-number-of-files"]'
+OthrClinclDtaTyp-Txtbx: '//*[@id="section-d-clinical-data-other-data-types"]'
+OthrDtaTyp-Txtbx: '//*[@id="section-d-other-data-types"]'
+SectionD-FileTypeTable: "//table[contains(@class,'MuiTable-root')]"
+SectionD-FileTypeTableHeader: "//table[contains(@class,'MuiTable-root')]//thead"
+TragetSubmDelivryDate-Clnder: '//*[@id="section-d-targeted-data-submission-delivery-date"]//following::button[1]'
+TragetSubmDelivryDate-TxtBx: '//*[@id="section-d-targeted-data-submission-delivery-date"]'
+TragetSubmissionDelivryDate-Clnder: '//*[@id="section-d-targeted-data-submission-delivery-date"]//following::button[1]'
+TreatmentData-SlidrBtn: '//*[@id="section-d-treatment-data"]'

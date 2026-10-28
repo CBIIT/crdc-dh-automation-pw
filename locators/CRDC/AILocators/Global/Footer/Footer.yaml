@@ -1,0 +1,7 @@
+# CRDC/AILocators/Global/Footer
+
+DesktopFooter: "//*[@data-testid='desktop-footer']"
+MobileFooter: "//*[@data-testid='mobile-footer']"
+NewsletterEmail-TxtBx: "//*[@data-testid='email-input']"
+NewsletterSignUp-Btn: "//button[.='Sign up']"
+TabletFooter: "//*[@data-testid='tablet-footer']"

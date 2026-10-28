@@ -1,0 +1,10 @@
+# CRDC/AILocators/SubmissionRequests/Form/Navigation
+
+Approve-Btn: "//*[@id='submission-form-approve-button']"
+Back-Btn: "//*[@id='submission-form-back-button']"
+Inquire-Btn: "//*[@id='submission-form-inquire-button']"
+Next-Btn: "//*[@id='submission-form-next-button']"
+Reject-Btn: "//*[@id='submission-form-reject-button']"
+Review-Btn: "//*[@data-testid='progress-bar-section-4']"
+Save-Btn: "//*[@id='submission-form-save-button']"
+Submit-Btn: "//*[@id='submission-form-submit-button']"

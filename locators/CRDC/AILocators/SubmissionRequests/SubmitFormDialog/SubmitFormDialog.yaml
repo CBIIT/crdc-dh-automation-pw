@@ -1,0 +1,4 @@
+# CRDC/AILocators/SubmissionRequests/SubmitFormDialog
+
+Cancel-Btn: "//button[.='Cancel']"
+ConfirmSubmit-Btn: "//button[.='Confirm to Submit']"

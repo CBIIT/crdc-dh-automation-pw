@@ -1,0 +1,10 @@
+# CRDC/DataSubmissions/Create
+
+DataCommons-Ddn: "//div[@aria-describedby='submission-data-commons-helper-text']"
+DataCommonsDdn-Option: "//*[contains(@role,'option')]"
+MetadataDataFiles-Btn: "//*[@id='create-data-submission-dialog-data-type-Metadata and Data Files-radio-button']"
+MetadataOnly-Btn: "//*[@id='create-data-submission-dialog-data-type-Metadata Only-radio-button']"
+Study-Ddn: "//*[@id='mui-component-select-studyID']"
+StudyDdn-Option: "//*[contains(@data-testid,'study-option')]"
+SubTypeDelete-Btn: '//*[@id="create-data-submission-dialog-submission-type-Delete-radio-button"]'
+SubTypeNewUpdate-Btn: '//*[@id="create-data-submission-dialog-submission-type-New/Update-radio-button"]'

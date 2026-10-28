@@ -1,0 +1,4 @@
+# CRDC/AILocators/Institutions/List
+
+AddInstitution-Btn: "//a[.='Add Institution']"
+Container: "//*[@data-testid='list-institutions-container']"

@@ -1,0 +1,4 @@
+# CRDC/AILocators/DataSubmissions/Detail/DataView/DetailsDialog
+
+Close-Btn: "//*[@data-testid='data-view-dialog-cancel-button']"
+Close-Icon: "//*[@data-testid='data-view-dialog-close-icon-button']"

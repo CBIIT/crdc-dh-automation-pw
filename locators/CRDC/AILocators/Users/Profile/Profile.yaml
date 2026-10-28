@@ -1,0 +1,11 @@
+# CRDC/AILocators/Users/Profile
+
+AccountStatus-Ddn: "//*[@aria-labelledby='userStatusLabel']"
+Cancel-Btn: "//button[.='Cancel']"
+DataCommons-Ddn: "//*[@aria-labelledby='userDataCommons']"
+FirstName-TxtBx: "//*[@aria-labelledby='firstNameLabel']"
+Institution-Ddn: "//*[@data-testid='institution-input']"
+LastName-TxtBx: "//*[@aria-labelledby='lastNameLabel']"
+Role-Ddn: "//*[@aria-labelledby='userRoleLabel']"
+Save-Btn: "//button[.='Save']"
+Studies-Ddn: "//*[@aria-labelledby='userStudies']"

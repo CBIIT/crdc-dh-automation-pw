@@ -1,0 +1,4 @@
+# CRDC/AILocators/SubmissionRequests/InquireDialog
+
+ConfirmInquire-Btn: "//button[.='Confirm to move to Inquired']"
+ReviewComment-TxtBx: "//*[@data-testid='review-comment']"

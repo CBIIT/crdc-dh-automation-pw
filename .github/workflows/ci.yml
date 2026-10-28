@@ -1,0 +1,28 @@
+# Placeholder GitHub Actions workflow (Phase 0).
+# Not wired to a GitHub repo yet.
+#
+# config/qa.yaml, qa2.yaml, and stage.yaml are gitignored, so checkout does
+# not include credentials. Unit tests use committed *.yaml.example files.
+# When smoke is added, write the gitignored yaml from GitHub Environment
+# secrets first (see ci/README.md and ci/write_profile_yaml.py).
+
+name: ci
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Hub profile (qa, qa2, or stage). Used when smoke is added."
+        required: false
+        default: "qa"
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+      - run: pytest tests/unit -m unit

@@ -1,0 +1,6 @@
+# CRDC/AILocators/Home
+
+LoginDialogClose-Btn: "//*[@id='loginDialogCloseButton']"
+LoginDialogLink-Link: "//*[@id='loginDialogLinkToLogin']"
+LoginDialogLogin-Btn: "//*[@id='loginDialogLoginButton']"
+PageLogin-Btn: "//*[@id='loginPageLoginButton']"

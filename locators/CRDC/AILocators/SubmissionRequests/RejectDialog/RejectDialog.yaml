@@ -1,0 +1,4 @@
+# CRDC/AILocators/SubmissionRequests/RejectDialog
+
+ConfirmReject-Btn: "//button[.='Confirm to Reject']"
+ReviewComment-TxtBx: '//*[@name="reviewComment"]'

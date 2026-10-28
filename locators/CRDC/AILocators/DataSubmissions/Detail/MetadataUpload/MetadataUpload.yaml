@@ -1,0 +1,6 @@
+# CRDC/AILocators/DataSubmissions/Detail/MetadataUpload
+
+ChooseFiles-Btn: "//*[@data-testid='metadata-upload-file-select-button']"
+FileCount-Lbl: "//*[@data-testid='metadata-upload-file-count']"
+FileInput: "//*[@data-testid='metadata-upload-file-input']"
+Upload-Btn: "//*[@data-testid='metadata-upload-file-upload-button']"

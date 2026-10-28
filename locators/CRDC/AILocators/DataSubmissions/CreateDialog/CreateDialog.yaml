@@ -1,0 +1,15 @@
+# CRDC/AILocators/DataSubmissions/CreateDialog
+
+Close-Btn: "//*[@data-testid='create-submission-dialog-close-button']"
+Create-Btn: "//*[@data-testid='create-data-submission-dialog-create-button']"
+DataCommons-Ddn: "//*[@data-testid='create-data-submission-dialog-data-commons-input']"
+DataType-RadioBtn: "//*[@data-testid='create-data-submission-dialog-data-type-input']"
+DbGaPID-Lbl: "//*[@data-testid='dbGaP-id-label']"
+DbGaPID-TxtBx: "//*[@data-testid='create-data-submission-dialog-dbgap-id-input']"
+Dialog: "//*[@data-testid='create-submission-dialog']"
+Form: "//*[@id='create-submission-dialog-form']"
+PendingConditions-Icon: "//*[@data-testid='pending-conditions-icon']"
+Study-Ddn: "//*[@data-testid='create-data-submission-dialog-study-id-input']"
+SubmissionName-TxtBx: "//*[@data-testid='create-data-submission-dialog-submission-name-input']"
+SubmissionType-RadioBtn: "//*[@data-testid='create-data-submission-dialog-submission-type-input']"
+Title-Lbl: "//*[@id='create-a-submission-title']"

@@ -1,0 +1,6 @@
+# CRDC/AILocators/DataSubmissions/Detail/Tabs
+
+CrossValidation-Tab: "//a[contains(@href,'/cross-validation-results')]"
+DataView-Tab: "//a[contains(@href,'/data-view')]"
+UploadActivities-Tab: "//a[contains(@href,'/upload-activity')]"
+ValidationResults-Tab: "//a[contains(@href,'/validation-results')]"

@@ -1,0 +1,5 @@
+# CRDC/AILocators/Programs/List/Filters
+
+Filters-Container: "//*[@for='organization-filter']/.."
+ProgramName-TxtBx: "//*[@id='organization-filter']"
+StudyName-TxtBx: "//*[@id='study-filter']"

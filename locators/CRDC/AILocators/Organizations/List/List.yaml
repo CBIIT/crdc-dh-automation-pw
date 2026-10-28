@@ -1,0 +1,6 @@
+# CRDC/AILocators/Organizations/List
+
+AddProgram-Btn: "//a[.='Add Program']"
+ProgramFilter-TxtBx: "//*[@id='organization-filter']"
+StatusFilter-Ddn: "//*[@id='status-filter']"
+StudyFilter-TxtBx: "//*[@id='study-filter']"

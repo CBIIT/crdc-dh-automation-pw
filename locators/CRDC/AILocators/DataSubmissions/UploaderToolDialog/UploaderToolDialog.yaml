@@ -1,0 +1,14 @@
+# CRDC/AILocators/DataSubmissions/UploaderToolDialog
+
+Close-Btn: "//*[@data-testid='uploader-cli-close-button']"
+Close-Icon: "//*[@data-testid='uploader-cli-dialog-close-icon']"
+Dialog: "//*[@data-testid='uploader-cli-dialog']"
+# Text download link for Binary / MacOS ARM (crdc-datahub-cli-uploader-mac-arm.zip) in Uploader CLI Tool modal package table.
+DownloadLink-MacOSARM: "//*[@data-testid='package-table-text-download-crdc-datahub-cli-uploader-mac-arm.zip']"
+# Text download link for Binary / MacOS x64 (crdc-datahub-cli-uploader-mac-x64.zip) in Uploader CLI Tool modal package table.
+DownloadLink-MacOSX64: "//*[@data-testid='package-table-text-download-crdc-datahub-cli-uploader-mac-x64.zip']"
+# Text download link for Source / Any (crdc-datahub-cli-uploader-src.zip) in Uploader CLI Tool modal package table.
+DownloadLink-SourceAny: "//*[@data-testid='package-table-text-download-crdc-datahub-cli-uploader-src.zip']"
+# Text download link for Binary / Windows x64 (crdc-datahub-cli-uploader-windows.zip) in Uploader CLI Tool modal package table.
+DownloadLink-WindowsX64: "//*[@data-testid='package-table-text-download-crdc-datahub-cli-uploader-windows.zip']"
+Version-Lbl: "//*[@data-testid='uploader-cli-version']"

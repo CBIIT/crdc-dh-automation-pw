@@ -1,0 +1,6 @@
+# CRDC/AILocators/DataSubmissions/FileListDialog
+
+Close-Btn: "//*[@data-testid='file-list-close-button']"
+Close-Icon: "//*[@data-testid='file-list-close-icon']"
+Dialog: "//*[@data-testid='file-list-dialog']"
+DownloadAll-Btn: "//*[@data-testid='download-all-button']"

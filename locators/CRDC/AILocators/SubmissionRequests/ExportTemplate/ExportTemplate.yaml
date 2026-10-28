@@ -1,0 +1,4 @@
+# CRDC/AILocators/SubmissionRequests/ExportTemplate
+
+Export-Btn: "//*[@data-testid='export-application-excel-template-button']"
+Tooltip: "//*[@data-testid='export-application-excel-template-tooltip']"

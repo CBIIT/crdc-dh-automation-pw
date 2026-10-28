@@ -1,0 +1,5 @@
+# CRDC/AILocators/DataSubmissions/Detail/DataView
+
+DeletionAlert: "//*[@data-testid='submitted-data-deletion-alert']"
+HeaderCheckbox-Chkbx: "//*[@data-testid='header-checkbox']"
+RowCheckbox-Chkbx: "//*[@data-testid='row-checkbox']"

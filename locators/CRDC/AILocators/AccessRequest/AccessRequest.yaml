@@ -1,0 +1,11 @@
+# CRDC/AILocators/AccessRequest
+
+AdditionalInfo-TxtBx: "//*[@data-testid='access-request-additionalInfo-field']"
+Cancel-Btn: "//*[@data-testid='access-request-dialog-cancel-button']"
+Close-Icon: "//*[@data-testid='access-request-dialog-close-icon']"
+Dialog: "//*[@data-testid='access-request-dialog']"
+Institution-Ddn: "//*[@data-testid='access-request-institution-field']"
+RequestAccess-Btn: "//*[@data-testid='request-access-button']"
+Role-Ddn: "//*[@data-testid='access-request-role-field']"
+Studies-Ddn: "//*[@data-testid='access-request-studies-field']"
+Submit-Btn: "//*[@data-testid='access-request-dialog-submit-button']"

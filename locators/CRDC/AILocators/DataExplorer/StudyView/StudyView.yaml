@@ -1,0 +1,9 @@
+# CRDC/AILocators/DataExplorer/StudyView
+
+ColumnVisibility-Btn: "//*[@data-testid='column-visibility-button']"
+Container: "//*[@data-testid='study-view-container']"
+# Node Type dropdown on Data Explorer study view. Uses same data-testid as Data View when the same MUI Select component is used.
+DataSubmissionName-Link: '(//*[@data-testid="truncated-text-wrapper"])[1]'
+# Node Type dropdown on Data Explorer study view. Uses same data-testid as Data View when the same MUI Select component is used.
+NodeType-Ddn: '//*[@id="mui-component-select-nodeType"]'
+ShowAll-Chkbx: '//*[@data-testid="toggle-all-checkbox"]'

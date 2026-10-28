@@ -1,0 +1,4 @@
+# CRDC/AILocators/SubmissionRequests/List
+
+Container: "//h1[.='Submission Requests']/.."
+Resume-Btn: "//button[.='Resume']"

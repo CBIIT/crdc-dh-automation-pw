@@ -1,0 +1,7 @@
+# CRDC/AILocators/DataExplorer/List/Filters
+
+DataCommons-Ddn: "//*[@data-testid='data-commons-display-names-select']"
+DbGaPID-TxtBx: "//*[@data-testid='dbGaPID-input']"
+Filters-Container: "//*[@data-testid='data-explorer-filters']"
+ResetFilters-Btn: "//*[@data-testid='reset-filters-button']"
+StudyName-TxtBx: "//*[@data-testid='name-input']"

@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "crdc-dh-automation-pw"
+version = "0.1.0"
+description = "Playwright Python test framework for CRDC Data Hub (Katalon port)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "playwright>=1.49",
+    "pytest>=8.0",
+    "pytest-playwright>=0.6",
+    "pytest-html>=4.0",
+    "pyyaml>=6.0",
+    "pyotp>=2.9",
+]
+
+[project.optional-dependencies]
+dev = []
+
+[tool.setuptools.packages.find]
+where = ["src"]

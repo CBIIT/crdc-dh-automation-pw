@@ -1,0 +1,3 @@
+# CRDC/AILocators/DataSubmissions/Detail/ValidationResults
+
+SeeDetails-Btn: "//*[@data-testid='generic-table-body']//button[contains(text(),'See details')]"

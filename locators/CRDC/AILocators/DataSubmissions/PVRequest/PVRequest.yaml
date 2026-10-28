@@ -1,0 +1,7 @@
+# CRDC/AILocators/DataSubmissions/PVRequest
+
+Description-TxtBx: "//*[@data-testid='request-pv-description']"
+Property-TxtBx: "//*[@data-testid='request-pv-property']"
+Request-Btn: "//*[@data-testid='request-pv-button']"
+Tooltip: "//*[@data-testid='request-pv-tooltip']"
+Value-TxtBx: "//*[@data-testid='request-pv-value']"

@@ -1,0 +1,5 @@
+# CRDC/AILocators/DataSubmissions/Detail/Statistics
+
+Charts-Container: "//*[@data-testid='statistics-charts-container']"
+Empty-Container: "//*[@data-testid='statistics-empty-container']"
+Loader-Container: "//*[@data-testid='statistics-loader-container']"

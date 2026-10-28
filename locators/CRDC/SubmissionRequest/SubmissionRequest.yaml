@@ -1,0 +1,13 @@
+# CRDC/SubmissionRequest
+
+Back-Btn: '//*[@id="submission-form-back-button"]'
+Cancel-Btn: "//*[@data-testid='cancel-restore-application-button']"
+CrdcDdValue: "//*[contains(text(),'${GlobalVariable.CrdcUiElement}')]"
+Next-Btn: '//*[@id="submission-form-next-button"]'
+PopUpConfirmToSubmit-Btn: "//*[contains(@id, ':r') and @type='button']"
+Review-Btn: "//button[.='Review']"
+Save-Btn: '//*[@id="submission-form-save-button"]'
+Start_a_SubmissionRequest-Btn: "//*[contains(@id, ':r') and @type='button']"
+Submit-Btn: '//*[@id="submission-form-submit-button"]'
+SubmReqListTable-Row: "//tbody/tr"
+Toggle-Btn: "//*[contains(@id,'${GlobalVariable.CrdcUiElement}') and @type='checkbox']"

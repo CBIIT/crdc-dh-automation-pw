@@ -1,0 +1,9 @@
+# CRDC/AILocators/DataSubmissions/UpdateDialog
+
+Cancel-Btn: "//*[@data-testid='update-submission-dialog-cancel-button']"
+Close-Icon: "//*[@data-testid='update-submission-dialog-close-icon']"
+Dialog: "//*[@data-testid='update-submission-dialog']"
+Save-Btn: "//*[@data-testid='update-submission-dialog-submit-button']"
+Submitter-Ddn: "//*[@data-testid='update-submission-submitter-field']"
+Update-Btn: "//button[@data-testid='update-submission-button']"
+Version-Ddn: "//*[@data-testid='update-submission-version-field']"

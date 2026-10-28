@@ -1,0 +1,29 @@
+# Katalon profile CRDC_QA2.
+# Copy to qa2.yaml and fill Email / Password / Secret from that .glbl.
+# qa2.yaml is gitignored. Do not commit secrets.
+name: qa2
+base_url: https://hub-qa2.datacommons.cancer.gov/
+
+AdminEmail:
+AdminPassword:
+AdminSecret:
+
+FedleadEmail:
+FedleadPassword:
+FedleadSecret:
+
+DcpEmail:
+DcpPassword:
+DcpSecret:
+
+SubmitterEmail:
+SubmitterPassword:
+SubmitterSecret:
+
+UserEmail:
+UserPassword:
+UserSecret:
+
+MasterEmail:
+MasterPassword:
+MasterSecret:

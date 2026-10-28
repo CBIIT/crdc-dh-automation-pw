@@ -1,0 +1,18 @@
+# CRDC/AILocators/DataSubmissions/List/Filters
+
+ColumnVisibility-Btn: "//*[@data-testid='column-visibility-button']"
+DataCommons-Ddn: "//*[@data-testid='data-commons-select']"
+DataCommons-Ddn-Input: "//*[@data-testid='data-commons-select-input']"
+DataCommonsOptionAll-Ddn-Option: "//*[@data-testid='data-commons-option-All']"
+DbGaPID-TxtBx: "//*[@data-testid='dbGaPID-input']"
+Filters-Container: "//*[@data-testid='data-submission-list-filters']"
+Program-Ddn: "//*[@data-testid='organization-select']"
+Program-Ddn-Input: "//*[@data-testid='organization-select-input']"
+ProgramOptionAll-Ddn-Option: "//*[@data-testid='organization-option-All']"
+ResetFilters-Btn: "//*[@data-testid='reset-filters-button']"
+Status-Ddn: "//*[@data-testid='status-select']"
+Status-Ddn-Input: "//*[@data-testid='status-select-input']"
+SubmissionName-TxtBx: "//*[@data-testid='submission-name-input']"
+SubmitterName-Ddn: "//*[@data-testid='submitter-name-select']"
+SubmitterName-Ddn-Input: "//*[@data-testid='submitter-name-select-input']"
+SubmitterNameOptionAll-Ddn-Option: "//*[@data-testid='submitter-name-option-All']"
