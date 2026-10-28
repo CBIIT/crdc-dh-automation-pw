@@ -60,7 +60,7 @@ smoke:
         MasterPassword: ${{ secrets.MasterPassword }}
         MasterSecret: ${{ secrets.MasterSecret }}
       run: python ci/write_profile_yaml.py
-    - run: pytest -m smoke --tracing=retain-on-failure
+    - run: pytest -m CRDC_Smoke --tracing=retain-on-failure
       env:
         CRDC_PROFILE: ${{ inputs.profile }}
 ```
@@ -75,7 +75,7 @@ Do not commit filled yaml files or bake them into an image.
 # local — edit the gitignored file
 cp config/qa.yaml.example config/qa.yaml
 # fill secrets, then:
-CRDC_PROFILE=qa pytest -m smoke
+CRDC_PROFILE=qa pytest -m CRDC_Smoke
 
 # Actions — same pytest command, after the write step above
 ```

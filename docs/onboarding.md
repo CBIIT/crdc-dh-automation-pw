@@ -31,7 +31,7 @@ The framework can:
 - Look up locators the same way Katalon did (`CRDC/Login/...`)
 - Sign in through Login.gov with TOTP (one-time password)
 - Reuse a saved browser session so the next run does not pay OTP every time
-- Smoke-test that **Admin, Fedlead, Dcp, Submitter, User, and Master** land on Hub
+- Sign in as **Admin, Fedlead, Dcp, Submitter, User, and Master** and land on Hub (TC18)
 - Run **TC08** Manage Studies, **TC09** Manage Programs, **TC01** PBAC Fedlead defaults, and **CRDCDH-3974** Release Notes (markdown visible on QA)
 
 That is the floor everything else builds on. Submission Requests, Data Submissions, emails, Mongo, and GraphQL are **not** here yet.
@@ -72,28 +72,94 @@ Every live Hub test uses the same pattern:
 1. **Fixture** (`hub`) — open the browser, sign in as a role (Login.gov / saved cookies). Same idea as Katalon `closeBrowser` + `loginToCrdcOtp` at the top of every script, except it is not copied into each pytest file.
 2. **Page** — one Hub screen. Locators stay in YAML; the page turns those paths into clicks, fills, and reads.
 3. **Test** — the *scenario* plus asserts: construct the page, drive it, `expect` / `assert` in the pytest file.
-4. **Utils** (optional) — Excel, GitHub raw, TOTP when the case is not page-only. Not the browser.
+4. **Utils** (optional) — Excel, GitHub raw, TOTP when the case is not page-only. Not a screen.
 
 Initial login is **setup**, not a line in the test. **TC08** (Manage Studies list and filter) is the example below: construct a page, navigate, `expect`, filter, assert. PBAC and DS tests follow the same pattern after the same logged-in `hub`.
 
 If login or the browser fails, follow the plumbing table below. If you want to know *what the case is testing*, read the pytest file.
 
-### Layers
+### Core pieces
+
+These files are the whole framework. Everything else is a page or a test that uses them.
+
+```mermaid
+flowchart TB
+  pytestRun[pytest]
+  conftest[conftest.py]
+  configPy[config.py]
+  configYaml[config/qa.yaml]
+  loader[LocatorLoader]
+  locYaml[locators YAML]
+  authPy[auth.py]
+  hubBag[Hub]
+  testFile[test file]
+  pageObj[pages]
+  utilsBox[utils]
+  pytestRun --> conftest
+  conftest --> configPy
+  configPy --> configYaml
+  conftest --> loader
+  loader --> locYaml
+  conftest --> authPy
+  authPy --> hubBag
+  conftest --> hubBag
+  hubBag --> testFile
+  testFile --> pageObj
+  pageObj --> loader
+  testFile -.-> utilsBox
+```
+
+| Piece | File | Job in one sentence |
+|---|---|---|
+| **pytest** | you run this | Discovers tests and asks `conftest` for fixtures |
+| **conftest** | `tests/conftest.py` | Setup for every live test: open browser, log in, HTML report, failure screenshot. Not a page. |
+| **config** | `src/crdc_pw/config.py` + `config/qa.yaml` | Which Hub URL and which Login.gov accounts (was Katalon Profiles) |
+| **locators** | `locators/CRDC/**/*.yaml` + `src/crdc_pw/locators/loader.py` | Katalon path → XPath (was Object Repository) |
+| **auth** | `src/crdc_pw/auth.py` | Login.gov OTP / Grant. Fixture only. Tests do not call this unless the *scenario* switches user |
+| **hub** | `src/crdc_pw/hub.py` | Thin bag the fixture hands the test: this tab, this role, locators, settings. Not the Hub website |
+| **pages** | `src/crdc_pw/pages/` | One Hub screen each (`StudiesListPage`, `HeaderPage`, …). Clicks and reads. `BasePage` is the shared wait/locator helper |
+| **tests** | `tests/AuxiliaryTests/`, `tests/Pbac/` | Scenario + pass/fail. Same Katalon suite names (`CRDC_Auxiliary`, `CRDC_PBAC`, `CRDC_Smoke`) |
+| **utils** | `src/crdc_pw/utils/` | Optional oracles (Excel, TOTP, GitHub raw). Not a screen |
+
+How one live test runs:
+
+```mermaid
+sequenceDiagram
+  participant P as pytest
+  participant C as conftest
+  participant A as auth
+  participant T as test
+  participant PG as page
+  P->>C: this test asked for hub
+  C->>C: load qa.yaml and YAML locators
+  C->>A: log in or reuse cookies
+  A-->>C: signed in on this tab
+  C->>T: here is hub
+  T->>PG: open filter read
+  PG-->>T: rows or text
+  T->>T: expect or assert
+```
+
+Adding TC12 does **not** mean editing conftest, hub, auth, or config. You add a page (if the screen is new) and a pytest file. Touch auth/conftest only when login or session setup is wrong.
+
+### Layers (test author's view)
+
+The files above collapse to four jobs when you write a case:
 
 ```mermaid
 flowchart LR
-  fixture["hub fixture"]
+  fixture["conftest builds hub"]
   test["test: scenario + asserts"]
   page["pages/"]
   yaml["locators YAML"]
-  utils["utils/ oracles"]
+  utils["utils/"]
   fixture --> test
   test --> page
   page --> yaml
   test -.-> utils
 ```
 
-`hub` is who is signed in. The **test** owns the scenario and asserts. A **page** is one Hub screen. **utils** is optional: Excel, GitHub raw markdown, TOTP — not the browser.
+`hub` is who is signed in. The **test** owns the scenario and asserts. A **page** is one Hub screen. **utils** is optional: Excel, GitHub raw markdown, TOTP — not a screen.
 
 ### Folders
 
@@ -130,7 +196,9 @@ crdc-dh-automation-pw/
 | Data File `CRDC/Pbac/Permissions` | `InputFiles/CRDC/PBACPermissions.xlsx` + `utils/pbac_sheet.py` |
 | Object Repository `CRDC/Login/...` | `locators/CRDC/**/*.yaml` + `LocatorLoader` |
 | `Profiles/CRDC_QA.glbl` / `GlobalVariable` | `config/qa.yaml` |
-| Test Suite `CRDC_Smoke.ts` | `pytest -m smoke` |
+| Test Suite `CRDC_Smoke.ts` | `pytest -m CRDC_Smoke` |
+| Test Suite `CRDC_Auxiliary.ts` | `pytest -m CRDC_Auxiliary` |
+| Test Suite `CRDC_PBAC.ts` | `pytest -m CRDC_PBAC` |
 
 ### Fixture, page, test (no keyword layer)
 
@@ -140,7 +208,7 @@ Katalon had **no separate page layer**. `Login.groovy` was both the journey (`lo
 |---|---|---|---|---|
 | Question it answers | Who is signed in, on which tab? | What can you do *on this screen*? | How does Hub compare to a file / GitHub / TOTP? | What is the scenario, and did it pass? |
 | Example | Login.gov OTP, saved cookies, `hub.role` | `open()`, `apply_filters()`, `markdown_text()` | `write_expected` / `compare_actual`, `published_notes_snippet` | `expect(studies.container).to_be_visible()` |
-| Uses | `auth.py` + `LoginPage` / `HeaderPage` | Locator properties → YAML → Playwright | Excel, HTTP GET, `pyotp` | Page objects + optional utils + `expect` / `assert` |
+| Uses | `auth.py` + `LoginPage` / `HeaderPage` | Locator properties → YAML → Playwright (15s `BasePage.DEFAULT_MS`) | Excel, HTTP GET, `pyotp` | Page objects + optional utils + `expect` / `assert` |
 | Test calls it? | Asks for `hub` (already signed in). Uses `auth.switch_user(hub, role)` only when the *scenario* changes user | Yes — `StudiesListPage(hub.page, hub.locators)` | Yes, when the case needs an oracle (TC01, later 3979) | This *is* the test |
 
 Adding a new list case (TC12) does not touch `Hub` or `conftest.py`. You write a page object and a pytest file.
@@ -162,7 +230,7 @@ If a test only asks for `hub`, the role is **Admin**. A case that needs every ro
 
 ### Walkthrough: TC08 Manage Studies
 
-Command: `pytest -m smoke -k TC08`.
+Command: `pytest -m CRDC_Auxiliary -k TC08`.
 
 **The test file itself** (`tests/AuxiliaryTests/test_TC08_ManageStudiesListAndFilter.py`) assumes `hub` is already signed in as Admin. The file is the scenario: open the list, check chrome, filter, assert rows.
 
@@ -218,7 +286,7 @@ studies.container
     → _loc("CRDC/AILocators/Studies/List/Container")
     → LocatorLoader.get(path)     # YAML → XPath
     → page.locator(xpath)         # Playwright, this tab
-    → wait until visible, then read or click
+    → wait until visible (15s Hub default), then read or click
 ```
 
 The test never sees the XPath or the Katalon path. If a locator is wrong, the failure is usually in a **page** wait, not in the filter asserts.
@@ -313,10 +381,10 @@ Committed templates (URLs filled, secrets blank):
 
 ```bash
 # uses config/qa.yaml
-pytest -m smoke
+pytest -m CRDC_Auxiliary
 
 # uses config/qa2.yaml
-CRDC_PROFILE=qa2 pytest -m smoke
+CRDC_PROFILE=qa2 pytest -m CRDC_Auxiliary
 ```
 
 Editing `qa2.yaml` does nothing unless `CRDC_PROFILE=qa2`. There is no pytest `--profile` flag yet.
@@ -368,7 +436,7 @@ For QA2 or Stage:
 ```bash
 cp config/qa2.yaml.example config/qa2.yaml
 # fill, then:
-CRDC_PROFILE=qa2 pytest -m smoke
+CRDC_PROFILE=qa2 pytest -m CRDC_Auxiliary
 ```
 
 ### 5. Confirm unit tests (no Hub, no accounts)
@@ -388,24 +456,26 @@ Always activate the venv first (`source .venv/bin/activate`).
 | What | Command |
 |---|---|
 | Unit (no browser) | `pytest tests/unit -m unit` |
-| Login smoke, all six roles (TC18) | `pytest -m smoke` |
-| Same, watch the browser | `pytest -m smoke --headed` |
-| One role | `pytest -m smoke -k Admin` |
-| TC08 Manage Studies list only | `pytest -m smoke -k TC08` |
-| TC09 Manage Programs list only | `pytest -m smoke -k TC09` |
-| TC01 PBAC Fedlead defaults | `pytest -m smoke -k TC01` |
-| CRDCDH-3974 Release Notes | `pytest -m smoke -k 3974` |
+| Katalon Auxiliary suite | `pytest -m CRDC_Auxiliary` |
+| Katalon Smoke subset (TC08, TC09 today) | `pytest -m CRDC_Smoke` |
+| Katalon PBAC suite | `pytest -m CRDC_PBAC` |
+| Same, watch the browser | `pytest -m CRDC_Auxiliary --headed` |
+| TC18 one role | `pytest -m CRDC_Auxiliary -k Admin` |
+| TC08 Manage Studies list only | `pytest -m CRDC_Auxiliary -k TC08` |
+| TC09 Manage Programs list only | `pytest -m CRDC_Auxiliary -k TC09` |
+| TC01 PBAC Fedlead defaults | `pytest -m CRDC_PBAC -k TC01` |
+| CRDCDH-3974 Release Notes | `pytest -m CRDC_Auxiliary -k 3974` |
 | TC18 file only | `pytest tests/AuxiliaryTests/test_TC18_LoginAllRolesAndSwitchUser.py` |
-| Against QA2 | `CRDC_PROFILE=qa2 pytest -m smoke` |
+| Against QA2 | `CRDC_PROFILE=qa2 pytest -m CRDC_Auxiliary` |
 
-The login smoke is Katalon **TC18_LoginAllRolesAndSwitchUser** at `tests/AuxiliaryTests/test_TC18_LoginAllRolesAndSwitchUser.py`. It checks that each role lands on Hub (username in the header, URL is Data Commons, not Login.gov). The `test_` prefix is required so pytest collects the file; the rest of the name matches Katalon.
+TC18 is Katalon **TC18_LoginAllRolesAndSwitchUser** (`CRDC_Auxiliary`, not `CRDC_Smoke`) at `tests/AuxiliaryTests/test_TC18_LoginAllRolesAndSwitchUser.py`. It checks that each role lands on Hub (username in the header, URL is Data Commons, not Login.gov). The `test_` prefix is required so pytest collects the file; the rest of the name matches Katalon.
 
 Every run writes `reports/report-YYYYMMDD-HHMMSS.html` (gitignored, Katalon-style new file per run). Override with `--html=path`. A failed live test embeds a full-page screenshot in that HTML and writes a PNG under `reports/screenshots/`.
 
 Useful pytest extras:
 
 ```bash
-pytest -m smoke --headed --slowmo 300   # slow the UI down to watch
+pytest -m CRDC_Auxiliary --headed --slowmo 300   # slow the UI down to watch
 pytest tests/unit -m unit -q                         # quieter
 ```
 

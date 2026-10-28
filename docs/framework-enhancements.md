@@ -34,7 +34,7 @@ Human walkthrough of how the framework works today: [onboarding.md](onboarding.m
 
 **Plan (not implemented):** [auth-once-then-parallel.md](auth-once-then-parallel.md).
 
-### 2. Playwright waits, one timeout policy — Open
+### 2. Playwright waits, one timeout policy — Done
 
 **Problem:** Pages use Selenium-style `wait_for(..., timeout=N)` plus `try/except` returning a bool. Many hand-tuned timeouts (1s–30s). Swallowed timeouts (`pass`) push the real failure downstream. Optional checks that are absent pay the full timeout.
 
@@ -42,7 +42,7 @@ Human walkthrough of how the framework works today: [onboarding.md](onboarding.m
 
 **Target:** Prefer `expect(locator).to_be_visible()` with one project-wide timeout. Use `locator.or_()` for either-or states (`pages/release_notes.py` already does this). Remove swallowed timeouts.
 
-**Where:** `pages/*.py`, `pytest.ini` / Playwright default timeout.
+**Where:** `BasePage` (`DEFAULT_MS` 15s on context + expect, `PROBE_MS` 2s for optional chrome, `RELEASE_NOTES_MS` 30s for the GitHub fetch). Table wait on `BasePage._wait_for_table_settled`. Login.gov timings stay in `login.py` / `auth.py`.
 
 ### 3. YAML XPath as destination — Deferred
 
@@ -82,13 +82,13 @@ Keep using YAML for dual-run. Do not block items 1, 2, 4–6 on this.
 |---|---|---|---|
 | Tooling | `dev = []`, no ruff/mypy/lockfile/pre-commit | Add ruff, mypy, pinned lock, pre-commit. Unchecked type hints drift. | Open |
 | Tracing | Screenshot only (Katalon-shaped) | `--tracing=retain-on-failure` in addopts or CI. Trace viewer is the debugging upgrade. | Open |
-| Markers | Every live test is `smoke`, including PBAC reset | Markers: `smoke`, `regression`, `area`, `slow`, `destructive`. `--strict-markers`. TC01 is not smoke. | Open |
+| Markers | Every live test is `smoke`, including PBAC reset | Katalon suite names (`CRDC_Auxiliary`, `CRDC_PBAC`, `CRDC_Smoke`, …). `--strict-markers`. Only Katalon smoke members get `CRDC_Smoke`. | Done |
 | Test logging | `log.info("Assert ...")` / `log.info("PASS TC08 ...")` will be copied 300 times | Put context in assertion messages. Drop PASS lines. Revisit `log_cli = true` (noisy by default). | Open |
 | Locator contract test | Typo in a `CRDC/...` string fails after a 15s live timeout | Unit test: every `CRDC/` string in `pages/` exists in the loader. | Open |
 | Hardcoded conventions | `pbac.{role}-automation` in `auth.py`; `datacommons.cancer.gov` in TC18; `autoQA` / `AutoTest-Program` in tests | Username scheme configurable; TC18 host from `settings.base_url`; filter data per env (QA2/Stage may differ). | Open |
 | `switch_user` | Reuses a context after clearing cookies | Fresh context (Katalon closed the browser). Save the new role’s `storage_state`. | Open |
 | Loader dual API | Attribute access (`locators.CRDC...`) is unused, extra duplicate rules | Keep `get(path)` only. | Open |
-| Bare `except Exception` | `HeaderPage.is_logged_in` treats a closed/crashed page as “not logged in” and may trigger OTP | Catch the specific timeout / closed-page errors only. | Open |
+| Bare `except Exception` | `HeaderPage.is_logged_in` treats a closed/crashed page as “not logged in” and may trigger OTP | Catch the specific timeout / closed-page errors only. | Done |
 | Filter warnings | `filterwarnings = ignore::DeprecationWarning` | Stop hiding Playwright upgrade signals. | Open |
 
 ---
@@ -98,13 +98,13 @@ Keep using YAML for dual-run. Do not block items 1, 2, 4–6 on this.
 Do these in this sequence unless a live flake forces a jump (e.g. PBAC positional match, banner timeout).
 
 1. **Auth setup once per role with a lock, then xdist.** Measure before and after.
-2. **Shared component layer and a single timeout policy.** Remove swallowed timeouts.
+2. **Shared component layer.** Tables, filters, MUI dropdowns (timeout policy is done as #2).
 3. **Label-based PBAC comparison and scoped checkbox locator.** Per-run output before parallel PBAC.
 4. **Tooling:** ruff, mypy, lockfile, tracing, markers, locator contract test.
 
-Locator properties (#4) are done. Strict mode and retiring `.first` wait until YAML retirement (#3) is in scope.
+Locator properties (#4) and Hub wait policy (#2) are done. Strict mode and retiring `.first` wait until YAML retirement (#3) is in scope.
 
-Then the smaller table, cheapest first (bare except, filterwarnings, loader API, TC18 host, logging) unless they land naturally with 1–4.
+Then the smaller table, cheapest first (filterwarnings, loader API, TC18 host, logging) unless they land naturally with 1–4.
 
 ## Out of scope here
 

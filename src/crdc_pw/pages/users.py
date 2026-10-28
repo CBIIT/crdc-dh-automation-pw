@@ -50,9 +50,9 @@ class PermissionForm(BasePage):
 
     def expand_permission_panels(self) -> None:
         """Open the Permissions and Email Notifications accordions."""
-        self._loc(PERMISSIONS_PANEL).wait_for(state="visible", timeout=15000)
+        self._loc(PERMISSIONS_PANEL).wait_for(state="visible")
         self._loc(PERMISSIONS_PANEL).click()
-        self._loc(NOTIFICATIONS_PANEL).wait_for(state="visible", timeout=10000)
+        self._loc(NOTIFICATIONS_PANEL).wait_for(state="visible")
         self._loc(NOTIFICATIONS_PANEL).click()
 
     def read_permission_rows(self) -> list[tuple[str, str]]:
@@ -62,7 +62,7 @@ class PermissionForm(BasePage):
         """
         boxes = self._loc(CHECKBOX)
         labels = self._loc(CHECKBOX_LABEL)
-        boxes.first.wait_for(state="attached", timeout=15000)
+        boxes.first.wait_for(state="attached")
         box_count = boxes.count()
         label_count = labels.count()
         if label_count != box_count:
@@ -104,16 +104,16 @@ class PermissionForm(BasePage):
 
     def _select_role(self, role_display: str) -> None:
         dropdown = self._loc(ROLE_DDN)
-        dropdown.wait_for(state="visible", timeout=15000)
+        dropdown.wait_for(state="visible")
         dropdown.click()
         option = self._loc(ROLE_OPTION, role=role_display)
-        option.wait_for(state="visible", timeout=10000)
+        option.wait_for(state="visible")
         option.click()
         log.info("Selected role: %s", role_display)
 
-    def _wait_for_snackbar_gone(self, timeout_ms: int = 20000) -> None:
+    def _wait_for_snackbar_gone(self) -> None:
         try:
-            self._loc(SNACKBAR).wait_for(state="hidden", timeout=timeout_ms)
+            self._loc(SNACKBAR).wait_for(state="hidden")
         except PlaywrightTimeoutError:
             log.info("wait_for_snackbar_gone: snackbar still present or never shown")
 
@@ -150,7 +150,7 @@ class ManageUsersPage(PermissionForm):
                 else:
                     raise
             if self._click_edit_on_current_page(needle):
-                self._loc(ROLE_DDN).wait_for(state="visible", timeout=15000)
+                self._loc(ROLE_DDN).wait_for(state="visible")
                 log.info("User %r found and Edit clicked.", needle)
                 return
             next_btn = self._loc(NEXT_PAGE).first
@@ -165,11 +165,13 @@ class ManageUsersPage(PermissionForm):
         """Type into the Name filter when Hub shows it. No-op if the box is missing."""
         box = self._loc(USER_FILTER)
         try:
-            box.wait_for(state="visible", timeout=5000)
+            box.wait_for(state="visible", timeout=self.PROBE_MS)
         except PlaywrightTimeoutError:
             return
+        rows = self._table_rows()
+        before = self._table_fingerprint(rows)
         box.fill(needle)
-        self._wait_for_table_settled()
+        self._wait_for_table_settled(self._loc(LOADING_ROW), rows, previous=before)
         log.info("Manage Users name filter: %r", needle)
 
     def _click_edit_on_current_page(self, needle: str) -> bool:
@@ -192,22 +194,10 @@ class ManageUsersPage(PermissionForm):
             return generic
         return self._loc(HTML_ROW)
 
-    def _wait_for_table(self, timeout_ms: int = 25000) -> None:
-        try:
-            self._loc(CONTAINER).wait_for(state="visible", timeout=timeout_ms)
-        except PlaywrightTimeoutError:
-            pass
-        try:
-            self._loc(GENERIC_ROW).first.wait_for(state="attached", timeout=timeout_ms)
-        except PlaywrightTimeoutError:
-            self._loc(HTML_ROW).first.wait_for(state="attached", timeout=timeout_ms)
-        self._wait_for_table_settled()
-
-    def _wait_for_table_settled(self, timeout_ms: int = 15000) -> None:
-        try:
-            self._loc(LOADING_ROW).first.wait_for(state="hidden", timeout=timeout_ms)
-        except PlaywrightTimeoutError:
-            pass
+    def _wait_for_table(self) -> None:
+        self._loc(CONTAINER).wait_for(state="visible")
+        self._loc(GENERIC_ROW).or_(self._loc(HTML_ROW)).first.wait_for(state="attached")
+        self._wait_for_table_settled(self._loc(LOADING_ROW))
 
 
 class UserProfilePage(PermissionForm):
@@ -215,5 +205,5 @@ class UserProfilePage(PermissionForm):
         """User menu → Profile, then wait for the permission form (or the page body)."""
         log.info("Navigate: User Profile")
         HeaderPage(self.page, self.locators).open_profile()
-        self._loc(PERMISSIONS_PANEL).wait_for(state="visible", timeout=20000)
+        self._loc(PERMISSIONS_PANEL).wait_for(state="visible")
         log.info("User Profile page loaded")

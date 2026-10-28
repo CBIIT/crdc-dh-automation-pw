@@ -5,14 +5,14 @@ Tests construct this from hub (ProgramsListPage(hub.page, hub.locators)), then:
   apply_filters()   — type program name and/or study name
   read_table_rows() — current table as lists of cell text
 
-Locator constants are Katalon object-repository paths (YAML), not raw XPath.
+YAML paths stay on this page. Tests use programs.container / programs.add_program.
 """
 
 from __future__ import annotations
 
 import logging
 
-from playwright.sync_api import Locator, TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import Locator
 
 from crdc_pw.pages.base import BasePage
 from crdc_pw.pages.header import HeaderPage
@@ -43,29 +43,21 @@ class ProgramsListPage(BasePage):
         self.wait_until_ready()
         log.info("Manage Programs list page loaded")
 
-    def wait_until_ready(self, timeout_ms: int = 30000) -> None:
-        """Block until the Manage Programs page container is on screen."""
-        self.container.wait_for(state="visible", timeout=timeout_ms)
-
-    def container_visible(self, timeout_ms: int = 10000) -> bool:
-        """True if the list container showed up before timeout."""
-        return self._is_visible(_CONTAINER, timeout_ms)
-
-    def add_program_visible(self, timeout_ms: int = 5000) -> bool:
-        """True if the Add Program button showed up before timeout."""
-        return self._is_visible(_ADD_PROGRAM, timeout_ms)
+    def wait_until_ready(self) -> None:
+        """Block until the Manage Programs page container is on screen (Hub default timeout)."""
+        self.container.wait_for(state="visible")
 
     def row_count(self) -> int:
         """How many data rows are in the table right now (no wait)."""
         return self._loc(_TABLE_ROW).count()
 
-    def fill_program_name(self, value: str) -> bool:
-        """Type into the Program Name filter. False if the box is not there."""
-        return self._fill_if_visible(_PROGRAM_NAME, value)
+    def fill_program_name(self, value: str) -> None:
+        """Type into the Program Name filter. Fails if the box is not there."""
+        self._loc(_PROGRAM_NAME).first.fill(value)
 
-    def fill_study_name(self, value: str) -> bool:
-        """Type into the Study Name filter. False if the box is not there."""
-        return self._fill_if_visible(_STUDY_NAME, value)
+    def fill_study_name(self, value: str) -> None:
+        """Type into the Study Name filter. Fails if the box is not there."""
+        self._loc(_STUDY_NAME).first.fill(value)
 
     def apply_filters(
         self,
@@ -86,19 +78,18 @@ class ProgramsListPage(BasePage):
             program_name,
             study_name,
         )
+        rows = self._loc(_TABLE_ROW)
+        before = self._table_fingerprint(rows)
         if program_name:
             self.fill_program_name(program_name)
         if study_name:
             self.fill_study_name(study_name)
-        self.wait_for_table_settled()
+        self._wait_for_table_settled(self._loc(_LOADING_ROW), rows, previous=before)
         log.info("Apply Manage Programs filters: completed")
 
-    def wait_for_table_settled(self, timeout_ms: int = 15000) -> None:
-        """Wait until the table spinner/loading row is gone. No-op if it never appeared."""
-        try:
-            self._loc(_LOADING_ROW).first.wait_for(state="hidden", timeout=timeout_ms)
-        except PlaywrightTimeoutError:
-            pass
+    def wait_for_table_settled(self) -> None:
+        """Wait until the table spinner is gone. Used after open when no filter ran."""
+        self._wait_for_table_settled(self._loc(_LOADING_ROW))
 
     def read_table_rows(self) -> list[list[str]]:
         """Each visible data row as a list of td text (header order). Empty list if none."""
@@ -108,21 +99,6 @@ class ProgramsListPage(BasePage):
             cells = [text.strip() for text in row.locator("td").all_inner_texts()]
             rows.append(cells)
         return rows
-
-    def _is_visible(self, path: str, timeout_ms: int) -> bool:
-        try:
-            self._loc(path).first.wait_for(state="visible", timeout=timeout_ms)
-            return True
-        except PlaywrightTimeoutError:
-            return False
-
-    def _fill_if_visible(self, path: str, value: str, timeout_ms: int = 5000) -> bool:
-        """Type into a text filter only if that field is on screen."""
-        if not self._is_visible(path, timeout_ms):
-            return False
-        box = self._loc(path).first
-        box.fill(value)
-        return True
 
 
 def _trim(value: str | None) -> str | None:

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 
-from playwright.sync_api import Locator, TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import Locator
 
 from crdc_pw.pages.base import BasePage
 
@@ -32,25 +32,21 @@ class ReleaseNotesPage(BasePage):
     def error(self) -> Locator:
         return self._loc(_ERROR)
 
-    def open(self, timeout_ms: int = 30000) -> None:
+    def open(self) -> None:
         """Scroll the desktop footer into view, click Release Notes, wait until markdown or error shows."""
         log.info("Navigate: Release Notes")
         footer = self._loc(_FOOTER)
         footer.scroll_into_view_if_needed()
         link = self._loc(_FOOTER_LINK)
-        link.wait_for(state="visible", timeout=timeout_ms)
+        link.wait_for(state="visible", timeout=self.RELEASE_NOTES_MS)
         link.click()
-        self.page.wait_for_url("**/release-notes", timeout=timeout_ms)
-        self.wait_until_ready(timeout_ms=timeout_ms)
+        self.page.wait_for_url("**/release-notes", timeout=self.RELEASE_NOTES_MS)
+        self.wait_until_ready()
         log.info("Release Notes page loaded")
 
-    def wait_until_ready(self, timeout_ms: int = 30000) -> None:
+    def wait_until_ready(self) -> None:
         """Block until the markdown body or the error alert is on screen (GitHub fetch can be slow)."""
-        try:
-            self.markdown.or_(self.error).first.wait_for(state="visible", timeout=timeout_ms)
-        except PlaywrightTimeoutError:
-            log.info("Release Notes: neither markdown nor error visible within %sms", timeout_ms)
-            raise
+        self.markdown.or_(self.error).first.wait_for(state="visible", timeout=self.RELEASE_NOTES_MS)
 
     def markdown_text(self) -> str:
         """Inner text of the rendered markdown. Empty string if the node is not there yet."""
