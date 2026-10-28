@@ -12,6 +12,8 @@ USERNAME = "CRDC/AILocators/Global/Header/Desktop/UserName-Btn"
 LOGOUT = "CRDC/AILocators/Global/Header/Desktop/Logout-Btn"
 MANAGE_STUDIES = "CRDC/AILocators/Global/Header/Desktop/ManageStudies-Link"
 MANAGE_PROGRAMS = "CRDC/AILocators/Global/Header/Desktop/ManagePrograms-Link"
+MANAGE_USERS = "CRDC/AILocators/Global/Header/Desktop/ManageUsers-Link"
+USER_PROFILE = "CRDC/AILocators/Global/Header/Desktop/UserProfile-Link"
 
 
 class HeaderPage(BasePage):
@@ -54,5 +56,19 @@ class HeaderPage(BasePage):
         """User menu → Manage Programs. Katalon clickTab UserProfile-Dd then ManagePrograms-Link."""
         self.open_user_menu()
         link = self.loc(MANAGE_PROGRAMS)
+        link.wait_for(state="visible", timeout=10000)
+        link.click()
+
+    def open_manage_users(self) -> None:
+        """User menu → Manage Users. Katalon clickTab UserProfile-Dd then ManageUsers-Btn."""
+        self.open_user_menu()
+        link = self.loc(MANAGE_USERS)
+        link.wait_for(state="visible", timeout=10000)
+        link.click()
+
+    def open_profile(self) -> None:
+        """User menu → User Profile. Katalon clickTab UserProfile-Dd then UserProfile-Link."""
+        self.open_user_menu()
+        link = self.loc(USER_PROFILE)
         link.wait_for(state="visible", timeout=10000)
         link.click()

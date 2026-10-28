@@ -68,7 +68,7 @@ Prefer Playwright `expect(locator).to_be_visible()` over bool-return + `assert` 
 
 ## Comments
 
-Tests: numbered **step** comments (Katalon script style) plus a short **Flow** list in the module docstring. A reader should see navigate / check chrome / filter / assert without tracing helpers.
+Tests: numbered **step** comments (Katalon script style) plus a short **Flow** list in the module docstring. A reader should see navigate / check chrome / filter / assert without tracing helpers. Unit tests (`tests/unit/`): same Flow list, plus a one-line docstring on each function saying **what it guards** (no Hub, no OTP).
 
 ```python
 # 1. User menu → Manage Studies
