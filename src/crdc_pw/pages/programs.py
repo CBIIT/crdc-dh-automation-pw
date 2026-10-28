@@ -12,22 +12,30 @@ from __future__ import annotations
 
 import logging
 
-from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import Locator, TimeoutError as PlaywrightTimeoutError
 
 from crdc_pw.pages.base import BasePage
 from crdc_pw.pages.header import HeaderPage
 
 log = logging.getLogger("crdc_pw.programs")
 
-CONTAINER = "CRDC/AILocators/Programs/List/Container"
-ADD_PROGRAM = "CRDC/AILocators/Programs/List/AddProgram-Btn"
-TABLE_ROW = "CRDC/AILocators/GenericTable/TableRow"
-LOADING_ROW = "CRDC/AILocators/GenericTable/LoadingRow"
-PROGRAM_NAME = "CRDC/AILocators/Programs/List/Filters/ProgramName-TxtBx"
-STUDY_NAME = "CRDC/AILocators/Programs/List/Filters/StudyName-TxtBx"
+_CONTAINER = "CRDC/AILocators/Programs/List/Container"
+_ADD_PROGRAM = "CRDC/AILocators/Programs/List/AddProgram-Btn"
+_TABLE_ROW = "CRDC/AILocators/GenericTable/TableRow"
+_LOADING_ROW = "CRDC/AILocators/GenericTable/LoadingRow"
+_PROGRAM_NAME = "CRDC/AILocators/Programs/List/Filters/ProgramName-TxtBx"
+_STUDY_NAME = "CRDC/AILocators/Programs/List/Filters/StudyName-TxtBx"
 
 
 class ProgramsListPage(BasePage):
+    @property
+    def container(self) -> Locator:
+        return self._loc(_CONTAINER)
+
+    @property
+    def add_program(self) -> Locator:
+        return self._loc(_ADD_PROGRAM)
+
     def open(self) -> None:
         """Click username → Manage Programs, then wait until the list container is visible."""
         log.info("Navigate: Manage Programs")
@@ -37,27 +45,27 @@ class ProgramsListPage(BasePage):
 
     def wait_until_ready(self, timeout_ms: int = 30000) -> None:
         """Block until the Manage Programs page container is on screen."""
-        self.loc(CONTAINER).wait_for(state="visible", timeout=timeout_ms)
+        self.container.wait_for(state="visible", timeout=timeout_ms)
 
     def container_visible(self, timeout_ms: int = 10000) -> bool:
         """True if the list container showed up before timeout."""
-        return self._is_visible(CONTAINER, timeout_ms)
+        return self._is_visible(_CONTAINER, timeout_ms)
 
     def add_program_visible(self, timeout_ms: int = 5000) -> bool:
         """True if the Add Program button showed up before timeout."""
-        return self._is_visible(ADD_PROGRAM, timeout_ms)
+        return self._is_visible(_ADD_PROGRAM, timeout_ms)
 
     def row_count(self) -> int:
         """How many data rows are in the table right now (no wait)."""
-        return self.loc(TABLE_ROW).count()
+        return self._loc(_TABLE_ROW).count()
 
     def fill_program_name(self, value: str) -> bool:
         """Type into the Program Name filter. False if the box is not there."""
-        return self._fill_if_visible(PROGRAM_NAME, value)
+        return self._fill_if_visible(_PROGRAM_NAME, value)
 
     def fill_study_name(self, value: str) -> bool:
         """Type into the Study Name filter. False if the box is not there."""
-        return self._fill_if_visible(STUDY_NAME, value)
+        return self._fill_if_visible(_STUDY_NAME, value)
 
     def apply_filters(
         self,
@@ -88,7 +96,7 @@ class ProgramsListPage(BasePage):
     def wait_for_table_settled(self, timeout_ms: int = 15000) -> None:
         """Wait until the table spinner/loading row is gone. No-op if it never appeared."""
         try:
-            self.loc(LOADING_ROW).first.wait_for(state="hidden", timeout=timeout_ms)
+            self._loc(_LOADING_ROW).first.wait_for(state="hidden", timeout=timeout_ms)
         except PlaywrightTimeoutError:
             pass
 
@@ -96,14 +104,14 @@ class ProgramsListPage(BasePage):
         """Each visible data row as a list of td text (header order). Empty list if none."""
         self.wait_for_table_settled()
         rows: list[list[str]] = []
-        for row in self.loc(TABLE_ROW).all():
+        for row in self._loc(_TABLE_ROW).all():
             cells = [text.strip() for text in row.locator("td").all_inner_texts()]
             rows.append(cells)
         return rows
 
     def _is_visible(self, path: str, timeout_ms: int) -> bool:
         try:
-            self.loc(path).first.wait_for(state="visible", timeout=timeout_ms)
+            self._loc(path).first.wait_for(state="visible", timeout=timeout_ms)
             return True
         except PlaywrightTimeoutError:
             return False
@@ -112,7 +120,7 @@ class ProgramsListPage(BasePage):
         """Type into a text filter only if that field is on screen."""
         if not self._is_visible(path, timeout_ms):
             return False
-        box = self.loc(path).first
+        box = self._loc(path).first
         box.fill(value)
         return True
 

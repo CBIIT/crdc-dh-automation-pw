@@ -38,7 +38,7 @@ Katalon has **keyword classes**, not page objects (`Keywords/utilities/*.groovy`
 
 ```python
 studies.open()
-expect(studies.loc(CONTAINER)).to_be_visible()
+expect(studies.container).to_be_visible()
 studies.apply_filters(study_name="autoQA", program="AutoTest-Program")
 assert any("autoQA" in cell for row in studies.read_table_rows() for cell in row)
 ```

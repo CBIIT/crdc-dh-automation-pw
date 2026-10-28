@@ -17,7 +17,7 @@ import pytest
 from playwright.sync_api import expect
 
 from crdc_pw.hub import Hub
-from crdc_pw.pages.studies import ADD_STUDY, CONTAINER, StudiesListPage
+from crdc_pw.pages.studies import StudiesListPage
 
 log = logging.getLogger("crdc_pw.tc08")
 
@@ -30,8 +30,8 @@ def test_TC08_ManageStudiesListAndFilter(hub: Hub) -> None:
     studies.open()
 
     # 2. List chrome: container and Add Study are visible (0 rows is allowed here)
-    expect(studies.loc(CONTAINER)).to_be_visible()
-    expect(studies.loc(ADD_STUDY)).to_be_visible()
+    expect(studies.container).to_be_visible()
+    expect(studies.add_study).to_be_visible()
     studies.wait_for_table_settled()
     rows = studies.row_count()
     log.info("Assert Manage Studies: container and Add Study visible (rows=%s)", rows)

@@ -20,7 +20,7 @@ import pytest
 from playwright.sync_api import expect
 
 from crdc_pw.hub import Hub
-from crdc_pw.pages.release_notes import ERROR, MARKDOWN, ReleaseNotesPage
+from crdc_pw.pages.release_notes import ReleaseNotesPage
 
 log = logging.getLogger("crdc_pw.tc_crdcdh_3974")
 
@@ -33,8 +33,8 @@ def test_TC_CRDCDH_3974_ReleaseNotesPage(hub: Hub) -> None:
     notes.open()
 
     # 2. Markdown loaded; fetch-error alert is not shown
-    expect(notes.loc(MARKDOWN)).to_be_visible()
-    expect(notes.loc(ERROR)).not_to_be_visible()
+    expect(notes.markdown).to_be_visible()
+    expect(notes.error).not_to_be_visible()
     log.info("Assert Release Notes: markdown visible, error alert hidden")
 
     # 3. Rendered notes are non-empty (do not pin version or source URL)

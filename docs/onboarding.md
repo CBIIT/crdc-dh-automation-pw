@@ -139,8 +139,8 @@ Katalon had **no separate page layer**. `Login.groovy` was both the journey (`lo
 | | **Fixture** (`hub`) | **Page** (`pages/`) | **Utils** (`utils/`) | **Test** (`tests/`) |
 |---|---|---|---|---|
 | Question it answers | Who is signed in, on which tab? | What can you do *on this screen*? | How does Hub compare to a file / GitHub / TOTP? | What is the scenario, and did it pass? |
-| Example | Login.gov OTP, saved cookies, `hub.role` | `open()`, `apply_filters()`, `markdown_text()` | `write_expected` / `compare_actual`, `published_notes_snippet` | `expect(studies.loc(CONTAINER)).to_be_visible()` |
-| Uses | `auth.py` + `LoginPage` / `HeaderPage` | YAML path → Playwright locator | Excel, HTTP GET, `pyotp` | Page objects + optional utils + `expect` / `assert` |
+| Example | Login.gov OTP, saved cookies, `hub.role` | `open()`, `apply_filters()`, `markdown_text()` | `write_expected` / `compare_actual`, `published_notes_snippet` | `expect(studies.container).to_be_visible()` |
+| Uses | `auth.py` + `LoginPage` / `HeaderPage` | Locator properties → YAML → Playwright | Excel, HTTP GET, `pyotp` | Page objects + optional utils + `expect` / `assert` |
 | Test calls it? | Asks for `hub` (already signed in). Uses `auth.switch_user(hub, role)` only when the *scenario* changes user | Yes — `StudiesListPage(hub.page, hub.locators)` | Yes, when the case needs an oracle (TC01, later 3979) | This *is* the test |
 
 Adding a new list case (TC12) does not touch `Hub` or `conftest.py`. You write a page object and a pytest file.
@@ -170,8 +170,8 @@ Command: `pytest -m smoke -k TC08`.
 def test_TC08_ManageStudiesListAndFilter(hub: Hub) -> None:
     studies = StudiesListPage(hub.page, hub.locators)
     studies.open()
-    expect(studies.loc(CONTAINER)).to_be_visible()
-    expect(studies.loc(ADD_STUDY)).to_be_visible()
+    expect(studies.container).to_be_visible()
+    expect(studies.add_study).to_be_visible()
     studies.apply_filters(study_name="autoQA", program="AutoTest-Program")
     assert studies.row_count() >= 1
     assert any("autoQA" in cell for row in studies.read_table_rows() for cell in row)
@@ -211,16 +211,17 @@ The fixture session is the **story**. It does not contain XPaths. It calls the l
 
 **4. Inside a page click** — `src/crdc_pw/pages/`
 
-`studies.open()` (the line the **test** calls) goes to `HeaderPage.open_manage_studies()`, then waits for the list container. That header click and `studies.loc(CONTAINER)` both go through `BasePage.loc()`:
+`studies.open()` (the line the **test** calls) goes to `HeaderPage.open_manage_studies()`, then waits for the list container. Tests assert `studies.container`; the page maps that to YAML via `_loc()`:
 
 ```
-path string  e.g. CRDC/AILocators/Studies/List/Container
+studies.container
+    → _loc("CRDC/AILocators/Studies/List/Container")
     → LocatorLoader.get(path)     # YAML → XPath
     → page.locator(xpath)         # Playwright, this tab
     → wait until visible, then read or click
 ```
 
-The test never sees the XPath. If a locator is wrong, the failure is usually in a **page** wait, not in the filter asserts.
+The test never sees the XPath or the Katalon path. If a locator is wrong, the failure is usually in a **page** wait, not in the filter asserts.
 
 **5. Back in the test** — already logged in
 
@@ -228,7 +229,7 @@ The test never sees the XPath. If a locator is wrong, the failure is usually in 
 |---|---|
 | `StudiesListPage(hub.page, hub.locators)` | Bind the Manage Studies screen to this tab |
 | `studies.open()` | User menu → Manage Studies, wait for the list |
-| `expect(studies.loc(CONTAINER))` / `ADD_STUDY` | List chrome is up |
+| `expect(studies.container)` / `studies.add_study` | List chrome is up |
 | `studies.apply_filters(study_name="autoQA", program="AutoTest-Program")` | Same filter values as Katalon |
 | `assert` row count / `"autoQA"` in a cell | Fail if the filtered table is empty or off |
 
