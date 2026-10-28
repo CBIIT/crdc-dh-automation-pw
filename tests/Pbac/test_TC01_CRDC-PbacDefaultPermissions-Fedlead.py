@@ -23,8 +23,9 @@ from crdc_pw.utils.pbac_sheet import compare_actual, output_path, write_expected
 
 log = logging.getLogger("crdc_pw.tc01_pbac")
 
+pytestmark = pytest.mark.CRDC_PBAC
 
-@pytest.mark.smoke
+
 def test_TC01_CRDC_PbacDefaultPermissions_Fedlead(hub: Hub) -> None:
     users = ManageUsersPage(hub.page, hub.locators)
 

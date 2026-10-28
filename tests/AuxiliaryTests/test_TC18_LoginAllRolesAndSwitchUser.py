@@ -22,8 +22,9 @@ from crdc_pw.pages.header import HeaderPage
 
 log = logging.getLogger("crdc_pw.tc18")
 
+pytestmark = pytest.mark.CRDC_Auxiliary
 
-@pytest.mark.smoke
+
 @pytest.mark.parametrize("hub", list(ROLES), indirect=True, ids=list(ROLES))
 def test_TC18_LoginAllRolesAndSwitchUser(hub: Hub) -> None:
     """One pytest case per role. Missing yaml values skip that role only."""

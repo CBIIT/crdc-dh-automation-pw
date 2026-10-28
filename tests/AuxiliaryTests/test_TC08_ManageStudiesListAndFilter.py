@@ -21,8 +21,9 @@ from crdc_pw.pages.studies import StudiesListPage
 
 log = logging.getLogger("crdc_pw.tc08")
 
+pytestmark = [pytest.mark.CRDC_Auxiliary, pytest.mark.CRDC_Smoke]
 
-@pytest.mark.smoke
+
 def test_TC08_ManageStudiesListAndFilter(hub: Hub) -> None:
     studies = StudiesListPage(hub.page, hub.locators)
 

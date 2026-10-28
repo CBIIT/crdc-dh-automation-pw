@@ -24,8 +24,9 @@ from crdc_pw.pages.release_notes import ReleaseNotesPage
 
 log = logging.getLogger("crdc_pw.tc_crdcdh_3974")
 
+pytestmark = pytest.mark.CRDC_Auxiliary
 
-@pytest.mark.smoke
+
 def test_TC_CRDCDH_3974_ReleaseNotesPage(hub: Hub) -> None:
     notes = ReleaseNotesPage(hub.page, hub.locators)
 

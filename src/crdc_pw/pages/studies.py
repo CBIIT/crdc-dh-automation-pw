@@ -5,14 +5,14 @@ Tests construct this from hub (StudiesListPage(hub.page, hub.locators)), then:
   apply_filters()   — type/select any of study name, program, dbGaP, status, access
   read_table_rows() — current table as lists of cell text
 
-Locator constants are Katalon object-repository paths (YAML), not raw XPath.
+YAML paths stay on this page. Tests use studies.container / studies.add_study.
 """
 
 from __future__ import annotations
 
 import logging
 
-from playwright.sync_api import Locator, TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import Locator
 
 from crdc_pw.pages.base import BasePage
 from crdc_pw.pages.header import HeaderPage
@@ -49,41 +49,33 @@ class StudiesListPage(BasePage):
         self.wait_until_ready()
         log.info("Manage Studies list page loaded")
 
-    def wait_until_ready(self, timeout_ms: int = 30000) -> None:
-        """Block until the Manage Studies page container is on screen."""
-        self.container.wait_for(state="visible", timeout=timeout_ms)
-
-    def container_visible(self, timeout_ms: int = 10000) -> bool:
-        """True if the list container showed up before timeout."""
-        return self._is_visible(_CONTAINER, timeout_ms)
-
-    def add_study_visible(self, timeout_ms: int = 5000) -> bool:
-        """True if the Add Study button showed up before timeout."""
-        return self._is_visible(_ADD_STUDY, timeout_ms)
+    def wait_until_ready(self) -> None:
+        """Block until the Manage Studies page container is on screen (Hub default timeout)."""
+        self.container.wait_for(state="visible")
 
     def row_count(self) -> int:
         """How many data rows are in the table right now (no wait)."""
         return self._loc(_TABLE_ROW).count()
 
-    def fill_study_name(self, value: str) -> bool:
-        """Type into the Study Name filter. False if the box is not there."""
-        return self._fill_if_visible(_STUDY_NAME, value)
+    def fill_study_name(self, value: str) -> None:
+        """Type into the Study Name filter. Fails if the box is not there."""
+        self._loc(_STUDY_NAME).first.fill(value)
 
-    def fill_dbgap(self, value: str) -> bool:
-        """Type into the dbGaP ID filter. False if the box is not there."""
-        return self._fill_if_visible(_DBGAP, value)
+    def fill_dbgap(self, value: str) -> None:
+        """Type into the dbGaP ID filter. Fails if the box is not there."""
+        self._loc(_DBGAP).first.fill(value)
 
-    def select_program(self, program: str) -> bool:
+    def select_program(self, program: str) -> None:
         """Open the Program dropdown and click that option."""
-        return self._select_dropdown(_PROGRAM_DDN, _PROGRAM_OPTION, program=program)
+        self._select_dropdown(_PROGRAM_DDN, _PROGRAM_OPTION, program=program)
 
-    def select_status(self, status: str) -> bool:
+    def select_status(self, status: str) -> None:
         """Open the Status dropdown and click that option."""
-        return self._select_dropdown(_STATUS_DDN, _STATUS_OPTION, status=status)
+        self._select_dropdown(_STATUS_DDN, _STATUS_OPTION, status=status)
 
-    def select_access_type(self, access_type: str) -> bool:
+    def select_access_type(self, access_type: str) -> None:
         """Open the Access Type dropdown and click that option."""
-        return self._select_dropdown(_ACCESS_DDN, _ACCESS_OPTION, accessType=access_type)
+        self._select_dropdown(_ACCESS_DDN, _ACCESS_OPTION, accessType=access_type)
 
     def apply_filters(
         self,
@@ -113,6 +105,8 @@ class StudiesListPage(BasePage):
             status,
             access_type,
         )
+        rows = self._loc(_TABLE_ROW)
+        before = self._table_fingerprint(rows)
         if study_name:
             self.fill_study_name(study_name)
         if program:
@@ -123,15 +117,12 @@ class StudiesListPage(BasePage):
             self.select_status(status)
         if access_type:
             self.select_access_type(access_type)
-        self.wait_for_table_settled()
+        self._wait_for_table_settled(self._loc(_LOADING_ROW), rows, previous=before)
         log.info("Apply Manage Studies filters: completed")
 
-    def wait_for_table_settled(self, timeout_ms: int = 15000) -> None:
-        """Wait until the table spinner/loading row is gone. No-op if it never appeared."""
-        try:
-            self._loc(_LOADING_ROW).first.wait_for(state="hidden", timeout=timeout_ms)
-        except PlaywrightTimeoutError:
-            pass
+    def wait_for_table_settled(self) -> None:
+        """Wait until the table spinner is gone. Used after open when no filter ran."""
+        self._wait_for_table_settled(self._loc(_LOADING_ROW))
 
     def read_table_rows(self) -> list[list[str]]:
         """Each visible data row as a list of td text (header order). Empty list if none."""
@@ -142,32 +133,11 @@ class StudiesListPage(BasePage):
             rows.append(cells)
         return rows
 
-    def _is_visible(self, path: str, timeout_ms: int) -> bool:
-        try:
-            self._loc(path).first.wait_for(state="visible", timeout=timeout_ms)
-            return True
-        except PlaywrightTimeoutError:
-            return False
-
-    def _fill_if_visible(self, path: str, value: str, timeout_ms: int = 5000) -> bool:
-        """Type into a text filter only if that field is on screen."""
-        if not self._is_visible(path, timeout_ms):
-            return False
-        box = self._loc(path).first
-        box.fill(value)
-        return True
-
-    def _select_dropdown(
-        self, dropdown_path: str, option_path: str, timeout_ms: int = 5000, **placeholders: str
-    ) -> bool:
+    def _select_dropdown(self, dropdown_path: str, option_path: str, **placeholders: str) -> None:
         """Click a MUI/select dropdown, then the option whose YAML path uses placeholders."""
-        if not self._is_visible(dropdown_path, timeout_ms):
-            return False
         self._loc(dropdown_path).first.click()
         option = self._loc(option_path, **placeholders).first
-        option.wait_for(state="visible", timeout=timeout_ms)
         option.click()
-        return True
 
 
 def _trim(value: str | None) -> str | None:

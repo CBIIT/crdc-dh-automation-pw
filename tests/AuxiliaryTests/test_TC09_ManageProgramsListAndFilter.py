@@ -21,8 +21,9 @@ from crdc_pw.pages.programs import ProgramsListPage
 
 log = logging.getLogger("crdc_pw.tc09")
 
+pytestmark = [pytest.mark.CRDC_Auxiliary, pytest.mark.CRDC_Smoke]
 
-@pytest.mark.smoke
+
 def test_TC09_ManageProgramsListAndFilter(hub: Hub) -> None:
     programs = ProgramsListPage(hub.page, hub.locators)
 

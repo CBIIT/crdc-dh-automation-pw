@@ -21,12 +21,14 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import Browser
 from playwright.sync_api import Page
+from playwright.sync_api import expect
 from pytest_html import extras as html_extras
 
 from crdc_pw.auth import LoginSession
 from crdc_pw.config import ROLES, Settings, load_settings
 from crdc_pw.hub import Hub
 from crdc_pw.locators.loader import LocatorLoader, repo_root
+from crdc_pw.pages.base import BasePage
 
 log = logging.getLogger("crdc_pw")
 
@@ -49,6 +51,7 @@ def pytest_configure(config: pytest.Config) -> None:
     path = reports / f"report-{stamp}.html"
     config.option.htmlpath = str(path)
     config.option.self_contained_html = True
+    expect.set_options(timeout=BasePage.DEFAULT_MS)
     log.info("HTML report: %s", path)
 
 
@@ -142,7 +145,7 @@ def hub(
         storage_state=str(path) if reuse else None,
         viewport=VIEWPORT,
     )
-    context.set_default_timeout(15000)
+    context.set_default_timeout(BasePage.DEFAULT_MS)
     page = context.new_page()
     session = LoginSession(page, locators, settings)
     try:
