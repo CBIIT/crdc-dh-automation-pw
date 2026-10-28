@@ -17,7 +17,7 @@ import pytest
 from playwright.sync_api import expect
 
 from crdc_pw.hub import Hub
-from crdc_pw.pages.programs import ADD_PROGRAM, CONTAINER, ProgramsListPage
+from crdc_pw.pages.programs import ProgramsListPage
 
 log = logging.getLogger("crdc_pw.tc09")
 
@@ -30,8 +30,8 @@ def test_TC09_ManageProgramsListAndFilter(hub: Hub) -> None:
     programs.open()
 
     # 2. List chrome: container and Add Program are visible (0 rows is allowed here)
-    expect(programs.loc(CONTAINER)).to_be_visible()
-    expect(programs.loc(ADD_PROGRAM)).to_be_visible()
+    expect(programs.container).to_be_visible()
+    expect(programs.add_program).to_be_visible()
     programs.wait_for_table_settled()
     rows = programs.row_count()
     log.info("Assert Manage Programs: container and Add Program visible (rows=%s)", rows)
