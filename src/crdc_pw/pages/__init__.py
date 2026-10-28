@@ -1,4 +1,4 @@
-"""Page objects: thin wrappers that turn locator paths into clicks and fills."""
+"""Page objects: one Hub screen each. Tests construct these from hub.page + hub.locators."""
 
 from crdc_pw.pages.header import HeaderPage
 from crdc_pw.pages.login import LoginPage

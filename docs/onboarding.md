@@ -72,7 +72,7 @@ Every live Hub test uses the same pattern:
 2. **Page** — one Hub screen. Locators stay in YAML; the page turns those paths into clicks, fills, and reads.
 3. **Test** — the *scenario* plus asserts: construct the page, drive it, `expect` / `assert` in the pytest file.
 
-Initial login is **setup**, not a line in the test. TC18 looks like “only asserts” because its scenario *is* “we are on Hub as this role.” PBAC and DS tests will show more lines (`open()`, `apply_filters`, permission checks) after the same logged-in `hub`.
+Initial login is **setup**, not a line in the test. **TC08** (Manage Studies list and filter) is the example below: construct a page, navigate, `expect`, filter, assert. PBAC and DS tests follow the same pattern after the same logged-in `hub`.
 
 If login or the browser fails, follow the plumbing table below. If you want to know *what the case is testing*, read the pytest file.
 
@@ -99,7 +99,7 @@ crdc-dh-automation-pw/
 
 | If you used this in Katalon | Look here instead |
 |---|---|
-| `Test Cases/CRDC/AuxiliaryTests/TC18_LoginAllRolesAndSwitchUser` | `tests/AuxiliaryTests/test_TC18_LoginAllRolesAndSwitchUser.py` |
+| `Test Cases/CRDC/AuxiliaryTests/TC08_ManageStudiesListAndFilter` | `tests/AuxiliaryTests/test_TC08_ManageStudiesListAndFilter.py` |
 | `Scripts/CRDC/.../Script….groovy` | `tests/<Area>/test_TC##_….py` |
 | `WebUI.closeBrowser()` + `loginToCrdcOtp` at the top of every script | `tests/conftest.py` (`hub` fixture) |
 | `CustomKeywords.'utilities.Login.loginToCrdcOtp'` | `src/crdc_pw/auth.py` (called by the fixture, not the test) |
@@ -115,9 +115,9 @@ Katalon had **no separate page layer**. `Login.groovy` was both the journey (`lo
 | | **Fixture** (`hub`) | **Page** (`pages/`) | **Test** (`tests/`) |
 |---|---|---|---|
 | Question it answers | Who is signed in, on which tab? | What can you do *on this screen*? | What is the scenario, and did it pass? |
-| Example | Login.gov OTP, saved cookies, `hub.role` | `open()`, `apply_filters()`, `click_grant()`, read username | `expect(programs.loc(CONTAINER)).to_be_visible()` |
+| Example | Login.gov OTP, saved cookies, `hub.role` | `open()`, `apply_filters()`, `click_grant()`, read username | `expect(studies.loc(CONTAINER)).to_be_visible()` |
 | Uses | `auth.py` + `LoginPage` / `HeaderPage` | YAML path → Playwright locator | Page objects + Playwright `expect` / `assert` |
-| Test calls it? | Asks for `hub` (already signed in). Uses `auth.switch_user(hub, role)` only when the *scenario* changes user | Yes — construct in the test: `ProgramsListPage(hub.page, hub.locators)` | This *is* the test |
+| Test calls it? | Asks for `hub` (already signed in). Uses `auth.switch_user(hub, role)` only when the *scenario* changes user | Yes — construct in the test: `StudiesListPage(hub.page, hub.locators)` | This *is* the test |
 
 Adding a new list case (TC12) does not touch `Hub` or `conftest.py`. You write a page object and a pytest file.
 
@@ -134,33 +134,35 @@ Katalon equivalent: the moment *after* `navigateToCrdc()` + `loginToCrdcOtp('Adm
 | `hub.locators` | Loaded YAML (`LocatorLoader`) — pages use this |
 | `hub.settings` | URL + credentials for this run |
 
-If a test only asks for `hub`, the role is **Admin**. Smoke parametrizes `hub` with `indirect=True` so each role gets a **new** browser — like Katalon `closeBrowser` between users, except each role is its own pytest result.
+If a test only asks for `hub`, the role is **Admin**. A case that needs every role (TC18) parametrizes `hub` with `indirect=True` so each role gets a **new** browser — like Katalon `closeBrowser` between users, except each role is its own pytest result.
 
-### Walkthrough: the smoke test (one role)
+### Walkthrough: TC08 Manage Studies
 
-Command: `pytest -m smoke`. Pytest runs `test_TC18_LoginAllRolesAndSwitchUser` **six times** (Admin, Fedlead, Dcp, Submitter, User, Master). Follow **Admin** only.
+Command: `pytest -m smoke -k TC08`.
 
-**The test file itself** (`tests/AuxiliaryTests/test_TC18_LoginAllRolesAndSwitchUser.py`) assumes `hub` is already signed in. For this case that *is* the scenario, so the file is three checks:
+**The test file itself** (`tests/AuxiliaryTests/test_TC08_ManageStudiesListAndFilter.py`) assumes `hub` is already signed in as Admin. The file is the scenario: open the list, check chrome, filter, assert rows.
 
 ```python
-def test_TC18_LoginAllRolesAndSwitchUser(hub: Hub) -> None:
-    header = HeaderPage(hub.page, hub.locators)
-    username = header.username(timeout_ms=5000)
-    assert username
-    assert "datacommons.cancer.gov" in hub.page.url
-    assert "login.gov" not in hub.page.url.lower()
+def test_TC08_ManageStudiesListAndFilter(hub: Hub) -> None:
+    studies = StudiesListPage(hub.page, hub.locators)
+    studies.open()
+    expect(studies.loc(CONTAINER)).to_be_visible()
+    expect(studies.loc(ADD_STUDY)).to_be_visible()
+    studies.apply_filters(study_name="autoQA", program="AutoTest-Program")
+    assert studies.row_count() >= 1
+    assert any("autoQA" in cell for row in studies.read_table_rows() for cell in row)
 ```
 
-Everything else already happened. Read **down** this list to see the clicks.
+Login already happened. Read **down** this list to see the clicks.
 
-**1. Once per pytest process** (not per role) — `tests/conftest.py`
+**1. Once per pytest process** — `tests/conftest.py`
 
 - `settings` = `config/qa.yaml` (or whatever `CRDC_PROFILE` is)
 - `locators` = `LocatorLoader()` reads every file under `locators/CRDC/` into memory (`"CRDC/Login/Login.gov-Btn"` → XPath). Same job as opening Object Repository.
 
-**2. Once per role — still `conftest.py`, the `hub` fixture** (session setup, not the scenario)
+**2. The `hub` fixture** (session setup, not the scenario)
 
-1. Role string is `"Admin"` (from parametrize).
+1. Role defaults to `"Admin"` (TC08 does not parametrize).
 2. If `AdminEmail` / `AdminPassword` / `AdminSecret` are blank → skip, not fail.
 3. Open a Chromium tab. If `auth/qa/Admin.json` exists, load those cookies (last successful Login.gov).
 4. Build `LoginSession(page, locators, settings)` from `auth.py`. That session builds `LoginPage` and `HeaderPage` on the **same** tab.
@@ -169,7 +171,7 @@ Everything else already happened. Read **down** this list to see the clicks.
    - Visible → cookies still good; skip Login.gov.
    - Not visible → `session.login_otp("Admin")` (Katalon `loginToCrdcOtp`), then save `auth/qa/Admin.json`.
 7. **Now** pytest calls your test function with `Hub(...)`.
-8. After the test: close the tab (`WebUI.closeBrowser()`). Next role starts at step 2.
+8. After the test: close the tab (`WebUI.closeBrowser()`).
 
 **3. Inside `login_otp` (only when cookies were dead)** — `src/crdc_pw/auth.py`
 
@@ -184,36 +186,37 @@ The fixture session is the **story**. It does not contain XPaths. It calls the l
 
 **4. Inside a page click** — `src/crdc_pw/pages/`
 
-`HeaderPage.username()` (the line the **test** calls) and `LoginPage.click_grant()` (the line **auth** calls) both go through `BasePage.loc()`:
+`studies.open()` (the line the **test** calls) goes to `HeaderPage.open_manage_studies()`, then waits for the list container. That header click and `studies.loc(CONTAINER)` both go through `BasePage.loc()`:
 
 ```
-path string  e.g. CRDC/AILocators/Global/Header/Desktop/UserName-Btn
+path string  e.g. CRDC/AILocators/Studies/List/Container
     → LocatorLoader.get(path)     # YAML → XPath
     → page.locator(xpath)         # Playwright, this tab
     → wait until visible, then read or click
 ```
 
-The test never sees the XPath. If a locator is wrong, the failure is usually in a **page** wait, not in the three asserts.
+The test never sees the XPath. If a locator is wrong, the failure is usually in a **page** wait, not in the filter asserts.
 
 **5. Back in the test** — already logged in
 
 | Line | What it is doing |
 |---|---|
-| `HeaderPage(hub.page, hub.locators).username(5000)` | Read the Hub header name |
-| `hub.page.url` | Playwright URL of that same tab |
-| `assert ...` | Fail **this role** if the name is empty or we are still on login.gov |
+| `StudiesListPage(hub.page, hub.locators)` | Bind the Manage Studies screen to this tab |
+| `studies.open()` | User menu → Manage Studies, wait for the list |
+| `expect(studies.loc(CONTAINER))` / `ADD_STUDY` | List chrome is up |
+| `studies.apply_filters(study_name="autoQA", program="AutoTest-Program")` | Same filter values as Katalon |
+| `assert` row count / `"autoQA"` in a cell | Fail if the filtered table is empty or off |
 
 The fixture is how we signed in. Tests do not call `login_otp` again. They call `auth.switch_user(hub, role)` only when the *scenario* changes user (PBAC).
 
 ```
 pytest
   load qa.yaml + all YAML locators          (session)
-  per role:
-      open tab (+ maybe auth/qa/Admin.json)
-      fixture: auth.LoginSession signs in
-      yield Hub                             ← test starts here, already on Hub
-          TEST: page objects + asserts
-      close tab
+  open tab (+ maybe auth/qa/Admin.json)
+  fixture: auth.LoginSession signs in as Admin
+  yield Hub                                 ← test starts here, already on Hub
+      TEST: StudiesListPage + expect/assert
+  close tab
 ```
 
 ### If something fails, where to look
@@ -224,26 +227,14 @@ pytest
 | Never reaches Hub / OTP timeout | `auth.py` then `pages/login.py` |
 | Timeout on a button name you recognize | YAML under `locators/CRDC/` for that Katalon path |
 | Logged in but username assert fails | `pages/header.py` |
+| Timeout on Manage Studies / filters | `pages/studies.py` then YAML under `locators/CRDC/AILocators/Studies/` |
 | “Who even opened the browser?” | `tests/conftest.py` fixture `hub` |
 
-### Later tests (same pattern, more scenario lines)
-
-TC18 is a thin scenario. **TC08** is the first case with visible scenario lines (`tests/AuxiliaryTests/test_TC08_ManageStudiesListAndFilter.py`):
-
-```python
-def test_TC08_ManageStudiesListAndFilter(hub: Hub) -> None:
-    studies = StudiesListPage(hub.page, hub.locators)
-    studies.open()
-    expect(studies.loc(CONTAINER)).to_be_visible()
-    expect(studies.loc(ADD_STUDY)).to_be_visible()
-    studies.apply_filters(study_name="autoQA", program="AutoTest-Program")
-    assert studies.row_count() >= 1
-    assert any("autoQA" in cell for row in studies.read_table_rows() for cell in row)
-```
-
-Fixture already signed in as Admin. Filter values match Katalon (`autoQA` / `AutoTest-Program`).
+### Other live cases (same pattern)
 
 **TC09** is the Programs twin (`tests/AuxiliaryTests/test_TC09_ManageProgramsListAndFilter.py`): `ProgramsListPage(hub.page, hub.locators).open()`, then filters `AutoTest` / `autoQA`, then at least one row contains `auto`.
+
+**TC18** only asserts that each role landed on Hub (header username, URL is Data Commons, not Login.gov). It parametrizes `hub` across the six roles; there is no list page after login.
 
 A ported PBAC case still uses the same logged-in `hub`; the pytest file is the **middle** of Katalon TC01 (not `loginToCrdcOtp` / `closeBrowser`). Katalon today:
 

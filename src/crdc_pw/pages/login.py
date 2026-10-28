@@ -38,6 +38,7 @@ POST_OTP_STEPS = (GRANT, NIH_AGREE, RULES_ACCEPT, SYSTEM_USE_CONTINUE, USERNAME)
 
 class LoginPage(BasePage):
     def goto(self, base_url: str) -> None:
+        """Open Hub (QA / QA2 / Stage). Does not wait for login to finish."""
         self.page.goto(base_url, wait_until="domcontentloaded")
 
     def _is_visible(self, path: str, timeout_ms: int) -> bool:
@@ -135,6 +136,7 @@ class LoginPage(BasePage):
         return True
 
     def submit_otp(self, code: str) -> None:
+        """Fill the six-digit TOTP. Click Submit only if Login.gov did not auto-advance."""
         otp_box = self.loc(OTP)
         otp_box.first.wait_for(state="visible", timeout=10000)
         otp_box.first.fill(code)
@@ -147,6 +149,7 @@ class LoginPage(BasePage):
             self.loc(OTP_SUBMIT).first.click()
 
     def grant_visible(self, timeout_ms: int = 5000) -> bool:
+        """True if the Login.gov Grant (OAuth consent) button is on screen."""
         return self._is_visible(GRANT, timeout_ms)
 
     def click_grant(self) -> None:

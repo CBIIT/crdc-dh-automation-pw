@@ -1,0 +1,88 @@
+---
+description: CRDC Data Hub Playwright port — architecture, locators, tests, comments, and Katalon mapping
+alwaysApply: true
+---
+
+# crdc-dh-automation-pw (Playwright / pytest)
+
+## Project role
+
+Behavior-preserving port of sibling **`crdc-dh-automation`** (Katalon / Groovy / Selenium) for **CRDC Data Hub**. Engine is **Python 3.11+**, **pytest**, **Playwright**. Same Hub environments (QA / QA2 / Stage), Login.gov roles, and Katalon case IDs. Dual-run a suite on QA until it matches, then retire that Katalon suite — not a big-bang rewrite of the product.
+
+Human walkthrough: `docs/onboarding.md`. Canonical example: **TC08** (`tests/AuxiliaryTests/test_TC08_ManageStudiesListAndFilter.py`).
+
+## Layers (do not revive keywords)
+
+```
+fixture hub  →  test (scenario + asserts)  →  page object  →  YAML locators
+```
+
+- **`hub`** (`src/crdc_pw/hub.py`): thin session — `page`, `locators`, `settings`, `role`. No `studies` / `programs` / `login` / `header` fields. Do not grow `Hub` or `conftest.py` when adding a case.
+- **Pages** (`src/crdc_pw/pages/`): one Hub screen. Actions and reads: `open()`, `apply_filters()`, `read_table_rows()`, `row_count()`. Locators are YAML path constants, not raw XPath.
+- **Tests** (`tests/`): construct pages (`StudiesListPage(hub.page, hub.locators)`), drive them, **own asserts**.
+- **Auth** (`src/crdc_pw/auth.py`): Login.gov OTP / Grant for the **fixture only**. Tests do not call `login_otp`. Role change in a scenario: `auth.switch_user(hub, role)`.
+- **No** `keywords/` package and **no** `App` facade. Do not add `verify_*` wrappers that take a Katalon-style expectations map.
+
+## Layout
+
+| Area | Purpose |
+|------|---------|
+| `tests/conftest.py` | `hub` fixture (browser + login). Default role Admin; parametrize `hub` with `indirect=True` for multi-role (TC18). |
+| `tests/AuxiliaryTests/` | Live Hub cases (Katalon area name, **no** `CRDC/` prefix) |
+| `tests/unit/` | No browser (`-m unit`) |
+| `src/crdc_pw/pages/` | Screen objects |
+| `src/crdc_pw/auth.py` | OTP / Grant |
+| `locators/CRDC/` | YAML object repository (Katalon paths preserved) |
+| `config/*.yaml.example` | Committed templates; gitignored `qa.yaml` / `qa2.yaml` / `stage.yaml` hold secrets |
+| `auth/` | `storage_state` JSON (gitignored) |
+
+`CRDC_PROFILE=qa|qa2|stage` selects the yaml (default `qa`).
+
+## Porting a Katalon case
+
+- Keep the **TC name** in the pytest function / module (`test_TC08_ManageStudiesListAndFilter`).
+- Port **steps and assertions**, not `WebUI.delay`, JS clicks, or stale-element retries.
+- New locators go in **YAML** under `locators/CRDC/`; export a path constant on the page; tests use `expect(page.loc(CONTAINER))`.
+- Login / `closeBrowser` / viewport stay in the fixture. The pytest file is the Groovy **after** `loginToCrdcOtp`.
+- Do **not** port ValidationReport unless asked. Do **not** commit `config/qa.yaml`, passwords, TOTP seeds, or `auth/**`.
+- Match existing import style: `from crdc_pw.hub import Hub`, `from crdc_pw.pages.studies import ...`.
+
+## Asserts (Playwright-native)
+
+**Default:** `expect` / `assert` in the test. Pages **read**; tests **decide pass/fail**.
+
+```python
+# BAD — keyword-style verify on the page
+studies.verify_filter_results(expect_at_least_rows=1, row_contains="autoQA")
+
+# GOOD — page acts/reads; test asserts case-specific values
+studies.apply_filters(study_name="autoQA", program="AutoTest-Program")
+rows = studies.read_table_rows()
+assert len(rows) >= 1
+assert any("autoQA" in (cell or "") for row in rows for cell in row)
+```
+
+Extract a helper only when the **same** check is the third copy or is genuinely complex (CSV parse, permission matrix). `expect_loaded()` on a page is OK (chrome every tests needs). A `verify_*` options-map is not.
+
+Prefer Playwright `expect(locator).to_be_visible()` over bool-return + `assert` so auto-wait stays.
+
+## Comments
+
+Tests: numbered **step** comments (Katalon script style) plus a short **Flow** list in the module docstring. A reader should see navigate / check chrome / filter / assert without tracing helpers.
+
+```python
+# 1. User menu → Manage Studies
+studies.open()
+# 2. List chrome: container and Add Study are visible
+expect(studies.loc(CONTAINER)).to_be_visible()
+```
+
+Pages: module docstring (how tests construct and call this screen) and a **plain-sentence** docstring on each public method. Do not comment what the next line obviously does (`box.fill(value)`).
+
+Do **not** use Javadoc linking or `{@link}` / `{@code}` wrappers. Refer to methods by name in plain text.
+
+## Safety
+
+- Do not paste Hub passwords or Login.gov TOTP secrets into scripts, rules, or docs.
+- Do not run two OTP logins for the same account at once.
+- Live tests: `pytest -m smoke -k TC08`. Unit: `pytest tests/unit -m unit`.

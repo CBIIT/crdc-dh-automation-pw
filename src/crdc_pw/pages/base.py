@@ -8,6 +8,8 @@ from crdc_pw.locators.loader import LocatorLoader
 
 
 class BasePage:
+    """Every screen page inherits this so loc('CRDC/...') resolves YAML → Playwright locator."""
+
     def __init__(self, page: Page, locators: LocatorLoader) -> None:
         self.page = page
         self.locators = locators

@@ -1,4 +1,8 @@
-"""Hub chrome: the signed-in user menu in the desktop header."""
+"""Hub chrome: the signed-in user menu in the desktop header.
+
+Used by list pages (open Manage Studies / Programs) and by the login fixture
+(is the username visible yet?). Tests can also read username() after login.
+"""
 
 from __future__ import annotations
 
@@ -12,6 +16,7 @@ MANAGE_PROGRAMS = "CRDC/AILocators/Global/Header/Desktop/ManagePrograms-Link"
 
 class HeaderPage(BasePage):
     def username_locator(self):
+        """The clickable signed-in name in the desktop header."""
         return self.loc(USERNAME)
 
     def username(self, timeout_ms: int = 15000) -> str:
@@ -29,11 +34,13 @@ class HeaderPage(BasePage):
             return False
 
     def logout(self) -> None:
+        """Open the user menu and click Logout; wait until the username is gone."""
         self.username_locator().click()
         self.loc(LOGOUT).click()
         self.username_locator().wait_for(state="hidden", timeout=15000)
 
     def open_user_menu(self) -> None:
+        """Click the header username so Manage Studies / Programs / Logout appear."""
         self.username_locator().click()
 
     def open_manage_studies(self) -> None:
