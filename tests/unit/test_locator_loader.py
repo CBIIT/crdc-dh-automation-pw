@@ -8,7 +8,6 @@ Flow (this file):
   2. Paths used by login + TC08/TC09 + CRDCDH-3974 still resolve
   3. Missing path raises
   4. Placeholder substitution (Katalon ${role} and {role})
-  5. Attribute access with hyphens in the YAML name
 """
 
 from __future__ import annotations
@@ -107,10 +106,3 @@ def test_brace_placeholder_substitution(locators: LocatorLoader) -> None:
     """Same path also accepts Python-style {role} kwargs."""
     xpath = locators.get("CRDC/ManageUsers/RoleDdn-Option", role="Submitter")
     assert "Submitter" in xpath
-
-
-@pytest.mark.unit
-def test_attribute_access_normalizes_hyphens(locators: LocatorLoader) -> None:
-    """Dot access: YAML UserName-Btn becomes UserName_Btn on the loader tree."""
-    xpath = locators.CRDC.AILocators.Global.Header.Desktop.UserName_Btn
-    assert "navbar-dropdown-name" in xpath

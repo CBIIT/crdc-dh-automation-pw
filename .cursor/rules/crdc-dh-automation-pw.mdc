@@ -19,7 +19,7 @@ fixture hub  →  test (scenario + asserts)  →  page object  →  YAML locator
 ```
 
 - **`hub`** (`src/crdc_pw/hub.py`): thin session — `page`, `locators`, `settings`, `role`. No `studies` / `programs` / `login` / `header` fields. Do not grow `Hub` or `conftest.py` when adding a case.
-- **Pages** (`src/crdc_pw/pages/`): one Hub screen. Actions and reads: `open()`, `apply_filters()`, `read_table_rows()`, `row_count()`. YAML paths stay on the page; tests use locator **properties** (`studies.container`). Required waits inherit `BasePage.DEFAULT_MS` (15s); optional chrome uses `PROBE_MS`. Do not `except: pass` on a required wait.
+- **Pages** (`src/crdc_pw/pages/`): one Hub screen. Actions and reads: `open()`, `apply_filters()`, `read_table_rows()`, `row_count()`. YAML paths stay on the page; tests use locator **properties** (`studies.container`). Required waits inherit `BasePage.DEFAULT_MS` (15s); optional chrome uses `PROBE_MS`. Do not `except: pass` on a required wait. Shared table read, MUI dropdown, and snackbar helpers live on `BasePage` (not `utils/` and not a `components/` package).
 - **Tests** (`tests/`): construct pages (`StudiesListPage(hub.page, hub.locators)`), drive them, **own asserts**.
 - **Auth** (`src/crdc_pw/auth.py`): Login.gov OTP / Grant for the **fixture only**. Tests do not call `login_otp`. Role change in a scenario: `auth.switch_user(hub, role)`.
 - **No** `keywords/` package and **no** `App` facade. Do not add `verify_*` wrappers that take a Katalon-style expectations map.

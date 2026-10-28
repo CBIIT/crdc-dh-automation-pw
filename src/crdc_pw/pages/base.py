@@ -1,4 +1,9 @@
-"""Shared helper so every page can resolve a Katalon path to a Playwright locator."""
+"""Shared helper so every page can resolve a Katalon path to a Playwright locator.
+
+Also holds Hub timeouts and widget helpers list pages share (table wait/read,
+MUI dropdown, snackbar). Pages own YAML paths and named filters; tests do not
+call these methods.
+"""
 
 from __future__ import annotations
 
@@ -67,3 +72,34 @@ class BasePage:
                     raise PlaywrightTimeoutError("Table still loading after filter")
                 return
             self.page.wait_for_timeout(_POLL_MS)
+
+    def _read_table_rows(self, rows: Locator) -> list[list[str]]:
+        """Each data row as a list of td text (header order). Empty list if none."""
+        result: list[list[str]] = []
+        for row in rows.all():
+            result.append([text.strip() for text in row.locator("td").all_inner_texts()])
+        return result
+
+    def _select_dropdown(self, dropdown: Locator, option: Locator) -> None:
+        """Click a MUI/select dropdown, then the option locator."""
+        dropdown.first.click()
+        option.first.click()
+
+    def _wait_for_snackbar_gone(self, snackbar: Locator) -> None:
+        """Probe for the snackbar, then wait until it is gone.
+
+        If it never appears, return. Hidden after visible uses the Hub default.
+        """
+        try:
+            snackbar.wait_for(state="visible", timeout=self.PROBE_MS)
+        except PlaywrightTimeoutError:
+            return
+        snackbar.wait_for(state="hidden")
+
+    @staticmethod
+    def _trim(value: str | None) -> str | None:
+        """None and blank/whitespace become None; otherwise the stripped string."""
+        if value is None:
+            return None
+        text = value.strip()
+        return text or None

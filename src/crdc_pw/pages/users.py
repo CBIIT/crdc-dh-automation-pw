@@ -99,23 +99,15 @@ class PermissionForm(BasePage):
         self._select_role(display)
         self._loc(SAVE).click()
         log.info("Clicked Save")
-        self._wait_for_snackbar_gone()
+        self._wait_for_snackbar_gone(self._loc(SNACKBAR))
         log.info("Reset permissions by re-selecting role: %s", display)
 
     def _select_role(self, role_display: str) -> None:
-        dropdown = self._loc(ROLE_DDN)
-        dropdown.wait_for(state="visible")
-        dropdown.click()
-        option = self._loc(ROLE_OPTION, role=role_display)
-        option.wait_for(state="visible")
-        option.click()
+        self._select_dropdown(
+            self._loc(ROLE_DDN),
+            self._loc(ROLE_OPTION, role=role_display),
+        )
         log.info("Selected role: %s", role_display)
-
-    def _wait_for_snackbar_gone(self) -> None:
-        try:
-            self._loc(SNACKBAR).wait_for(state="hidden")
-        except PlaywrightTimeoutError:
-            log.info("wait_for_snackbar_gone: snackbar still present or never shown")
 
 
 class ManageUsersPage(PermissionForm):

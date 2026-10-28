@@ -4,8 +4,7 @@ Lookup is the same path Katalon used, for example:
     locators.get("CRDC/Login/Login.gov_UserEmail-TxtBx")
 
 A locator's identity is folder + key, not the key alone — 43 leaf names repeat
-in different folders. Optional: locators.CRDC.Login.Login_gov_UserEmail_TxtBx
-(hyphens and dots become underscores for Python attributes).
+in different folders. Pages call get(path) only.
 """
 
 from __future__ import annotations
@@ -32,37 +31,6 @@ def default_locators_dir() -> Path:
     return repo_root() / "locators"
 
 
-def _attr_name(key: str) -> str:
-    """Save-Btn -> Save_Btn so it can be a Python attribute."""
-    return key.replace("-", "_").replace(".", "_")
-
-
-class LocatorNode:
-    """One folder in the locator tree, or a leaf that holds an XPath."""
-
-    def __init__(self, name: str = "") -> None:
-        self._name = name
-        self._children: dict[str, LocatorNode] = {}
-        self._xpath: str | None = None
-
-    def __getattr__(self, name: str) -> LocatorNode | str:
-        if name.startswith("_"):
-            raise AttributeError(name)
-        child = self._children.get(name)
-        if child is None:
-            available = ", ".join(sorted(self._children)) or "(none)"
-            raise AttributeError(
-                f"No locator node '{name}' under '{self._name or 'locators'}'. Available: {available}"
-            )
-        # Leaf: return the XPath string. Folder: return the child node.
-        if child._xpath is not None and not child._children:
-            return child._xpath
-        return child
-
-    def __repr__(self) -> str:
-        return f"LocatorNode({self._name!r})"
-
-
 class LocatorLoader:
     """Loads locators/*.yaml into an in-memory index keyed by Katalon path."""
 
@@ -72,7 +40,6 @@ class LocatorLoader:
             raise FileNotFoundError(f"Locators directory not found: {self.locators_dir}")
         self._index: dict[str, str] = {}
         self._yaml_files: list[Path] = []
-        self._root = LocatorNode("locators")
         self._load()
 
     @property
@@ -98,9 +65,6 @@ class LocatorLoader:
         """All loaded paths, sorted. Used by unit tests to check catalog size."""
         return sorted(self._index)
 
-    def __getattr__(self, name: str) -> LocatorNode | str:
-        return getattr(self._root, name)
-
     def _load(self) -> None:
         for yaml_path in sorted(self.locators_dir.rglob("*.yaml")):
             self._yaml_files.append(yaml_path)
@@ -111,48 +75,20 @@ class LocatorLoader:
                 data = yaml.safe_load(handle) or {}
             if not isinstance(data, dict):
                 raise ValueError(f"Expected a mapping in {yaml_path}")
-            self._ingest(folder, data, self._root)
+            self._ingest(folder, data)
 
-    def _ingest(self, folder: str, data: dict[str, Any], node: LocatorNode) -> None:
-        """Walk folder segments (CRDC/Login) so attribute access can follow the same tree."""
-        folder_parts = [p for p in folder.split("/") if p and p != "."]
-        current = node
-        walked: list[str] = []
-        for part in folder_parts:
-            walked.append(part)
-            attr = _attr_name(part)
-            if attr not in current._children:
-                current._children[attr] = LocatorNode("/".join(walked))
-            current = current._children[attr]
-        self._ingest_keys(folder, data, current)
-
-    def _ingest_keys(self, folder: str, data: dict[str, Any], node: LocatorNode) -> None:
+    def _ingest(self, folder: str, data: dict[str, Any]) -> None:
         """Register each YAML key as folder/key. Nested mappings become more folders."""
         for key, value in data.items():
+            nested = f"{folder}/{key}" if folder not in ("", ".") else str(key)
             if isinstance(value, dict):
-                nested_folder = f"{folder}/{key}" if folder not in ("", ".") else key
-                attr = _attr_name(str(key))
-                if attr not in node._children:
-                    node._children[attr] = LocatorNode(nested_folder)
-                self._ingest_keys(nested_folder, value, node._children[attr])
+                self._ingest(nested, value)
                 continue
             if value is None:
                 continue
-            xpath = str(value)
-            path = f"{folder}/{key}" if folder not in ("", ".") else str(key)
-            if path in self._index:
-                raise ValueError(f"Duplicate locator path: {path}")
-            self._index[path] = xpath
-            attr = _attr_name(str(key))
-            # UserName-Btn and UserName.Btn would both become UserName_Btn.
-            if attr in node._children and node._children[attr]._xpath is not None:
-                raise ValueError(
-                    f"Duplicate attribute '{attr}' under '{node._name}' "
-                    f"(from keys that normalize to the same name)"
-                )
-            leaf = LocatorNode(path)
-            leaf._xpath = xpath
-            node._children[attr] = leaf
+            if nested in self._index:
+                raise ValueError(f"Duplicate locator path: {nested}")
+            self._index[nested] = str(value)
 
     @staticmethod
     def _fill(xpath: str, placeholders: dict[str, Any]) -> str:

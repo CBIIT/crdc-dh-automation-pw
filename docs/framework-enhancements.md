@@ -19,6 +19,7 @@ Human walkthrough of how the framework works today: [onboarding.md](onboarding.m
 | Open | Do this; not started |
 | Deferred | Leave until dual-run / YAML retirement is an explicit project |
 | Done | Shipped |
+| Rejected | Reviewed; will not do |
 
 ---
 
@@ -48,7 +49,7 @@ Human walkthrough of how the framework works today: [onboarding.md](onboarding.m
 
 Katalon paths and `page.locator(xpath)` are a **transition** layer, not the end state. Semantic locators (`get_by_test_id`, `get_by_role`), strict mode, and retiring `.first` / duplicate YAML trees (`CRDC/Login` vs `CRDC/AILocators/Login`, identical XPaths under different names) stay **out of this backlog** until we explicitly start retiring YAML.
 
-Keep using YAML for dual-run. Do not block items 1, 2, 4–6 on this.
+Keep using YAML for dual-run. Do not block remaining Open items on this.
 
 ### 4. Locator properties on pages — Done
 
@@ -58,21 +59,21 @@ Keep using YAML for dual-run. Do not block items 1, 2, 4–6 on this.
 
 **Where:** `pages/*.py` (`_loc` + named properties), TC08 / TC09 / CRDCDH-3974. YAML stays (#3 deferred). Tests use `expect(studies.container)`, not `loc(CONTAINER)`.
 
-### 5. Shared UI kit before more pages — Open
+### 5. Shared UI kit before more pages — Done
 
 **Problem:** `_is_visible`, `_fill_if_visible`, `_select_dropdown`, `wait_for_table_settled`, `read_table_rows`, `_trim` are copied across `studies.py`, `programs.py`, and `users.py`. Fine at three pages. Painful at thirty.
 
-**Target:** Components pages compose: `GenericTable`, `MuiSelect`, `FilterBar`, `Snackbar`. Do this **before** SR and DS, not after (onboarding already lists this as planned step 2).
+**Target:** Shared widget helpers on `BasePage` (not a `components/` package and not `utils/`). Pages still own YAML paths and `apply_filters`. Do this **before** SR and DS.
 
-**Where:** new `src/crdc_pw/components/` (or similar); then fold list pages onto it.
+**Where:** `BasePage._trim`, `_select_dropdown(dropdown, option)`, `_read_table_rows(rows)`, `_wait_for_snackbar_gone(snackbar)` (PROBE then hidden). Table wait was already on `BasePage` (#2). Pagination stays on `users.py` until a second list page needs it. No `FilterBar` class.
 
-### 6. PBAC oracle: label match, scoped locators, per-run output — Open
+### 6. PBAC oracle: label match, scoped locators, per-run output — Rejected
 
 **Problem:** `compare_actual` in `utils/pbac_sheet.py` matches sheet row *i* to UI checkbox *i*. A new permission anywhere shifts every row. Checkbox xpath `//input[@type='checkbox']` is page-global. Shared `OutputFiles/PBAC_Defaults_Results.xlsx` will collide under parallel runs.
 
-**Target:** Match on label (both sides have it). Scope checkboxes to the two accordions. Per-run output (or assert in memory and attach the sheet), not one mutated workbook.
+**Target (not taking):** Match on label. Scope checkboxes to the two accordions. Per-run output instead of one mutated workbook.
 
-**Where:** `utils/pbac_sheet.py`, `locators/.../ManageUsers.yaml`, `pages/users.py`.
+**Why not:** Positional compare is Katalon-shaped and working. A new permission in the middle of the form already fails loudly; QA adds the row to `PBACPermissions.xlsx`. Display names repeat (`View`), so label match can pair the wrong checkbox and Pass. Do not rewrite `compare_actual`. Scoped locators and a unique output path are optional later (parallel PBAC), not a reason to change pairing.
 
 ---
 
@@ -80,31 +81,26 @@ Keep using YAML for dual-run. Do not block items 1, 2, 4–6 on this.
 
 | Item | Problem | Target | Status |
 |---|---|---|---|
-| Tooling | `dev = []`, no ruff/mypy/lockfile/pre-commit | Add ruff, mypy, pinned lock, pre-commit. Unchecked type hints drift. | Open |
-| Tracing | Screenshot only (Katalon-shaped) | `--tracing=retain-on-failure` in addopts or CI. Trace viewer is the debugging upgrade. | Open |
+| Tooling | `dev = []`, no ruff/mypy/lockfile/pre-commit | `pip install -e ".[dev]"` for ruff and mypy. No lockfile, no `requirements.txt`, no pre-commit (git commit unchanged). | Done |
+| Tracing | Screenshot only (Katalon-shaped) | `--tracing=retain-on-failure` in addopts. Open a fail with `playwright show-trace test-results/.../trace.zip`. | Done |
 | Markers | Every live test is `smoke`, including PBAC reset | Katalon suite names (`CRDC_Auxiliary`, `CRDC_PBAC`, `CRDC_Smoke`, …). `--strict-markers`. Only Katalon smoke members get `CRDC_Smoke`. | Done |
-| Test logging | `log.info("Assert ...")` / `log.info("PASS TC08 ...")` will be copied 300 times | Put context in assertion messages. Drop PASS lines. Revisit `log_cli = true` (noisy by default). | Open |
-| Locator contract test | Typo in a `CRDC/...` string fails after a 15s live timeout | Unit test: every `CRDC/` string in `pages/` exists in the loader. | Open |
-| Hardcoded conventions | `pbac.{role}-automation` in `auth.py`; `datacommons.cancer.gov` in TC18; `autoQA` / `AutoTest-Program` in tests | Username scheme configurable; TC18 host from `settings.base_url`; filter data per env (QA2/Stage may differ). | Open |
-| `switch_user` | Reuses a context after clearing cookies | Fresh context (Katalon closed the browser). Save the new role’s `storage_state`. | Open |
-| Loader dual API | Attribute access (`locators.CRDC...`) is unused, extra duplicate rules | Keep `get(path)` only. | Open |
+| Test logging | `log.info("Assert ...")` / `log.info("PASS TC08 ...")` will be copied 300 times | Leave as-is. Assert/PASS lines and `log_cli = true` are how QA follows live runs (Katalon logInfo). Sweeping tests would not catch a defect. | Rejected |
+| Locator contract test | Typo in a `CRDC/...` string fails after a 15s live timeout | Unit test: every `CRDC/` string in `pages/` exists in the loader. | Done |
+| Hardcoded conventions | `pbac.{role}-automation` in `auth.py`; `datacommons.cancer.gov` in TC18; `autoQA` / `AutoTest-Program` in tests | Leave as-is. Those are the real Hub account and filter names. TC18 already uses `settings.base_url`. Do not add a config scheme. | Rejected |
+| `switch_user` | Reuses a context after clearing cookies | Leave as-is. `switch_user` already exists (TC01 Admin → Fedlead). Same-tab logout + cookie clear works. Do not rewrite auth unless it flakes. | Rejected |
+| Loader dual API | Attribute access (`locators.CRDC...`) is unused, extra duplicate rules | Keep `get(path)` only. | Done |
 | Bare `except Exception` | `HeaderPage.is_logged_in` treats a closed/crashed page as “not logged in” and may trigger OTP | Catch the specific timeout / closed-page errors only. | Done |
-| Filter warnings | `filterwarnings = ignore::DeprecationWarning` | Stop hiding Playwright upgrade signals. | Open |
+| Filter warnings | `filterwarnings = ignore::DeprecationWarning` | Stop hiding Playwright upgrade signals. | Done |
 
 ---
 
 ## Suggested order
 
-Do these in this sequence unless a live flake forces a jump (e.g. PBAC positional match, banner timeout).
+Do these in this sequence unless a live flake forces a jump (e.g. banner timeout).
 
 1. **Auth setup once per role with a lock, then xdist.** Measure before and after.
-2. **Shared component layer.** Tables, filters, MUI dropdowns (timeout policy is done as #2).
-3. **Label-based PBAC comparison and scoped checkbox locator.** Per-run output before parallel PBAC.
-4. **Tooling:** ruff, mypy, lockfile, tracing, markers, locator contract test.
 
-Locator properties (#4) and Hub wait policy (#2) are done. Strict mode and retiring `.first` wait until YAML retirement (#3) is in scope.
-
-Then the smaller table, cheapest first (filterwarnings, loader API, TC18 host, logging) unless they land naturally with 1–4.
+Locator properties (#4), Hub wait policy (#2), shared UI helpers (#5), traces, loader `get()`-only, and ruff/mypy (`dev` extra) are done. PBAC oracle (#6), test logging, hardcoded names, and a `switch_user` rewrite are rejected. Strict mode and retiring `.first` wait until YAML retirement (#3) is in scope.
 
 ## Out of scope here
 

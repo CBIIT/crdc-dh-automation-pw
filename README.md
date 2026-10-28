@@ -18,6 +18,8 @@ cd crdc-dh-automation-pw
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
+# optional: ruff and mypy (not required to run tests)
+# pip install -e ".[dev]"
 playwright install chromium
 cp config/qa.yaml.example config/qa.yaml
 ```
@@ -49,7 +51,15 @@ pytest -m CRDC_Smoke
 pytest -m CRDC_PBAC
 ```
 
-Every run writes a timestamped HTML report to `reports/report-YYYYMMDD-HHMMSS.html` (gitignored). Pass `--html=...` to override the path. Failed live tests attach a full-page screenshot to that report (and `reports/screenshots/`).
+Every run writes a timestamped HTML report to `reports/report-YYYYMMDD-HHMMSS.html` (gitignored). Pass `--html=...` to override the path. Failed live tests attach a full-page screenshot to that report (and `reports/screenshots/`). They also keep a Playwright trace under `test-results/` (gitignored); open it with `playwright show-trace test-results/.../trace.zip`.
+
+Optional lint (does not run on `git commit`):
+
+```bash
+pip install -e ".[dev]"
+ruff check src tests
+mypy src/crdc_pw
+```
 
 ## Layout
 

@@ -54,7 +54,7 @@ Replace the Katalon Hub suites with this repo so QA and CI run Playwright instea
 Planned order after this scaffold:
 
 1. Remaining **PBAC defaults** (TC02–05) plus isolated PBAC tickets — TC01 is already here
-2. **Shared UI kit** — tables, filters, MUI dropdowns, snackbars (unblocks every list page)
+2. **Shared UI helpers on BasePage** — tables, MUI dropdowns, snackbars (done; unblocks every list page)
 3. **Submission Requests**
 4. **Data Submissions** (upload, validate, results tables)
 5. **Non-browser oracles** — Mongo, GraphQL, CLI uploader, Gmail (`utils/` already holds Excel and GitHub-raw helpers)
@@ -117,7 +117,7 @@ flowchart TB
 | **locators** | `locators/CRDC/**/*.yaml` + `src/crdc_pw/locators/loader.py` | Katalon path → XPath (was Object Repository) |
 | **auth** | `src/crdc_pw/auth.py` | Login.gov OTP / Grant. Fixture only. Tests do not call this unless the *scenario* switches user |
 | **hub** | `src/crdc_pw/hub.py` | Thin bag the fixture hands the test: this tab, this role, locators, settings. Not the Hub website |
-| **pages** | `src/crdc_pw/pages/` | One Hub screen each (`StudiesListPage`, `HeaderPage`, …). Clicks and reads. `BasePage` is the shared wait/locator helper |
+| **pages** | `src/crdc_pw/pages/` | One Hub screen each (`StudiesListPage`, `HeaderPage`, …). Clicks and reads. `BasePage` holds locator resolve, Hub timeouts, and shared table / dropdown / snackbar helpers |
 | **tests** | `tests/AuxiliaryTests/`, `tests/Pbac/` | Scenario + pass/fail. Same Katalon suite names (`CRDC_Auxiliary`, `CRDC_PBAC`, `CRDC_Smoke`) |
 | **utils** | `src/crdc_pw/utils/` | Optional oracles (Excel, TOTP, GitHub raw). Not a screen |
 
@@ -447,6 +447,8 @@ pytest tests/unit -m unit
 
 All of these should pass on a fresh clone, even before you fill `qa.yaml`.
 
+Optional lint (not required to run tests, does not run on `git commit`): `pip install -e ".[dev]"` then `ruff check src tests` and `mypy src/crdc_pw`.
+
 ---
 
 ## Run tests
@@ -479,7 +481,7 @@ pytest -m CRDC_Auxiliary --headed --slowmo 300   # slow the UI down to watch
 pytest tests/unit -m unit -q                         # quieter
 ```
 
-On failure, Playwright can keep a trace (`--tracing=retain-on-failure` once that is wired in CI). Locally, `--headed` is usually enough to see Login.gov.
+Failed live tests keep a Playwright trace under `test-results/` (gitignored). Open it with `playwright show-trace test-results/.../trace.zip`. Locally, `--headed` is usually enough to watch Login.gov.
 
 ---
 
