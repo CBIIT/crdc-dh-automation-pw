@@ -62,7 +62,7 @@ assert len(rows) >= 1
 assert any("autoQA" in (cell or "") for row in rows for cell in row)
 ```
 
-Extract a helper only when the **same** check is the third copy or is genuinely complex (CSV parse, permission matrix). `expect_loaded()` on a page is OK (chrome every tests needs). A `verify_*` options-map is not.
+Extract a helper only when Katalon reuse justifies it (DS TSV/batch, PBAC sheet, third copy of the same check). See rule **hybrid-pom-katalon-reuse**. `expect_loaded()` on a page is OK. A `verify_*` options-map is not.
 
 Prefer Playwright `expect(locator).to_be_visible()` over bool-return + `assert` so auto-wait stays.
 

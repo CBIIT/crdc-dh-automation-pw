@@ -2,7 +2,7 @@
 
 Tests construct ManageUsersPage or UserProfilePage from hub, then:
   open()                   — header → Manage Users or Profile
-  find_and_edit(role)      — search pbac.{role}-automation and click Edit
+  find_and_edit(role)      — filter/paginate to pbac.{role}-automation and click Edit
   reset_permissions(role)  — toggle Role away and back, Save (Katalon reset)
   expand_permission_panels()
   read_permission_rows()   — (label, status) for every PBAC checkbox
@@ -14,14 +14,18 @@ from __future__ import annotations
 
 import logging
 
-from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import Locator, TimeoutError as PlaywrightTimeoutError
 
 from crdc_pw.pages.base import BasePage
 from crdc_pw.pages.header import HeaderPage
 
 log = logging.getLogger("crdc_pw.users")
 
-TABLE_ROW = "CRDC/ManageUsers/ManageUsersTable-Row"
+CONTAINER = "CRDC/AILocators/Users/List/Container"
+USER_FILTER = "CRDC/AILocators/Users/List/UserFilter-TxtBx"
+GENERIC_ROW = "CRDC/AILocators/GenericTable/TableRow"
+HTML_ROW = "CRDC/ManageUsers/ManageUsersTable-Row"
+LOADING_ROW = "CRDC/AILocators/GenericTable/LoadingRow"
 NEXT_PAGE = "CRDC/AILocators/GenericTable/Pagination/NextPage-Btn"
 PERMISSIONS_PANEL = "CRDC/ManageUsers/PermissionsPanel-Ddn"
 NOTIFICATIONS_PANEL = "CRDC/ManageUsers/NotificationsPanel-Ddn"
@@ -123,10 +127,15 @@ class ManageUsersPage(PermissionForm):
         log.info("Manage Users list page loaded")
 
     def find_and_edit(self, role: str) -> None:
-        """Find pbac.{role}-automation in the table (paginating if needed) and click Edit."""
+        """Find pbac.{role}-automation in the table (filter, then paginate) and click Edit.
+
+        Matches the token in any cell (Name is 'Please Do Not Edit, pbac.fedlead-automation',
+        not column 0 when a checkbox column is present).
+        """
         needle = f"pbac.{role}-automation"
         log.info("Find and Edit user %s", needle)
         self._wait_for_table()
+        self._filter_user(needle)
         renav_attempted = False
         while True:
             try:
@@ -137,13 +146,14 @@ class ManageUsersPage(PermissionForm):
                     log.info("Manage Users table wait timed out; retrying after navigation.")
                     self.open()
                     self._wait_for_table()
+                    self._filter_user(needle)
                 else:
                     raise
             if self._click_edit_on_current_page(needle):
                 self.loc(ROLE_DDN).wait_for(state="visible", timeout=15000)
                 log.info("User %r found and Edit clicked.", needle)
                 return
-            next_btn = self.loc(NEXT_PAGE)
+            next_btn = self.loc(NEXT_PAGE).first
             if next_btn.is_disabled():
                 raise RuntimeError(
                     f"Reached the last page. User '{needle}' not found in Manage Users table."
@@ -151,22 +161,53 @@ class ManageUsersPage(PermissionForm):
             next_btn.click()
             self._wait_for_table()
 
+    def _filter_user(self, needle: str) -> None:
+        """Type into the Name filter when Hub shows it. No-op if the box is missing."""
+        box = self.loc(USER_FILTER)
+        try:
+            box.wait_for(state="visible", timeout=5000)
+        except PlaywrightTimeoutError:
+            return
+        box.fill(needle)
+        self._wait_for_table_settled()
+        log.info("Manage Users name filter: %r", needle)
+
     def _click_edit_on_current_page(self, needle: str) -> bool:
         needle_l = needle.strip().lower()
-        for row in self.loc(TABLE_ROW).all():
-            cells = row.locator("td")
-            if cells.count() < 6:
+        for row in self._table_rows().all():
+            if needle_l not in (row.inner_text() or "").lower():
                 continue
-            name_text = (cells.nth(0).inner_text() or "").strip()
-            if needle_l not in name_text.lower():
+            edit = row.get_by_role("button", name="Edit")
+            if edit.count() == 0:
+                edit = row.locator("button").filter(has_text="Edit")
+            if edit.count() == 0:
                 continue
-            edit = cells.nth(5).locator("button").filter(has_text="Edit")
-            edit.click()
+            edit.first.click()
             return True
         return False
 
+    def _table_rows(self) -> Locator:
+        generic = self.loc(GENERIC_ROW)
+        if generic.count() > 0:
+            return generic
+        return self.loc(HTML_ROW)
+
     def _wait_for_table(self, timeout_ms: int = 25000) -> None:
-        self.loc(TABLE_ROW).first.wait_for(state="attached", timeout=timeout_ms)
+        try:
+            self.loc(CONTAINER).wait_for(state="visible", timeout=timeout_ms)
+        except PlaywrightTimeoutError:
+            pass
+        try:
+            self.loc(GENERIC_ROW).first.wait_for(state="attached", timeout=timeout_ms)
+        except PlaywrightTimeoutError:
+            self.loc(HTML_ROW).first.wait_for(state="attached", timeout=timeout_ms)
+        self._wait_for_table_settled()
+
+    def _wait_for_table_settled(self, timeout_ms: int = 15000) -> None:
+        try:
+            self.loc(LOADING_ROW).first.wait_for(state="hidden", timeout=timeout_ms)
+        except PlaywrightTimeoutError:
+            pass
 
 
 class UserProfilePage(PermissionForm):

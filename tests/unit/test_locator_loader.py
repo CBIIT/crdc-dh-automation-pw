@@ -32,6 +32,7 @@ def test_login_and_header_paths_used_by_smoke(locators: LocatorLoader) -> None:
     # Login.gov + system-use banner
     assert "user_email" in locators.get("CRDC/Login/Login.gov_UserEmail-TxtBx")
     assert locators.get("CRDC/Login/LoginPageLogin-Btn")
+    assert locators.get("CRDC/AILocators/Home/LoginDialogLogin-Btn")
     assert locators.get("CRDC/Login/Login.gov-Btn")
     assert "system-use-warning-dialog" in locators.get(
         "CRDC/AILocators/Global/SystemUseWarning/Continue-Btn"
@@ -70,6 +71,9 @@ def test_login_and_header_paths_used_by_smoke(locators: LocatorLoader) -> None:
     # TC01 Manage Users / Profile permission form
     assert locators.get("CRDC/AILocators/Global/Header/Desktop/ManageUsers-Link")
     assert locators.get("CRDC/AILocators/Global/Header/Desktop/UserProfile-Link")
+    assert locators.get("CRDC/AILocators/Users/List/Container")
+    assert locators.get("CRDC/AILocators/Users/List/UserFilter-TxtBx")
+    assert locators.get("CRDC/AILocators/GenericTable/TableRow")
     assert locators.get("CRDC/ManageUsers/ManageUsersTable-Row")
     assert locators.get("CRDC/ManageUsers/PermissionsPanel-Ddn")
     assert locators.get("CRDC/ManageUsers/PbacOptions-Chkbx")
