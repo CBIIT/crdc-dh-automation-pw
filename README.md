@@ -47,12 +47,14 @@ pytest -m smoke
 pytest -m smoke --headed
 ```
 
+Every run writes a timestamped HTML report to `reports/report-YYYYMMDD-HHMMSS.html` (gitignored). Pass `--html=...` to override the path. Failed live tests attach a full-page screenshot to that report (and `reports/screenshots/`).
+
 ## Layout
 
 ```
 config/          # *.yaml.example committed; qa.yaml / qa2.yaml / stage.yaml gitignored
 locators/CRDC/   # YAML object repository (Katalon paths preserved)
-src/crdc_pw/     # loader, config, OTP, auth, hub, pages
+src/crdc_pw/     # loader, config, auth, hub, pages, utils
 tests/unit/      # no browser
 tests/AuxiliaryTests/  # live Hub cases (Katalon area folders, without a CRDC/ prefix)
 auth/            # storage_state JSON (gitignored)

@@ -14,7 +14,7 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from crdc_pw.config import Settings
 from crdc_pw.hub import Hub
 from crdc_pw.locators.loader import LocatorLoader
-from crdc_pw.otp import totp_now
+from crdc_pw.utils.otp import totp_now
 from crdc_pw.pages.header import HeaderPage
 from crdc_pw.pages.login import (
     GRANT,
@@ -46,11 +46,22 @@ class LoginSession:
         self.header = HeaderPage(page, locators)
 
     def navigate(self) -> None:
+        """Open Hub base_url and dismiss the system-use banner if it is already up."""
         self.login_page.goto(self.settings.base_url)
         self.login_page.dismiss_system_use_warning()
 
     def is_logged_in(self, timeout_ms: int = 2000) -> bool:
+        """True if the desktop header username is visible (Hub session, not Login.gov)."""
         return self.header.is_logged_in(timeout_ms=timeout_ms)
+
+    def ensure_hub_ready(self, banner_appear_ms: int = 5000) -> None:
+        """Dismiss the system-use banner if it paints after the header is up.
+
+        Reused storage_state often shows the username first; tests then fail clicking
+        it because the MUI dialog is on top. Call after login or session reuse.
+        """
+        if self.login_page.dismiss_system_use_warning(timeout_ms=banner_appear_ms):
+            log.info("Dismissed system-use warning")
 
     def signed_in_as(self, role: str) -> bool:
         """True if Hub header is visible and the name is this PBAC automation user."""
@@ -176,6 +187,7 @@ class LoginSession:
         return step == USERNAME
 
     def logout(self) -> None:
+        """Header Logout if a Hub session is up. No-op when already on Login.gov."""
         if self.is_logged_in(timeout_ms=2000):
             self.header.logout()
 
@@ -201,6 +213,7 @@ def username_matches_role(username: str, role: str) -> bool:
 
 
 def _step_name(path: str) -> str:
+    """Locator path to a short label for login logs (OTP field, Grant button, ...)."""
     names = {
         OTP: "OTP field",
         GRANT: "Grant button",

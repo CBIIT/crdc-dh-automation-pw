@@ -43,7 +43,7 @@ studies.apply_filters(study_name="autoQA", program="AutoTest-Program")
 assert any("autoQA" in cell for row in studies.read_table_rows() for cell in row)
 ```
 
-**PBAC family — reuse the sheet, not a fat page** (see `pbac_sheet.py`, TC01):
+**PBAC family — reuse the sheet, not a fat page** (see `crdc_pw.utils.pbac_sheet`, TC01):
 
 ```python
 users.find_and_edit("Submitter")

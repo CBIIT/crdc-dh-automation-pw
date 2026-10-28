@@ -31,7 +31,8 @@ fixture hub  →  test (scenario + asserts)  →  page object  →  YAML locator
 | `tests/AuxiliaryTests/` | Live Hub cases (Katalon area name, **no** `CRDC/` prefix) |
 | `tests/unit/` | No browser (`-m unit`) |
 | `src/crdc_pw/pages/` | Screen objects |
-| `src/crdc_pw/auth.py` | OTP / Grant |
+| `src/crdc_pw/auth.py` | Login.gov OTP / Grant (fixture) |
+| `src/crdc_pw/utils/` | Non-page oracles (Excel, GitHub raw, TOTP) |
 | `locators/CRDC/` | YAML object repository (Katalon paths preserved) |
 | `config/*.yaml.example` | Committed templates; gitignored `qa.yaml` / `qa2.yaml` / `stage.yaml` hold secrets |
 | `auth/` | `storage_state` JSON (gitignored) |
@@ -85,4 +86,4 @@ Do **not** use Javadoc linking or `{@link}` / `{@code}` wrappers. Refer to metho
 
 - Do not paste Hub passwords or Login.gov TOTP secrets into scripts, rules, or docs.
 - Do not run two OTP logins for the same account at once.
-- Live tests: `pytest -m smoke -k TC08`. Unit: `pytest tests/unit -m unit`.
+- Live tests: `pytest -m smoke -k TC08`. Unit: `pytest tests/unit -m unit`. Each run writes `reports/report-YYYYMMDD-HHMMSS.html`. Failed Hub tests attach a screenshot to that report.

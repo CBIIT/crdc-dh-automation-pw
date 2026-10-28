@@ -14,7 +14,7 @@ import re
 
 import pytest
 
-from crdc_pw.otp import totp_now
+from crdc_pw.utils.otp import totp_now
 
 RFC_EXAMPLE_SECRET = "JBSWY3DPEHPK3PXP"
 

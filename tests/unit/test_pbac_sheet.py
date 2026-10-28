@@ -17,7 +17,7 @@ import pytest
 from openpyxl import load_workbook
 
 from crdc_pw.locators.loader import repo_root
-from crdc_pw.pbac_sheet import (
+from crdc_pw.utils.pbac_sheet import (
     INPUT_RELATIVE,
     compare_actual,
     load_expected_rows,

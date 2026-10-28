@@ -5,7 +5,7 @@ broken catalog or a renamed Katalon path before a live smoke pays OTP.
 
 Flow (this file):
   1. Catalog size matches the conversion report
-  2. Paths used by login + TC08/TC09 still resolve
+  2. Paths used by login + TC08/TC09 + CRDCDH-3974 still resolve
   3. Missing path raises
   4. Placeholder substitution (Katalon ${role} and {role})
   5. Attribute access with hyphens in the YAML name
@@ -28,7 +28,7 @@ def test_loader_loads_converted_yaml(locators: LocatorLoader) -> None:
 
 @pytest.mark.unit
 def test_login_and_header_paths_used_by_smoke(locators: LocatorLoader) -> None:
-    """XPaths the live smoke (login, header, Manage Studies/Programs) actually clicks."""
+    """XPaths the live smoke (login, header, Manage Studies/Programs, Release Notes) actually clicks."""
     # Login.gov + system-use banner
     assert "user_email" in locators.get("CRDC/Login/Login.gov_UserEmail-TxtBx")
     assert locators.get("CRDC/Login/LoginPageLogin-Btn")
@@ -37,6 +37,7 @@ def test_login_and_header_paths_used_by_smoke(locators: LocatorLoader) -> None:
     assert "system-use-warning-dialog" in locators.get(
         "CRDC/AILocators/Global/SystemUseWarning/Continue-Btn"
     )
+    assert locators.get("CRDC/AILocators/Global/SystemUseWarning/Warning-Dialog")
 
     # Desktop header (username, Manage Studies / Programs)
     assert "navbar-dropdown-name" in locators.get(
@@ -67,6 +68,13 @@ def test_login_and_header_paths_used_by_smoke(locators: LocatorLoader) -> None:
     assert locators.get("CRDC/AILocators/Programs/List/AddProgram-Btn")
     assert locators.get("CRDC/AILocators/Programs/List/Filters/ProgramName-TxtBx")
     assert locators.get("CRDC/AILocators/Programs/List/Filters/StudyName-TxtBx")
+
+    # CRDCDH-3974 Release Notes (footer link + page body)
+    assert locators.get("CRDC/AILocators/Global/Footer/DesktopFooter")
+    assert "/release-notes" in locators.get("CRDC/AILocators/Global/Footer/ReleaseNotes-Link")
+    markdown = locators.get("CRDC/AILocators/ReleaseNotes/MarkdownContent")
+    assert "Release Notes" in markdown
+    assert "release-notes-error" in locators.get("CRDC/AILocators/ReleaseNotes/ErrorAlert")
 
     # TC01 Manage Users / Profile permission form
     assert locators.get("CRDC/AILocators/Global/Header/Desktop/ManageUsers-Link")

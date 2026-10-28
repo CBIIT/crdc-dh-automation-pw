@@ -16,7 +16,7 @@ from openpyxl.workbook.workbook import Workbook as WorkbookType
 
 from crdc_pw.locators.loader import repo_root
 
-log = logging.getLogger("crdc_pw.pbac_sheet")
+log = logging.getLogger("crdc_pw.utils.pbac_sheet")
 
 INPUT_RELATIVE = Path("InputFiles/CRDC/PBACPermissions.xlsx")
 OUTPUT_RELATIVE = Path("OutputFiles/PBAC_Defaults_Results.xlsx")
@@ -33,17 +33,22 @@ HEADER_FONT = Font(bold=True)
 
 
 def input_path(root: Path | None = None) -> Path:
+    """Committed driver workbook: InputFiles/CRDC/PBACPermissions.xlsx."""
     return (root or repo_root()) / INPUT_RELATIVE
 
 
 def output_path(root: Path | None = None) -> Path:
+    """Per-run results workbook written by write_expected / compare_actual."""
     return (root or repo_root()) / OUTPUT_RELATIVE
 
 
 def load_expected_rows(role: str, root: Path | None = None) -> list[tuple[str, str, str]]:
-    """Rows for one role column: (internal_name, expected_status, display_name).
+    """Read one role column from PBACPermissions.xlsx.
 
-    Skips rows with a blank Permission Internal Name, same as Katalon writePbacExpectedPermissionsForRole.
+    Each returned row is (internal_name, expected_status, display_name).
+    Blank Permission Internal Name rows are skipped, same as Katalon
+    writePbacExpectedPermissionsForRole. openpyxl is 1-based; headers.index
+    is 0-based, so add 1 before ws.cell.
     """
     path = input_path(root)
     wb = load_workbook(path)
@@ -68,7 +73,12 @@ def load_expected_rows(role: str, root: Path | None = None) -> list[tuple[str, s
 
 
 def write_expected(role: str, root: Path | None = None) -> Path:
-    """Write the role's expected column into OutputFiles/PBAC_Defaults_Results.xlsx."""
+    """Copy the role's expected column into OutputFiles/PBAC_Defaults_Results.xlsx.
+
+    One sheet per role. Actual / Result columns stay empty until compare_actual.
+    Recreating the sheet on each run so a leftover Fail from a prior role does
+    not mix with this one.
+    """
     expected_rows = load_expected_rows(role, root)
     out = output_path(root)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -80,6 +90,7 @@ def write_expected(role: str, root: Path | None = None) -> Path:
         cell = ws.cell(1, col, title)
         cell.font = HEADER_FONT
         cell.fill = HEADER_FILL
+    # Col 1 Permission, 2 Expected, 4 Name. 3 / 5 / 6 filled later.
     for i, (internal, expected, display) in enumerate(expected_rows, start=2):
         ws.cell(i, 1, internal)
         ws.cell(i, 2, expected)
@@ -96,9 +107,11 @@ def compare_actual(
     actual_rows: list[tuple[str, str]],
     root: Path | None = None,
 ) -> bool:
-    """Fill Actual / Actual Name / Result from UI rows in sheet order. True if every row Pass.
+    """Fill Actual / Actual Name / Result from UI rows. True if every row Pass.
 
-    actual_rows is (display_label, status) in checkbox order, same as Katalon i-1 vs sheet row i.
+    actual_rows is (display_label, status) in checkbox order. Sheet row 2 is
+    UI index 0, same as Katalon i-1 vs sheet row i. A missing UI row or a
+    blank label is Fail, not a skip.
     """
     out = output_path(root)
     wb = load_workbook(out)
@@ -119,6 +132,7 @@ def compare_actual(
             ui_label, actual_status = actual_rows[ui_index]
             if not ui_label:
                 ui_label = "MISSING_LABEL_UI"
+            # Both the checkbox state and the visible name must match.
             state_matches = bool(expected) and expected.lower() == (actual_status or "").lower()
             name_matches = bool(expected_name) and bool(ui_label) and expected_name.lower() == ui_label.lower()
             passed = state_matches and name_matches
@@ -147,12 +161,14 @@ def compare_actual(
 
 
 def _open_or_create(path: Path) -> WorkbookType:
+    """Reuse an existing results workbook so other role sheets stay; else start empty."""
     if path.is_file():
         return load_workbook(path)
     return Workbook()
 
 
 def _save(wb: WorkbookType, path: Path) -> None:
+    """Write the workbook. Drop leftover default 'Sheet' tabs openpyxl creates."""
     extra = [name for name in wb.sheetnames if name.startswith("Sheet")]
     if extra and len(wb.sheetnames) > 1:
         for name in extra:
@@ -162,6 +178,7 @@ def _save(wb: WorkbookType, path: Path) -> None:
 
 
 def _cell_str(cell: object) -> str:
+    """Cell text, or empty string when the cell is blank."""
     value = getattr(cell, "value", None)
     if value is None:
         return ""

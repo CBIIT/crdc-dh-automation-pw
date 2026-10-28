@@ -19,7 +19,7 @@ import pytest
 from crdc_pw.auth import switch_user
 from crdc_pw.hub import Hub
 from crdc_pw.pages.users import ManageUsersPage, UserProfilePage
-from crdc_pw.pbac_sheet import compare_actual, output_path, write_expected
+from crdc_pw.utils.pbac_sheet import compare_actual, output_path, write_expected
 
 log = logging.getLogger("crdc_pw.tc01_pbac")
 

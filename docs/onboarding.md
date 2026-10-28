@@ -90,7 +90,7 @@ crdc-dh-automation-pw/
 │   ├── pages/              # one screen: open / filter / click / fill / read
 │   ├── locators/loader.py  # Katalon path → XPath string
 │   ├── config.py           # which yaml file, which role credentials
-│   └── otp.py              # TOTP codes (was GenerateOtp.py)
+│   └── utils/              # non-page oracles (Excel, GitHub raw, TOTP)
 ├── locators/CRDC/          # YAML catalog (was Object Repository/*.rs)
 ├── config/                 # qa / qa2 / stage (was Profiles/*.glbl)
 ├── auth/                   # saved Login.gov cookies (gitignored)
@@ -369,6 +369,8 @@ Always activate the venv first (`source .venv/bin/activate`).
 | Against QA2 | `CRDC_PROFILE=qa2 pytest -m smoke` |
 
 The login smoke is Katalon **TC18_LoginAllRolesAndSwitchUser** at `tests/AuxiliaryTests/test_TC18_LoginAllRolesAndSwitchUser.py`. It checks that each role lands on Hub (username in the header, URL is Data Commons, not Login.gov). The `test_` prefix is required so pytest collects the file; the rest of the name matches Katalon.
+
+Every run writes `reports/report-YYYYMMDD-HHMMSS.html` (gitignored, Katalon-style new file per run). Override with `--html=path`. A failed live test embeds a full-page screenshot in that HTML and writes a PNG under `reports/screenshots/`.
 
 Useful pytest extras:
 

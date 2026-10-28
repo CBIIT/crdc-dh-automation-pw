@@ -16,6 +16,7 @@ from crdc_pw.pages.base import BasePage
 from crdc_pw.pages.header import USERNAME
 
 SYSTEM_USE_CONTINUE = "CRDC/AILocators/Global/SystemUseWarning/Continue-Btn"
+SYSTEM_USE_DIALOG = "CRDC/AILocators/Global/SystemUseWarning/Warning-Dialog"
 LOGIN_PAGE_LOGIN_BTN = "CRDC/Login/LoginPageLogin-Btn"
 LOGIN_DIALOG_LOGIN_BTN = "CRDC/AILocators/Home/LoginDialogLogin-Btn"
 LOGIN_DIALOG_CLOSE_BTN = "CRDC/Login/LoginDialogClose-Btn"
@@ -51,10 +52,18 @@ class LoginPage(BasePage):
             return False
 
     def dismiss_system_use_warning(self, timeout_ms: int = 1500) -> bool:
-        """Click Continue only if the banner is already on screen."""
+        """Click Continue if the banner shows, then wait until the dialog is gone.
+
+        Cookie reuse often paints this after the header username, so callers should
+        pass a few seconds. No-op if it never appears.
+        """
         if not self._is_visible(SYSTEM_USE_CONTINUE, timeout_ms):
             return False
         self.loc(SYSTEM_USE_CONTINUE).first.click()
+        try:
+            self.loc(SYSTEM_USE_DIALOG).first.wait_for(state="hidden", timeout=10000)
+        except PlaywrightTimeoutError:
+            pass
         return True
 
     def start_login_gov(self) -> None:
