@@ -27,7 +27,7 @@ Katalon has **keyword classes**, not page objects (`Keywords/utilities/*.groovy`
 |---|---|
 | 1 test (most list / export / SR-ticket) | Inline `expect` / `assert` in **that** test. Page `read_*` only. |
 | Role / TC **family** (PBAC defaults × 5, functional × 10) | One helper + same test shape, different role / args. |
-| Many DS cases vs files (batch row, validation TSV, error modal, CLI errors) | Page `read_*` + sheet / TSV helper (hybrid). |
+| Many DS cases vs files (batch row, validation TSV, error modal, CLI errors) | Page `read_*` + TSV utils. Reused Katalon keywords like `verifyValidationResultsVsExpectedForTC` live on the detail page, not a tests/ sidecar. |
 | `verifyButtonEnabled` / `verifyElementText` | Playwright `expect` in the test. Never a page/`WebUIUtils` wrapper. |
 
 `expect_loaded()` on a page is OK. A `verify_*` options-map is not. Do not recreate Katalon keyword verifies on list pages.
@@ -52,14 +52,14 @@ write_expected("Submitter")
 assert compare_actual("Submitter", users.read_permission_rows())
 ```
 
-**DS upload — page reads; helper owns expected TSV:**
+**DS validation TSV — test looks like Katalon; compare keyword is on the detail page:**
 
 ```python
-ds.open_upload_activities()
-row = ds.read_batch_row()
-assert row["status"] == "Uploaded"
-issues = ds.read_validation_results()
-assert validation_tsv.matches(tc_name="CRDCDH-887", issues)
+ds.open()
+ds.create_data_submission("New", "metadata only", "GC", "autoQA - AutomationQA_Study")
+detail.upload_folder("TC08")
+detail.click_validate()
+detail.verify_validation_results_vs_expected_for_tc("TC08", model="GC")
 ```
 
-The test still names case-specific values. The 19-case compare is not pasted 19 times.
+The test still names case-specific values (`TC08`, `GC`). Utils own the expected TSV matching. Do not add `tests/DataSubmissions/metadata_vr.py`.

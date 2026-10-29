@@ -86,6 +86,15 @@ def test_login_and_header_paths_used_by_smoke(locators: LocatorLoader) -> None:
     assert locators.get("CRDC/ManageUsers/PbacOptions-Chkbx")
     assert locators.get("CRDC/AILocators/GenericTable/Pagination/NextPage-Btn")
 
+    # TC08 GC metadata VR (create DS, upload, Validation Results)
+    assert locators.get("CRDC/AILocators/Global/Header/Desktop/DataSubmissions-Tab")
+    assert locators.get("CRDC/AILocators/DataSubmissions/List/Table/CreateDataSubmission-Btn")
+    assert locators.get("CRDC/DataSubmissions/DataSubmissionName-Link")
+    assert locators.get("CRDC/DataSubmissions/ChooseFiles-Btn")
+    assert locators.get("CRDC/DataSubmissions/Validate-Btn")
+    assert locators.get("CRDC/DataSubmissions/Validation/ValidationResults-Tab")
+    assert locators.get("CRDC/DataSubmissions/Validation/Table-Row")
+
 
 @pytest.mark.unit
 def test_missing_path_raises(locators: LocatorLoader) -> None:

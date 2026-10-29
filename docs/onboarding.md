@@ -32,9 +32,9 @@ The framework can:
 - Sign in through Login.gov with TOTP (one-time password)
 - Reuse a saved browser session so the next run does not pay OTP every time
 - Sign in as **Admin, Fedlead, Dcp, Submitter, User, and Master** and land on Hub (TC18)
-- Run **TC08** Manage Studies, **TC09** Manage Programs, **TC01** PBAC Fedlead defaults, and **CRDCDH-3974** Release Notes (markdown visible on QA)
+- Run **TC08** Manage Studies, **TC09** Manage Programs, **TC01** PBAC Fedlead defaults, **CRDCDH-3974** Release Notes, and **TC08** GC invalid-integer Data Submission (metadata VR)
 
-That is the floor everything else builds on. Submission Requests, Data Submissions, emails, Mongo, and GraphQL are **not** here yet.
+That is the floor everything else builds on. Submission Requests, remaining Data Submissions, emails, Mongo, and GraphQL are **not** here yet.
 
 ### End goal (after the port)
 
@@ -118,7 +118,7 @@ flowchart TB
 | **auth** | `src/crdc_pw/auth.py` | Login.gov OTP / Grant, file-locked `storage_state`. Fixture only. Tests do not call this unless the *scenario* switches user |
 | **hub** | `src/crdc_pw/hub.py` | Thin bag the fixture hands the test: this tab, this role, locators, settings. Not the Hub website |
 | **pages** | `src/crdc_pw/pages/` | One Hub screen each (`StudiesListPage`, `HeaderPage`, …). Clicks and reads. `BasePage` holds locator resolve, Hub timeouts, and shared table / dropdown / snackbar helpers |
-| **tests** | `tests/AuxiliaryTests/`, `tests/Pbac/` | Scenario + pass/fail. Same Katalon suite names (`CRDC_Auxiliary`, `CRDC_PBAC`, `CRDC_Smoke`) |
+| **tests** | `tests/AuxiliaryTests/`, `tests/Pbac/`, `tests/DataSubmissions/` | Scenario + pass/fail. Same Katalon suite names (`CRDC_Auxiliary`, `CRDC_PBAC`, `CRDC_Smoke`, `CRDC_DataValidation`) |
 | **utils** | `src/crdc_pw/utils/` | Optional oracles (Excel, TOTP, GitHub raw). Not a screen |
 
 How one live test runs:
@@ -167,18 +167,19 @@ flowchart LR
 crdc-dh-automation-pw/
 ├── tests/                  # pytest files (Katalon Test Case / Script)
 │   ├── conftest.py         # builds `hub`: browser + login  ← start here if login fails
-│   ├── AuxiliaryTests/     # TC08, TC09, TC18, CRDCDH-3974
+│   ├── AuxiliaryTests/     # TC08 studies, TC09, TC18, CRDCDH-3974
 │   ├── Pbac/               # TC01 Fedlead defaults
+│   ├── DataSubmissions/    # GC metadata VR (TC08 invalid integer)
 │   └── unit/               # no browser (locator, config, sheet, notes helpers)
 ├── src/crdc_pw/
 │   ├── hub.py              # thin session the fixture yields (page, locators, settings, role)
 │   ├── auth.py             # Login.gov OTP / Grant (fixture only; tests do not call this)
 │   ├── config.py           # which yaml file, which role credentials
-│   ├── pages/              # login, header, studies, programs, users, release_notes
+│   ├── pages/              # login, header, studies, programs, users, data_submissions, release_notes
 │   ├── locators/loader.py  # Katalon path → XPath string
-│   └── utils/              # pbac_sheet, static_content, otp
+│   └── utils/              # pbac_sheet, validation_results, static_content, otp
 ├── locators/CRDC/          # YAML catalog (was Object Repository/*.rs)
-├── InputFiles/CRDC/        # PBACPermissions.xlsx (and later TSV / Excel drivers)
+├── InputFiles/CRDC/        # PBAC Excel, MetadataData/TC08, DSV_ValidationResults-mappings.xlsx
 ├── config/                 # qa / qa2 / stage (was Profiles/*.glbl)
 ├── auth/                   # saved Login.gov cookies (gitignored)
 ├── reports/                # HTML + failure screenshots (gitignored)
@@ -199,6 +200,8 @@ crdc-dh-automation-pw/
 | Test Suite `CRDC_Smoke.ts` | `pytest -m CRDC_Smoke` |
 | Test Suite `CRDC_Auxiliary.ts` | `pytest -m CRDC_Auxiliary` |
 | Test Suite `CRDC_PBAC.ts` | `pytest -m CRDC_PBAC` |
+| Test Suite `CRDC_DataValidation.ts` | `pytest -m CRDC_DataValidation` |
+| `Test Cases/CRDC/DataSubmissions/GC/CRDCDH-686-Partial/TC08_...` | `tests/DataSubmissions/GC/test_TC08_CRDC-VerifyInvalidIntegerValue.py` |
 
 ### Fixture, page, test (no keyword layer)
 
@@ -320,6 +323,8 @@ pytest
 | Timeout on Manage Studies / filters | `pages/studies.py` then YAML under `locators/CRDC/AILocators/Studies/` |
 | Timeout on Release Notes / empty markdown | `pages/release_notes.py` then YAML under `locators/CRDC/AILocators/ReleaseNotes/` and Footer |
 | PBAC Pass/Fail in Excel | `utils/pbac_sheet.py` and `OutputFiles/PBAC_Defaults_Results.xlsx` |
+| Timeout on Data Submissions create / Validate / VR table | `pages/data_submissions.py` then YAML under `locators/CRDC/DataSubmissions/` |
+| VR vs expected TSV mismatch | `utils/validation_results.py` and `InputFiles/CRDC/MetadataData/<TC>/expected-ValidationResults/` |
 | “Who even opened the browser?” | `tests/conftest.py` fixture `hub` |
 
 ### Other live cases (same pattern)
@@ -352,6 +357,8 @@ def test_TC01_CRDC_PbacDefaultPermissions_Fedlead(hub: Hub) -> None:
 ```
 
 `navigate`, `closeBrowser`, viewport, and the first OTP stay in the fixture. Scenario clicks stay in the pytest file as page-object calls — not as raw XPaths.
+
+**TC08 invalid integer** (`tests/DataSubmissions/GC/test_TC08_CRDC-VerifyInvalidIntegerValue.py`) is Submitter, not Admin. Marker `CRDC_DataValidation` so `pytest -m CRDC_Auxiliary -k TC08` still means Manage Studies only. Same steps as Katalon after login: create a New GC metadata-only DS, `upload_folder("TC08")`, `click_validate()`, then `verify_validation_results_vs_expected_for_tc("TC08", model="GC")`. Expected TSV matching is `utils/validation_results.py`. It leaves the `auto-test_*` submission (Katalon does too).
 
 ---
 
@@ -463,6 +470,8 @@ Always activate the venv first (`source .venv/bin/activate`).
 | TC08 Manage Studies list only | `pytest -m CRDC_Auxiliary -k TC08` |
 | TC09 Manage Programs list only | `pytest -m CRDC_Auxiliary -k TC09` |
 | TC01 PBAC Fedlead defaults | `pytest -m CRDC_PBAC -k TC01` |
+| Katalon Data Validation suite | `pytest -m CRDC_DataValidation` |
+| TC08 invalid integer (GC metadata VR) | `pytest -m CRDC_DataValidation -k "VerifyInvalidInteger"` |
 | CRDCDH-3974 Release Notes | `pytest -m CRDC_Auxiliary -k 3974` |
 | TC18 file only | `pytest tests/AuxiliaryTests/test_TC18_LoginAllRolesAndSwitchUser.py` |
 | Against QA2 | `CRDC_PROFILE=qa2 pytest -m CRDC_Auxiliary` |
