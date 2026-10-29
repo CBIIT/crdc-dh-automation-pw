@@ -1,7 +1,9 @@
 """CRDC Data Hub Playwright test framework (Katalon port).
 
 Layers:
-  tests  ->  keywords (login, later PBAC)  ->  pages (header, login)  ->  YAML locators
+  tests  ->  pages (header, login, studies, programs)  ->  YAML locators
+  fixture  ->  auth (Login.gov OTP)  ->  Hub (page, locators, settings, role)
+  utils  ->  non-page oracles (Excel, GitHub raw, TOTP)
 """
 
 from crdc_pw.config import Settings, load_settings

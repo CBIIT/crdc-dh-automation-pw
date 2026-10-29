@@ -23,7 +23,7 @@ The sibling Katalon project is still the live suite until we cut over area by ar
 
 ## Where we are vs the end goal
 
-### Today (Phase 0 — scaffold)
+### Today (Phase 0 — scaffold plus first cases)
 
 The framework can:
 
@@ -31,9 +31,10 @@ The framework can:
 - Look up locators the same way Katalon did (`CRDC/Login/...`)
 - Sign in through Login.gov with TOTP (one-time password)
 - Reuse a saved browser session so the next run does not pay OTP every time
-- Smoke-test that **Admin, Fedlead, Dcp, Submitter, User, and Master** land on Hub
+- Sign in as **Admin, Fedlead, Dcp, Submitter, User, and Master** and land on Hub (TC18)
+- Run **TC08** Manage Studies, **TC09** Manage Programs, **TC01** PBAC Fedlead defaults, and **CRDCDH-3974** Release Notes (markdown visible on QA)
 
-That is the floor everything else builds on. PBAC, Submission Requests, Data Submissions, emails, Mongo, and GraphQL are **not** here yet.
+That is the floor everything else builds on. Submission Requests, Data Submissions, emails, Mongo, and GraphQL are **not** here yet.
 
 ### End goal (after the port)
 
@@ -41,7 +42,7 @@ Replace the Katalon Hub suites with this repo so QA and CI run Playwright instea
 
 | Area (Katalon today) | Rough size | Lands in this repo as |
 |---|---:|---|
-| Data Submissions | ~79 cases | `tests/` + DS keywords (largest slice) |
+| Data Submissions | ~79 cases | `tests/` + DS page objects (largest slice) |
 | Notification emails | ~27 | UI in Playwright; existing Gmail Python stays |
 | Submission Requests | ~19 | SR form + list |
 | PBAC | ~19 | First real suite after login |
@@ -52,11 +53,11 @@ Replace the Katalon Hub suites with this repo so QA and CI run Playwright instea
 
 Planned order after this scaffold:
 
-1. **PBAC defaults** (TC01–05) plus a couple of isolated PBAC tickets — first real functional tests
-2. **Shared UI kit** — tables, filters, MUI dropdowns, snackbars (unblocks every list page)
+1. Remaining **PBAC defaults** (TC02–05) plus isolated PBAC tickets — TC01 is already here
+2. **Shared UI helpers on BasePage** — tables, MUI dropdowns, snackbars (done; unblocks every list page)
 3. **Submission Requests**
 4. **Data Submissions** (upload, validate, results tables)
-5. **Non-browser oracles** — Mongo, GraphQL, CLI uploader, Gmail
+5. **Non-browser oracles** — Mongo, GraphQL, CLI uploader, Gmail (`utils/` already holds Excel and GitHub-raw helpers)
 6. **Notifications and remaining admin**
 7. **CI on GitHub Actions** for smoke + suites; Katalon retired suite by suite
 
@@ -68,153 +69,248 @@ If you are joining during the port, expect new tests to show up as pytest files 
 
 Every live Hub test uses the same pattern:
 
-1. **Fixture** (`app`) — open the browser, sign in as a role (Login.gov / saved cookies). Same idea as Katalon `closeBrowser` + `loginToCrdcOtp` at the top of every script, except it is not copied into each pytest file.
-2. **Test** — the *scenario*: navigate, click, assert. That is the middle of the Katalon Groovy, the part you used to read to understand the case.
-3. **Keywords / pages** — how those scenario lines are implemented (XPaths stay in YAML).
+1. **Fixture** (`hub`) — open the browser, sign in as a role (Login.gov / saved cookies). Same idea as Katalon `closeBrowser` + `loginToCrdcOtp` at the top of every script, except it is not copied into each pytest file.
+2. **Page** — one Hub screen. Locators stay in YAML; the page turns those paths into clicks, fills, and reads.
+3. **Test** — the *scenario* plus asserts: construct the page, drive it, `expect` / `assert` in the pytest file.
+4. **Utils** (optional) — Excel, GitHub raw, TOTP when the case is not page-only. Not a screen.
 
-Initial login is **setup**, not a line in the test. TC18 looks like “only asserts” because its scenario *is* “we are on Hub as this role.” PBAC and DS tests will show more lines (`open_manage_users`, `verify_permission_defaults`) after the same logged-in `app`.
+Initial login is **setup**, not a line in the test. **TC08** (Manage Studies list and filter) is the example below: construct a page, navigate, `expect`, filter, assert. PBAC and DS tests follow the same pattern after the same logged-in `hub`.
 
 If login or the browser fails, follow the plumbing table below. If you want to know *what the case is testing*, read the pytest file.
+
+### Core pieces
+
+These files are the whole framework. Everything else is a page or a test that uses them.
+
+```mermaid
+flowchart TB
+  pytestRun[pytest]
+  conftest[conftest.py]
+  configPy[config.py]
+  configYaml[config/qa.yaml]
+  loader[LocatorLoader]
+  locYaml[locators YAML]
+  authPy[auth.py]
+  hubBag[Hub]
+  testFile[test file]
+  pageObj[pages]
+  utilsBox[utils]
+  pytestRun --> conftest
+  conftest --> configPy
+  configPy --> configYaml
+  conftest --> loader
+  loader --> locYaml
+  conftest --> authPy
+  authPy --> hubBag
+  conftest --> hubBag
+  hubBag --> testFile
+  testFile --> pageObj
+  pageObj --> loader
+  testFile -.-> utilsBox
+```
+
+| Piece | File | Job in one sentence |
+|---|---|---|
+| **pytest** | you run this | Discovers tests and asks `conftest` for fixtures |
+| **conftest** | `tests/conftest.py` | Setup for every live test: open browser, log in, HTML report, failure screenshot. Not a page. |
+| **config** | `src/crdc_pw/config.py` + `config/qa.yaml` | Which Hub URL and which Login.gov accounts (was Katalon Profiles) |
+| **locators** | `locators/CRDC/**/*.yaml` + `src/crdc_pw/locators/loader.py` | Katalon path → XPath (was Object Repository) |
+| **auth** | `src/crdc_pw/auth.py` | Login.gov OTP / Grant. Fixture only. Tests do not call this unless the *scenario* switches user |
+| **hub** | `src/crdc_pw/hub.py` | Thin bag the fixture hands the test: this tab, this role, locators, settings. Not the Hub website |
+| **pages** | `src/crdc_pw/pages/` | One Hub screen each (`StudiesListPage`, `HeaderPage`, …). Clicks and reads. `BasePage` holds locator resolve, Hub timeouts, and shared table / dropdown / snackbar helpers |
+| **tests** | `tests/AuxiliaryTests/`, `tests/Pbac/` | Scenario + pass/fail. Same Katalon suite names (`CRDC_Auxiliary`, `CRDC_PBAC`, `CRDC_Smoke`) |
+| **utils** | `src/crdc_pw/utils/` | Optional oracles (Excel, TOTP, GitHub raw). Not a screen |
+
+How one live test runs:
+
+```mermaid
+sequenceDiagram
+  participant P as pytest
+  participant C as conftest
+  participant A as auth
+  participant T as test
+  participant PG as page
+  P->>C: this test asked for hub
+  C->>C: load qa.yaml and YAML locators
+  C->>A: log in or reuse cookies
+  A-->>C: signed in on this tab
+  C->>T: here is hub
+  T->>PG: open filter read
+  PG-->>T: rows or text
+  T->>T: expect or assert
+```
+
+Adding TC12 does **not** mean editing conftest, hub, auth, or config. You add a page (if the screen is new) and a pytest file. Touch auth/conftest only when login or session setup is wrong.
+
+### Layers (test author's view)
+
+The files above collapse to four jobs when you write a case:
+
+```mermaid
+flowchart LR
+  fixture["conftest builds hub"]
+  test["test: scenario + asserts"]
+  page["pages/"]
+  yaml["locators YAML"]
+  utils["utils/"]
+  fixture --> test
+  test --> page
+  page --> yaml
+  test -.-> utils
+```
+
+`hub` is who is signed in. The **test** owns the scenario and asserts. A **page** is one Hub screen. **utils** is optional: Excel, GitHub raw markdown, TOTP — not a screen.
 
 ### Folders
 
 ```
 crdc-dh-automation-pw/
 ├── tests/                  # pytest files (Katalon Test Case / Script)
-│   ├── conftest.py         # builds `app`: browser + login  ← start here if login fails
-│   ├── AuxiliaryTests/     # Katalon AuxiliaryTests (no extra CRDC/ — this repo is Hub only)
-│   └── unit/               # no browser (locator + config checks)
+│   ├── conftest.py         # builds `hub`: browser + login  ← start here if login fails
+│   ├── AuxiliaryTests/     # TC08, TC09, TC18, CRDCDH-3974
+│   ├── Pbac/               # TC01 Fedlead defaults
+│   └── unit/               # no browser (locator, config, sheet, notes helpers)
 ├── src/crdc_pw/
-│   ├── app.py              # the `App` toolbox the test receives
-│   ├── keywords/           # user journeys (Login today; later Pbac, DS)
-│   ├── pages/              # one screen: click / fill / read
-│   ├── locators/loader.py  # Katalon path → XPath string
+│   ├── hub.py              # thin session the fixture yields (page, locators, settings, role)
+│   ├── auth.py             # Login.gov OTP / Grant (fixture only; tests do not call this)
 │   ├── config.py           # which yaml file, which role credentials
-│   └── otp.py              # TOTP codes (was GenerateOtp.py)
+│   ├── pages/              # login, header, studies, programs, users, release_notes
+│   ├── locators/loader.py  # Katalon path → XPath string
+│   └── utils/              # pbac_sheet, static_content, otp
 ├── locators/CRDC/          # YAML catalog (was Object Repository/*.rs)
+├── InputFiles/CRDC/        # PBACPermissions.xlsx (and later TSV / Excel drivers)
 ├── config/                 # qa / qa2 / stage (was Profiles/*.glbl)
 ├── auth/                   # saved Login.gov cookies (gitignored)
+├── reports/                # HTML + failure screenshots (gitignored)
 └── docs/onboarding.md
 ```
 
 | If you used this in Katalon | Look here instead |
 |---|---|
-| `Test Cases/CRDC/AuxiliaryTests/TC18_LoginAllRolesAndSwitchUser` | `tests/AuxiliaryTests/test_TC18_LoginAllRolesAndSwitchUser.py` |
+| `Test Cases/CRDC/AuxiliaryTests/TC08_ManageStudiesListAndFilter` | `tests/AuxiliaryTests/test_TC08_ManageStudiesListAndFilter.py` |
 | `Scripts/CRDC/.../Script….groovy` | `tests/<Area>/test_TC##_….py` |
-| `WebUI.closeBrowser()` + `loginToCrdcOtp` at the top of every script | `tests/conftest.py` (`app` fixture) |
-| `CustomKeywords.'utilities.Login.loginToCrdcOtp'` | `src/crdc_pw/keywords/login.py` |
-| `findTestObject` + `WebUI.click` inside that Groovy | `src/crdc_pw/pages/` (`LoginPage`, `HeaderPage`) |
+| `WebUI.closeBrowser()` + `loginToCrdcOtp` at the top of every script | `tests/conftest.py` (`hub` fixture) |
+| `CustomKeywords.'utilities.Login.loginToCrdcOtp'` | `src/crdc_pw/auth.py` (called by the fixture, not the test) |
+| `findTestObject` + `WebUI.click` inside that Groovy | `src/crdc_pw/pages/` (`LoginPage`, `HeaderPage`, list pages) |
+| `PythonFiles/CRDC/GenerateOtp.py` | `src/crdc_pw/utils/otp.py` |
+| Data File `CRDC/Pbac/Permissions` | `InputFiles/CRDC/PBACPermissions.xlsx` + `utils/pbac_sheet.py` |
 | Object Repository `CRDC/Login/...` | `locators/CRDC/**/*.yaml` + `LocatorLoader` |
 | `Profiles/CRDC_QA.glbl` / `GlobalVariable` | `config/qa.yaml` |
-| Test Suite `CRDC_Smoke.ts` | `pytest -m smoke` |
+| Test Suite `CRDC_Smoke.ts` | `pytest -m CRDC_Smoke` |
+| Test Suite `CRDC_Auxiliary.ts` | `pytest -m CRDC_Auxiliary` |
+| Test Suite `CRDC_PBAC.ts` | `pytest -m CRDC_PBAC` |
 
-### Keywords vs pages (Katalon mixed these)
+### Fixture, page, test (no keyword layer)
 
-Katalon had **no separate page layer**. `Login.groovy` was both the journey (`loginToCrdcOtp`) and the clicks (`findTestObject`, `setText`, `click`). This repo splits that one Groovy class:
+Katalon had **no separate page layer**. `Login.groovy` was both the journey (`loginToCrdcOtp`) and the clicks (`findTestObject`, `setText`, `click`). This repo splits that Groovy class into a **fixture** (session) and **page objects** (screens). There is no `keywords/` package.
 
-| | **Keyword** (`keywords/`) | **Page** (`pages/`) |
-|---|---|---|
-| Question it answers | What can the *user / test* do? | What can you do *on this screen*? |
-| Example | `login_otp` (fixture); later `verify_permission_defaults` (test) | `click_grant()`, `fill` email, read username |
-| Uses | One or more pages + yaml credentials + OTP | YAML path → Playwright locator |
-| Test calls it? | Scenario steps (`app.pbac.…`, `app.login.switch_user`). Not the first login | Yes, for one screen (`app.header.username()`) |
+| | **Fixture** (`hub`) | **Page** (`pages/`) | **Utils** (`utils/`) | **Test** (`tests/`) |
+|---|---|---|---|---|
+| Question it answers | Who is signed in, on which tab? | What can you do *on this screen*? | How does Hub compare to a file / GitHub / TOTP? | What is the scenario, and did it pass? |
+| Example | Login.gov OTP, saved cookies, `hub.role` | `open()`, `apply_filters()`, `markdown_text()` | `write_expected` / `compare_actual`, `published_notes_snippet` | `expect(studies.container).to_be_visible()` |
+| Uses | `auth.py` + `LoginPage` / `HeaderPage` | Locator properties → YAML → Playwright (15s `BasePage.DEFAULT_MS`) | Excel, HTTP GET, `pyotp` | Page objects + optional utils + `expect` / `assert` |
+| Test calls it? | Asks for `hub` (already signed in). Uses `auth.switch_user(hub, role)` only when the *scenario* changes user | Yes — `StudiesListPage(hub.page, hub.locators)` | Yes, when the case needs an oracle (TC01, later 3979) | This *is* the test |
 
-You could put every method on a page. Keywords exist so `PbacKeywords` does not become another 1,600-line file that also owns every Manage Users button.
+Adding a new list case (TC12) does not touch `Hub` or `conftest.py`. You write a page object and a pytest file.
 
-### What `app` is
+### What `hub` is
 
-`app` is **not** the Hub website. It is a Python object pytest builds **before** your test function runs: **one Chromium tab, already on Hub, already signed in as a role**, plus named helpers for that tab.
+`hub` is **not** the Hub website. It is a thin Python object pytest builds **before** your test function runs: **one Chromium tab, already on Hub, already signed in as a role**. Tests construct page objects from it. It has no `studies` / `programs` / `login` / `header` fields.
 
-Katalon equivalent: the moment *after* `navigateToCrdc()` + `loginToCrdcOtp('Admin')`, browser still open. That whole situation is `app`.
+Katalon equivalent: the moment *after* `navigateToCrdc()` + `loginToCrdcOtp('Admin')`, browser still open. That whole situation is `hub`.
 
 | You write | What it is |
 |---|---|
-| `app.page` | The browser tab |
-| `app.role` | `'Admin'`, `'Fedlead'`, … |
-| `app.header` | Hub header page (`HeaderPage`) |
-| `app.login` | Login.gov keyword (`LoginKeywords`) |
-| `app.locators` | Loaded YAML (`LocatorLoader`) — pages use this, tests rarely do |
-| `app.config` | URL + credentials for this run |
+| `hub.page` | The browser tab |
+| `hub.role` | `'Admin'`, `'Fedlead'`, … |
+| `hub.locators` | Loaded YAML (`LocatorLoader`) — pages use this |
+| `hub.settings` | URL + credentials for this run |
 
-If a test only asks for `app`, the role is **Admin**. Smoke parametrizes `app` so each role gets a **new** browser — like Katalon `closeBrowser` between users, except each role is its own pytest result.
+If a test only asks for `hub`, the role is **Admin**. A case that needs every role (TC18) parametrizes `hub` with `indirect=True` so each role gets a **new** browser — like Katalon `closeBrowser` between users, except each role is its own pytest result.
 
-### Walkthrough: the smoke test (one role)
+### Walkthrough: TC08 Manage Studies
 
-Command: `pytest -m smoke`. Pytest runs `test_TC18_LoginAllRolesAndSwitchUser` **six times** (Admin, Fedlead, Dcp, Submitter, User, Master). Follow **Admin** only.
+Command: `pytest -m CRDC_Auxiliary -k TC08`.
 
-**The test file itself** (`tests/AuxiliaryTests/test_TC18_LoginAllRolesAndSwitchUser.py`) assumes `app` is already signed in. For this case that *is* the scenario, so the file is three checks:
+**The test file itself** (`tests/AuxiliaryTests/test_TC08_ManageStudiesListAndFilter.py`) assumes `hub` is already signed in as Admin. The file is the scenario: open the list, check chrome, filter, assert rows.
 
 ```python
-def test_TC18_LoginAllRolesAndSwitchUser(app: App) -> None:
-    username = app.header.username(timeout_ms=5000)
-    assert username
-    assert "datacommons.cancer.gov" in app.page.url
-    assert "login.gov" not in app.page.url.lower()
+def test_TC08_ManageStudiesListAndFilter(hub: Hub) -> None:
+    studies = StudiesListPage(hub.page, hub.locators)
+    studies.open()
+    expect(studies.container).to_be_visible()
+    expect(studies.add_study).to_be_visible()
+    studies.apply_filters(study_name="autoQA", program="AutoTest-Program")
+    assert studies.row_count() >= 1
+    assert any("autoQA" in cell for row in studies.read_table_rows() for cell in row)
 ```
 
-Everything else already happened. Read **down** this list to see the clicks.
+Login already happened. Read **down** this list to see the clicks.
 
-**1. Once per pytest process** (not per role) — `tests/conftest.py`
+**1. Once per pytest process** — `tests/conftest.py`
 
 - `settings` = `config/qa.yaml` (or whatever `CRDC_PROFILE` is)
 - `locators` = `LocatorLoader()` reads every file under `locators/CRDC/` into memory (`"CRDC/Login/Login.gov-Btn"` → XPath). Same job as opening Object Repository.
 
-**2. Once per role — still `conftest.py`, the `app` fixture** (session setup, not the scenario)
+**2. The `hub` fixture** (session setup, not the scenario)
 
-1. Role string is `"Admin"` (from parametrize).
+1. Role defaults to `"Admin"` (TC08 does not parametrize).
 2. If `AdminEmail` / `AdminPassword` / `AdminSecret` are blank → skip, not fail.
 3. Open a Chromium tab. If `auth/qa/Admin.json` exists, load those cookies (last successful Login.gov).
-4. Build the keyword: `LoginKeywords(page, locators, settings)`. That keyword builds `LoginPage` and `HeaderPage` on the **same** tab.
-5. `login.navigate()` → `LoginPage` goes to Hub URL, dismisses the system-use banner if it is there.
-6. `login.is_logged_in()` → `HeaderPage` looks for the username button.
+4. Build `LoginSession(page, locators, settings)` from `auth.py`. That session builds `LoginPage` and `HeaderPage` on the **same** tab.
+5. `session.navigate()` → `LoginPage` goes to Hub URL, dismisses the system-use banner if it is there.
+6. `session.is_logged_in()` → `HeaderPage` looks for the username button.
    - Visible → cookies still good; skip Login.gov.
-   - Not visible → `login.login_otp("Admin")` (Katalon `loginToCrdcOtp`), then save `auth/qa/Admin.json`.
-7. **Now** pytest calls your test function with `App(...)`.
-8. After the test: close the tab (`WebUI.closeBrowser()`). Next role starts at step 2.
+   - Not visible → `session.login_otp("Admin")` (Katalon `loginToCrdcOtp`), then save `auth/qa/Admin.json`.
+7. `session.ensure_hub_ready()` — dismiss the system-use banner if it paints after the header (cookie reuse often does this).
+8. **Now** pytest calls your test function with `Hub(...)`.
+9. After the test: close the tab (`WebUI.closeBrowser()`). Failure screenshots go on the HTML report under `reports/`.
 
-**3. Inside `login_otp` (only when cookies were dead)** — `src/crdc_pw/keywords/login.py`
+**3. Inside `login_otp` (only when cookies were dead)** — `src/crdc_pw/auth.py`
 
-The keyword is the **story**. It does not contain XPaths. It calls the login **page**:
+The fixture session is the **story**. It does not contain XPaths. It calls the login **page**:
 
 - `start_login_gov()` — Hub Login button, then Login.gov icon
 - `submit_credentials(email, password)` — from the yaml, not the test
 - Wait for OTP **or** Grant **or** rare extra pages (Rules of Use, NIH agree)
-- If OTP: `totp_now(secret)` then `submit_otp(code)`
+- If OTP: `totp_now(secret)` from `utils/otp.py`, then `submit_otp(code)`
 - If Grant: `click_grant()`
 - Then `header.username()` to confirm Hub is up
 
 **4. Inside a page click** — `src/crdc_pw/pages/`
 
-`HeaderPage.username()` (the line the **test** calls) and `LoginPage.click_grant()` (the line the **keyword** calls) both go through `BasePage.loc()`:
+`studies.open()` (the line the **test** calls) goes to `HeaderPage.open_manage_studies()`, then waits for the list container. Tests assert `studies.container`; the page maps that to YAML via `_loc()`:
 
 ```
-path string  e.g. CRDC/AILocators/Global/Header/Desktop/UserName-Btn
+studies.container
+    → _loc("CRDC/AILocators/Studies/List/Container")
     → LocatorLoader.get(path)     # YAML → XPath
     → page.locator(xpath)         # Playwright, this tab
-    → wait until visible, then read or click
+    → wait until visible (15s Hub default), then read or click
 ```
 
-The test never sees the XPath. If a locator is wrong, the failure is usually in a **page** wait, not in the three asserts.
+The test never sees the XPath or the Katalon path. If a locator is wrong, the failure is usually in a **page** wait, not in the filter asserts.
 
 **5. Back in the test** — already logged in
 
 | Line | What it is doing |
 |---|---|
-| `app.header.username(5000)` | Read the Hub header name (page, not keyword) |
-| `app.page.url` | Playwright URL of that same tab |
-| `assert ...` | Fail **this role** if the name is empty or we are still on login.gov |
+| `StudiesListPage(hub.page, hub.locators)` | Bind the Manage Studies screen to this tab |
+| `studies.open()` | User menu → Manage Studies, wait for the list |
+| `expect(studies.container)` / `studies.add_study` | List chrome is up |
+| `studies.apply_filters(study_name="autoQA", program="AutoTest-Program")` | Same filter values as Katalon |
+| `assert` row count / `"autoQA"` in a cell | Fail if the filtered table is empty or off |
 
-`app.login` is how the fixture signed in. Tests do not call `login_otp` again. They call `app.login.switch_user(...)` only when the *scenario* changes user (PBAC), or `app.pbac.…` for domain steps.
+The fixture is how we signed in. Tests do not call `login_otp` again. They call `auth.switch_user(hub, role)` only when the *scenario* changes user (PBAC).
 
 ```
 pytest
   load qa.yaml + all YAML locators          (session)
-  per role:
-      open tab (+ maybe auth/qa/Admin.json)
-      fixture: LoginKeywords signs in
-      yield App                             ← test starts here, already on Hub
-          TEST: scenario + asserts
-      close tab
+  open tab (+ maybe auth/qa/Admin.json)
+  fixture: auth.LoginSession signs in as Admin
+  yield Hub                                 ← test starts here, already on Hub
+      TEST: StudiesListPage + expect/assert
+  close tab
 ```
 
 ### If something fails, where to look
@@ -222,49 +318,44 @@ pytest
 | Symptom | Open this first |
 |---|---|
 | Skip: missing AdminEmail | `config/qa.yaml` |
-| Never reaches Hub / OTP timeout | `keywords/login.py` then `pages/login.py` |
+| Never reaches Hub / OTP timeout | `auth.py` then `pages/login.py` |
 | Timeout on a button name you recognize | YAML under `locators/CRDC/` for that Katalon path |
 | Logged in but username assert fails | `pages/header.py` |
-| “Who even opened the browser?” | `tests/conftest.py` fixture `app` |
+| Timeout on Manage Studies / filters | `pages/studies.py` then YAML under `locators/CRDC/AILocators/Studies/` |
+| Timeout on Release Notes / empty markdown | `pages/release_notes.py` then YAML under `locators/CRDC/AILocators/ReleaseNotes/` and Footer |
+| PBAC Pass/Fail in Excel | `utils/pbac_sheet.py` and `OutputFiles/PBAC_Defaults_Results.xlsx` |
+| “Who even opened the browser?” | `tests/conftest.py` fixture `hub` |
 
-### Later tests (same pattern, more scenario lines)
+### Other live cases (same pattern)
 
-TC18 is a thin scenario. **TC08** is the first case with visible scenario lines (`tests/AuxiliaryTests/test_TC08_ManageStudiesListAndFilter.py`):
+**TC09** is the Programs twin (`tests/AuxiliaryTests/test_TC09_ManageProgramsListAndFilter.py`): `ProgramsListPage(hub.page, hub.locators).open()`, then filters `AutoTest` / `autoQA`, then at least one row contains `auto`.
 
-```python
-def test_TC08_ManageStudiesListAndFilter(app: App) -> None:
-    app.studies.navigate_to_manage_studies()
-    app.studies.verify_list_page()
-    app.studies.apply_filters(study_name="autoQA", program="AutoTest-Program")
-    app.studies.verify_filter_results(expect_at_least_rows=1, row_contains="autoQA")
-```
+**TC18** only asserts that each role landed on Hub (header username, URL is Data Commons, not Login.gov). It parametrizes `hub` across the six roles; there is no list page after login.
 
-Fixture already signed in as Admin. Filter values match Katalon (`autoQA` / `AutoTest-Program`).
+**CRDCDH-3974** (`tests/AuxiliaryTests/test_TC_CRDCDH-3974_ReleaseNotesPage.py`): footer → `/release-notes`, markdown visible, error alert hidden, text non-empty. A GitHub static-content compare is sketched in `utils/static_content.py` but not called until CRDCDH-3979.
 
-**TC09** is the Programs twin (`tests/AuxiliaryTests/test_TC09_ManageProgramsListAndFilter.py`): `app.programs.navigate_to_manage_programs()`, then filters `AutoTest` / `autoQA`, then at least one row contains `auto`.
-
-A ported PBAC case still uses the same logged-in `app`; the pytest file is the **middle** of Katalon TC01 (not `loginToCrdcOtp` / `closeBrowser`). Katalon today:
-
-```groovy
-CustomKeywords.'utilities.SubmissionRequest.loginToCrdcOtp'('Admin')
-CustomKeywords.'utilities.WebUIUtils.clickTab'('CRDC/NavBar/ManageUsers-Btn')
-CustomKeywords.'utilities.Pbac.verifyPbacPermissionDefaults'('Fedlead')
-```
-
-Same case here (shape only; `app.pbac` is not written yet). Fixture already signed in as Admin; **Manage Users and PBAC stay in the test**:
+**TC01** (`tests/Pbac/test_TC01_CRDC-PbacDefaultPermissions-Fedlead.py`) is the **middle** of Katalon TC01 (not `loginToCrdcOtp` / `closeBrowser`). Fixture already signed in as Admin. The page reads checkboxes; `utils/pbac_sheet.py` owns the Excel compare — no `verify_*` on the page:
 
 ```python
-def test_pbac_default_permissions_fedlead(app: App) -> None:
-    # fixture already logged in as Admin
-    app.header.open_manage_users()
-    app.pbac.verify_permission_defaults("Fedlead")
+def test_TC01_CRDC_PbacDefaultPermissions_Fedlead(hub: Hub) -> None:
+    users = ManageUsersPage(hub.page, hub.locators)
+    users.open()
+    users.find_and_edit("Fedlead")
+    users.reset_permissions("Fedlead")
+    users.find_and_edit("Fedlead")
+    users.expand_permission_panels()
+    write_expected("Fedlead")
+    assert compare_actual("Fedlead", users.read_permission_rows())
 
-    app.login.switch_user("Fedlead")
-    app.header.open_profile()
-    app.pbac.verify_permission_defaults("Fedlead-self")
+    switch_user(hub, "Fedlead")
+    profile = UserProfilePage(hub.page, hub.locators)
+    profile.open()
+    profile.expand_permission_panels()
+    write_expected("Fedlead-self")
+    assert compare_actual("Fedlead-self", profile.read_permission_rows())
 ```
 
-`navigate`, `closeBrowser`, viewport, and the first OTP stay in the fixture. Scenario clicks stay in the pytest file as keyword/page calls — not as raw XPaths.
+`navigate`, `closeBrowser`, viewport, and the first OTP stay in the fixture. Scenario clicks stay in the pytest file as page-object calls — not as raw XPaths.
 
 ---
 
@@ -290,10 +381,10 @@ Committed templates (URLs filled, secrets blank):
 
 ```bash
 # uses config/qa.yaml
-pytest -m smoke
+pytest -m CRDC_Auxiliary
 
 # uses config/qa2.yaml
-CRDC_PROFILE=qa2 pytest -m smoke
+CRDC_PROFILE=qa2 pytest -m CRDC_Auxiliary
 ```
 
 Editing `qa2.yaml` does nothing unless `CRDC_PROFILE=qa2`. There is no pytest `--profile` flag yet.
@@ -345,7 +436,7 @@ For QA2 or Stage:
 ```bash
 cp config/qa2.yaml.example config/qa2.yaml
 # fill, then:
-CRDC_PROFILE=qa2 pytest -m smoke
+CRDC_PROFILE=qa2 pytest -m CRDC_Auxiliary
 ```
 
 ### 5. Confirm unit tests (no Hub, no accounts)
@@ -356,6 +447,8 @@ pytest tests/unit -m unit
 
 All of these should pass on a fresh clone, even before you fill `qa.yaml`.
 
+Optional lint (not required to run tests, does not run on `git commit`): `pip install -e ".[dev]"` then `ruff check src tests` and `mypy src/crdc_pw`.
+
 ---
 
 ## Run tests
@@ -365,24 +458,30 @@ Always activate the venv first (`source .venv/bin/activate`).
 | What | Command |
 |---|---|
 | Unit (no browser) | `pytest tests/unit -m unit` |
-| Login smoke, all six roles (TC18) | `pytest -m smoke` |
-| Same, watch the browser | `pytest -m smoke --headed` |
-| One role | `pytest -m smoke -k Admin` |
-| TC08 Manage Studies list only | `pytest -m smoke -k TC08` |
-| TC09 Manage Programs list only | `pytest -m smoke -k TC09` |
+| Katalon Auxiliary suite | `pytest -m CRDC_Auxiliary` |
+| Katalon Smoke subset (TC08, TC09 today) | `pytest -m CRDC_Smoke` |
+| Katalon PBAC suite | `pytest -m CRDC_PBAC` |
+| Same, watch the browser | `pytest -m CRDC_Auxiliary --headed` |
+| TC18 one role | `pytest -m CRDC_Auxiliary -k Admin` |
+| TC08 Manage Studies list only | `pytest -m CRDC_Auxiliary -k TC08` |
+| TC09 Manage Programs list only | `pytest -m CRDC_Auxiliary -k TC09` |
+| TC01 PBAC Fedlead defaults | `pytest -m CRDC_PBAC -k TC01` |
+| CRDCDH-3974 Release Notes | `pytest -m CRDC_Auxiliary -k 3974` |
 | TC18 file only | `pytest tests/AuxiliaryTests/test_TC18_LoginAllRolesAndSwitchUser.py` |
-| Against QA2 | `CRDC_PROFILE=qa2 pytest -m smoke` |
+| Against QA2 | `CRDC_PROFILE=qa2 pytest -m CRDC_Auxiliary` |
 
-The login smoke is Katalon **TC18_LoginAllRolesAndSwitchUser** at `tests/AuxiliaryTests/test_TC18_LoginAllRolesAndSwitchUser.py`. It checks that each role lands on Hub (username in the header, URL is Data Commons, not Login.gov). The `test_` prefix is required so pytest collects the file; the rest of the name matches Katalon.
+TC18 is Katalon **TC18_LoginAllRolesAndSwitchUser** (`CRDC_Auxiliary`, not `CRDC_Smoke`) at `tests/AuxiliaryTests/test_TC18_LoginAllRolesAndSwitchUser.py`. It checks that each role lands on Hub (username in the header, URL is Data Commons, not Login.gov). The `test_` prefix is required so pytest collects the file; the rest of the name matches Katalon.
+
+Every run writes `reports/report-YYYYMMDD-HHMMSS.html` (gitignored, Katalon-style new file per run). Override with `--html=path`. A failed live test embeds a full-page screenshot in that HTML and writes a PNG under `reports/screenshots/`.
 
 Useful pytest extras:
 
 ```bash
-pytest -m smoke --headed --slowmo 300   # slow the UI down to watch
+pytest -m CRDC_Auxiliary --headed --slowmo 300   # slow the UI down to watch
 pytest tests/unit -m unit -q                         # quieter
 ```
 
-On failure, Playwright can keep a trace (`--tracing=retain-on-failure` once that is wired in CI). Locally, `--headed` is usually enough to see Login.gov.
+Failed live tests keep a Playwright trace under `test-results/` (gitignored). Open it with `playwright show-trace test-results/.../trace.zip`. Locally, `--headed` is usually enough to watch Login.gov.
 
 ---
 
@@ -417,15 +516,15 @@ When you copy a case over:
 - Keep the **TC name** in the module docstring or test name so Xray / ticket mapping still works
 - Port the **steps and assertions**, not `WebUI.delay`, JS clicks, or stale-element retries
 - Put new locators in YAML under `locators/CRDC/`, not as XPath strings in the test
-- Put Hub actions in `keywords/` and `pages/`. The pytest file is the Katalon script **after** login: scenario + asserts, not Selenium
-- Do not open the browser or call `login_otp` in the test; ask for `app` (already signed in). Use `app.login.switch_user` only when the scenario changes role
+- Put Hub actions in `pages/`. The pytest file is the Katalon script **after** login: scenario + asserts, not Selenium
+- Do not open the browser or call `login_otp` in the test; ask for `hub` (already signed in). Use `auth.switch_user(hub, role)` only when the scenario changes role
 - Do not close the browser in the test; the fixture does that
 
 ---
 
 ## GitHub Actions (CI)
 
-CI is **GitHub Actions**, not Jenkins. The workflow is a placeholder until this repo is on GitHub.
+CI is **GitHub Actions**, not Jenkins. The workflow is still `workflow_dispatch` only (not on every PR yet). Default integration branch is **`develop`**.
 
 Because `qa.yaml` is gitignored, a checkout does **not** contain passwords.
 

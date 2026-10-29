@@ -39,6 +39,7 @@ class RoleCredentials:
     secret: str
 
     def is_complete(self) -> bool:
+        """True when email, password, and TOTP secret are all non-empty (smoke can log in)."""
         return bool(self.email and self.password and self.secret)
 
 
@@ -63,6 +64,7 @@ class Settings:
 
 
 def _yaml_str(data: dict[str, Any], key: str) -> str:
+    """YAML value as stripped text. Missing keys become '' so role() does not KeyError."""
     value = data.get(key)
     if value is None:
         return ""
@@ -130,6 +132,8 @@ def load_settings(profile: str | None = None, root: Path | None = None) -> Setti
     if name not in PROFILES:
         raise ValueError(f"Unknown profile '{name}'. Expected one of: {', '.join(PROFILES)}")
     config_path, example_path = profile_paths(base, name)
+    # Prefer the gitignored yaml (secrets). Fall back to the committed example
+    # so unit tests run on a fresh clone without copying qa.yaml.
     if config_path.is_file():
         path = config_path
     elif example_path.is_file():

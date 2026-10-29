@@ -1,4 +1,4 @@
-"""Login.gov OTP login.
+"""Login.gov OTP login used by the hub fixture (not by tests).
 
 Port of Katalon Login.loginToCrdcOtp: same screens and retry idea, Playwright waits
 instead of WebUI.delay. After a successful Grant, Hub sets the connect.sid cookie.
@@ -12,8 +12,9 @@ from playwright.sync_api import Page
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from crdc_pw.config import Settings
+from crdc_pw.hub import Hub
 from crdc_pw.locators.loader import LocatorLoader
-from crdc_pw.otp import totp_now
+from crdc_pw.utils.otp import totp_now
 from crdc_pw.pages.header import HeaderPage
 from crdc_pw.pages.login import (
     GRANT,
@@ -27,14 +28,16 @@ from crdc_pw.pages.login import (
     LoginPage,
 )
 
-log = logging.getLogger("crdc_pw.login")
+log = logging.getLogger("crdc_pw.auth")
 
 OTP_MAX_ATTEMPTS = 6  # Katalon used 6; TOTP changes every 30s
 OTP_RETRY_WAIT_MS = 30_000
 LOGIN_GOV_STEP_TIMEOUT_MS = 60_000  # Grant can lag 30s+ on a slow Hub
 
 
-class LoginKeywords:
+class LoginSession:
+    """OTP / Grant flow for the fixture. Tests do not construct this."""
+
     def __init__(self, page: Page, locators: LocatorLoader, settings: Settings) -> None:
         self.page = page
         self.locators = locators
@@ -43,18 +46,46 @@ class LoginKeywords:
         self.header = HeaderPage(page, locators)
 
     def navigate(self) -> None:
+        """Open Hub base_url and dismiss the system-use banner if it is already up."""
         self.login_page.goto(self.settings.base_url)
         self.login_page.dismiss_system_use_warning()
 
     def is_logged_in(self, timeout_ms: int = 2000) -> bool:
+        """True if the desktop header username is visible (Hub session, not Login.gov)."""
         return self.header.is_logged_in(timeout_ms=timeout_ms)
 
-    def login_otp(self, role: str) -> None:
-        """Full Login.gov path for one role (Admin, Fedlead, ...).
+    def ensure_hub_ready(self, banner_appear_ms: int = 5000) -> None:
+        """Dismiss the system-use banner if it paints after the header is up.
 
-        Called by the `app` fixture (and by switch_user). Tests do not call this
-        for the initial sign-in; they start already on Hub.
+        Reused storage_state often shows the username first; tests then fail clicking
+        it because the MUI dialog is on top. Call after login or session reuse.
         """
+        if self.login_page.dismiss_system_use_warning(timeout_ms=banner_appear_ms):
+            log.info("Dismissed system-use warning")
+
+    def signed_in_as(self, role: str) -> bool:
+        """True if Hub header is visible and the name is this PBAC automation user."""
+        if not self.is_logged_in(timeout_ms=2000):
+            return False
+        username = self.header.username(timeout_ms=5000)
+        return username_matches_role(username, role)
+
+    def _drop_browser_session(self) -> None:
+        """Drop Hub + NIH/Login.gov cookies so SSO cannot restore the previous role.
+
+        Katalon switchUser does closeBrowser(); this is the same-tab equivalent.
+        """
+        log.info("Clearing cookies so NIH SSO cannot restore the last role")
+        try:
+            self.page.evaluate(
+                "() => { try { localStorage.clear(); sessionStorage.clear(); } catch (e) {} }"
+            )
+        except Exception:
+            pass
+        self.page.context.clear_cookies()
+
+    def login_otp(self, role: str) -> None:
+        """Full Login.gov path for one role (Admin, Fedlead, ...). Fixture and switch_user only."""
         creds = self.settings.role(role)
         if not creds.is_complete():
             raise ValueError(
@@ -62,10 +93,35 @@ class LoginKeywords:
             )
         log.info("Login %s: opening Hub and Login.gov", role)
         self.navigate()
-        if self.is_logged_in(timeout_ms=2000):
-            log.info("Login %s: already signed in", role)
+        if self.signed_in_as(role):
+            log.info("Login %s: already signed in as this role", role)
             return
+        if self.is_logged_in(timeout_ms=2000):
+            username = self.header.username(timeout_ms=5000)
+            log.info("Login %s: Hub is %r, not this role; dropping session", role, username)
+            self.logout()
+            self._drop_browser_session()
+            self.navigate()
         self.login_page.start_login_gov()
+        if self.signed_in_as(role):
+            username = self.header.username(timeout_ms=5000)
+            log.info(
+                "Login %s: Hub after Login click (SSO session reuse), username=%r",
+                role,
+                username,
+            )
+            return
+        if self.is_logged_in(timeout_ms=2000):
+            username = self.header.username(timeout_ms=5000)
+            log.info(
+                "Login %s: SSO restored %r instead of this role; dropping session and using Login.gov",
+                role,
+                username,
+            )
+            self.logout()
+            self._drop_browser_session()
+            self.navigate()
+            self.login_page.start_login_gov()
         self.login_page.submit_credentials(creds.email, creds.password)
         log.info("Login %s: submitted credentials, waiting for OTP or Grant (up to 60s)", role)
 
@@ -115,6 +171,10 @@ class LoginKeywords:
         self.login_page.dismiss_system_use_warning(timeout_ms=3000)
         username = self.header.username(timeout_ms=20000)
         log.info("Login %s: Hub header username is %r", role, username)
+        if not username_matches_role(username, role):
+            raise RuntimeError(
+                f"Login {role}: Hub header is {username!r}, not pbac.{role}-automation"
+            )
 
     def _finish_if_hub_or_grant(self, step: str) -> bool:
         """True if this step completes Login.gov (Grant click or Hub already up)."""
@@ -127,16 +187,33 @@ class LoginKeywords:
         return step == USERNAME
 
     def logout(self) -> None:
+        """Header Logout if a Hub session is up. No-op when already on Login.gov."""
         if self.is_logged_in(timeout_ms=2000):
             self.header.logout()
 
-    def switch_user(self, role: str) -> None:
-        """Katalon switchUser: log out, then Login.gov as another role in this browser."""
-        self.logout()
-        self.login_otp(role)
+
+def switch_user(hub: Hub, role: str) -> None:
+    """Katalon switchUser: log out, drop SSO cookies (closeBrowser), Login.gov as role."""
+    session = LoginSession(hub.page, hub.locators, hub.settings)
+    session.logout()
+    session._drop_browser_session()
+    session.login_otp(role)
+    if not session.signed_in_as(role):
+        username = session.header.username(timeout_ms=5000) if session.is_logged_in() else ""
+        raise RuntimeError(
+            f"switch_user({role!r}) landed on Hub as {username!r}, not the requested role"
+        )
+    hub.role = role
+
+
+def username_matches_role(username: str, role: str) -> bool:
+    """True if header text is this PBAC automation user (PBAC.ADMIN-AUTOMATION, etc.)."""
+    text = (username or "").lower()
+    return f"pbac.{role.lower()}-automation" in text
 
 
 def _step_name(path: str) -> str:
+    """Locator path to a short label for login logs (OTP field, Grant button, ...)."""
     names = {
         OTP: "OTP field",
         GRANT: "Grant button",
