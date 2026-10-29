@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
-from playwright.sync_api import Page
+from playwright.sync_api import BrowserContext, Page
 
 from crdc_pw.config import Settings
 from crdc_pw.locators.loader import LocatorLoader
@@ -18,3 +19,4 @@ class Hub:
     locators: LocatorLoader
     settings: Settings
     role: str
+    create_context: Callable[..., BrowserContext] | None = None

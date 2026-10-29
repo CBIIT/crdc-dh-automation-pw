@@ -21,7 +21,7 @@ fixture hub  →  test (scenario + asserts)  →  page object  →  YAML locator
 - **`hub`** (`src/crdc_pw/hub.py`): thin session — `page`, `locators`, `settings`, `role`. No `studies` / `programs` / `login` / `header` fields. Do not grow `Hub` or `conftest.py` when adding a case.
 - **Pages** (`src/crdc_pw/pages/`): one Hub screen. Actions and reads: `open()`, `apply_filters()`, `read_table_rows()`, `row_count()`. YAML paths stay on the page; tests use locator **properties** (`studies.container`). Required waits inherit `BasePage.DEFAULT_MS` (15s); optional chrome uses `PROBE_MS`. Do not `except: pass` on a required wait. Shared table read, MUI dropdown, and snackbar helpers live on `BasePage` (not `utils/` and not a `components/` package).
 - **Tests** (`tests/`): construct pages (`StudiesListPage(hub.page, hub.locators)`), drive them, **own asserts**.
-- **Auth** (`src/crdc_pw/auth.py`): Login.gov OTP / Grant for the **fixture only**. Tests do not call `login_otp`. Role change in a scenario: `auth.switch_user(hub, role)`.
+- **Auth** (`src/crdc_pw/auth.py`): Login.gov OTP / Grant for the **fixture only**. `ensure_storage_state` file-locks `auth/<profile>/<Role>.json` so OTP runs once per role. Tests do not call `login_otp`. Role change in a scenario: `auth.switch_user(hub, role)` (new context from that role’s json).
 - **No** `keywords/` package and **no** `App` facade. Do not add `verify_*` wrappers that take a Katalon-style expectations map.
 
 ## Layout
@@ -88,5 +88,5 @@ Do **not** use Javadoc linking or `{@link}` / `{@code}` wrappers. Refer to metho
 ## Safety
 
 - Do not paste Hub passwords or Login.gov TOTP secrets into scripts, rules, or docs.
-- Do not run two OTP logins for the same account at once.
+- FileLock on `auth/<profile>/<Role>.json.lock` serializes OTP for the same account. Parallel is opt-in: `pytest -m CRDC_Smoke -n 4` (do not put `-n` in addopts).
 - Live tests: `pytest -m CRDC_Auxiliary -k TC08` or `pytest -m CRDC_Smoke`. Unit: `pytest tests/unit -m unit`. Each run writes `reports/report-YYYYMMDD-HHMMSS.html`. Failed Hub tests attach a screenshot to that report.

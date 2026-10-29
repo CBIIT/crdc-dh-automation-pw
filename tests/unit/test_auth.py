@@ -11,9 +11,13 @@ Flow (this file):
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
-from crdc_pw.auth import username_matches_role
+from crdc_pw.auth import storage_state_path, username_matches_role
+from crdc_pw.config import Settings
+from crdc_pw.locators.loader import repo_root
 
 
 @pytest.mark.unit
@@ -41,3 +45,10 @@ def test_empty_or_other_name_does_not_match() -> None:
     """Missing header or a different account is not a match."""
     assert not username_matches_role("", "Admin")
     assert not username_matches_role("PBAC.SUBMITTER-AUTOMATION", "Admin")
+
+
+@pytest.mark.unit
+def test_storage_state_path_uses_profile_and_role() -> None:
+    """Saved sessions live under auth/<profile>/<Role>.json next to the lock file."""
+    settings = Settings(profile="qa", base_url="https://example.invalid/", config_path=Path("unused"))
+    assert storage_state_path(settings, "Admin") == repo_root() / "auth" / "qa" / "Admin.json"

@@ -14,7 +14,8 @@ from __future__ import annotations
 
 import logging
 
-from playwright.sync_api import Locator, TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import Error, Locator
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from crdc_pw.pages.base import BasePage
 from crdc_pw.pages.header import HeaderPage
@@ -94,13 +95,14 @@ class PermissionForm(BasePage):
         alternate = next((name for name in ROLE_DISPLAY.values() if name != display), None)
         if not alternate:
             raise RuntimeError("Could not find alternate role to switch to.")
-        log.info("Resetting permissions for role: %s", role)
+        log.info("Resetting permissions for role: %s (toggle away and back, then Save)", role)
         self._select_role(alternate)
         self._select_role(display)
+        log.info("Role re-selected to %s; clicking Save", display)
         self._loc(SAVE).click()
-        log.info("Clicked Save")
+        log.info("Clicked Save; waiting for snackbar")
         self._wait_for_snackbar_gone(self._loc(SNACKBAR))
-        log.info("Reset permissions by re-selecting role: %s", display)
+        log.info("Save finished; snackbar gone")
 
     def _select_role(self, role_display: str) -> None:
         self._select_dropdown(
@@ -129,21 +131,25 @@ class ManageUsersPage(PermissionForm):
         self._wait_for_table()
         self._filter_user(needle)
         renav_attempted = False
+        settled = True
         while True:
-            try:
-                self._wait_for_table()
-            except PlaywrightTimeoutError:
-                if not renav_attempted:
-                    renav_attempted = True
-                    log.info("Manage Users table wait timed out; retrying after navigation.")
-                    self.open()
+            if not settled:
+                try:
                     self._wait_for_table()
-                    self._filter_user(needle)
-                else:
-                    raise
+                except PlaywrightTimeoutError:
+                    if not renav_attempted:
+                        renav_attempted = True
+                        log.info("Manage Users table wait timed out; retrying after navigation.")
+                        self.open()
+                        self._wait_for_table()
+                        self._filter_user(needle)
+                    else:
+                        raise
+            settled = False
             if self._click_edit_on_current_page(needle):
+                log.info("Clicked Edit for %r", needle)
                 self._loc(ROLE_DDN).wait_for(state="visible")
-                log.info("User %r found and Edit clicked.", needle)
+                log.info("Edit form visible for %r", needle)
                 return
             next_btn = self._loc(NEXT_PAGE).first
             if next_btn.is_disabled():
@@ -151,7 +157,7 @@ class ManageUsersPage(PermissionForm):
                     f"Reached the last page. User '{needle}' not found in Manage Users table."
                 )
             next_btn.click()
-            self._wait_for_table()
+            settled = False
 
     def _filter_user(self, needle: str) -> None:
         """Type into the Name filter when Hub shows it. No-op if the box is missing."""
@@ -160,11 +166,19 @@ class ManageUsersPage(PermissionForm):
             box.wait_for(state="visible", timeout=self.PROBE_MS)
         except PlaywrightTimeoutError:
             return
+        try:
+            current = (box.input_value() or "").strip()
+        except Error:
+            nested = box.locator("input").first
+            current = (nested.input_value() or "").strip() if nested.count() else ""
+        if current.lower() == needle.lower():
+            log.info("Manage Users name filter already %r; skipping", needle)
+            return
+        log.info("Manage Users name filter: %r", needle)
         rows = self._table_rows()
         before = self._table_fingerprint(rows)
         box.fill(needle)
         self._wait_for_table_settled(self._loc(LOADING_ROW), rows, previous=before)
-        log.info("Manage Users name filter: %r", needle)
 
     def _click_edit_on_current_page(self, needle: str) -> bool:
         needle_l = needle.strip().lower()
