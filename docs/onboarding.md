@@ -479,7 +479,13 @@ pytest -m CRDC_Smoke -n 4                            # parallel; lock serializes
 pytest tests/unit -m unit -q                         # quieter (leave -n off)
 ```
 
-Failed live tests keep a Playwright trace under `test-results/` (gitignored). Open it with `playwright show-trace test-results/.../trace.zip`. Locally, `--headed` is usually enough to watch Login.gov.
+Failed live tests keep a Playwright trace of the **Hub tab** under `test-results/` (gitignored). OTP setup windows are not traced. Passing tests do not keep a zip unless you pass `--tracing=on`.
+
+```bash
+playwright show-trace test-results/**/trace.zip
+```
+
+The folder name matches the test file (for example `tests-auxiliarytests-test-tc08-...`). The viewer is local, not Hub: timeline, action list (the last wait is often the failure), before/after DOM snapshots, and network. TC01 (`switch_user`) can write `trace.zip` and `trace-2.zip`. Locally, `--headed` is usually enough to watch Login.gov.
 
 ---
 

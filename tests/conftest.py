@@ -114,8 +114,9 @@ def hub(
     This is session setup (Katalon navigate + loginToCrdcOtp), not the test
     scenario. Parametrize with indirect=True so each role gets its own
     context — same idea as Katalon closing the browser between users.
-    `browser` comes from pytest-playwright and is only requested after we know
-    credentials exist, so unit tests never launch Chromium.
+    `browser` and `new_context` come from pytest-playwright and are only
+    requested after we know credentials exist, so unit tests never launch
+    Chromium. `new_context` is what records --tracing=retain-on-failure.
     """
     role = getattr(request, "param", "Admin")
     if role not in ROLES:
@@ -128,11 +129,20 @@ def hub(
             "and fill the Katalon profile values."
         )
     browser: Browser = request.getfixturevalue("browser")
+    create_context = request.getfixturevalue("new_context")
     page: Page | None = None
     live: Hub | None = None
     try:
-        page = open_signed_in_page(browser, locators, settings, role)
-        live = Hub(page=page, locators=locators, settings=settings, role=role)
+        page = open_signed_in_page(
+            browser, locators, settings, role, create_context=create_context
+        )
+        live = Hub(
+            page=page,
+            locators=locators,
+            settings=settings,
+            role=role,
+            create_context=create_context,
+        )
         yield live
     except Exception:
         png = _failure_screenshot(live.page if live is not None else page)

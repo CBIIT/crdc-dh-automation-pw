@@ -7,6 +7,7 @@ instead of WebUI.delay. After a successful Grant, Hub sets the connect.sid cooki
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
 
 from filelock import FileLock
@@ -21,6 +22,7 @@ from crdc_pw.pages.header import HeaderPage
 from crdc_pw.pages.login import (
     EMAIL,
     GRANT,
+    LOGIN_PAGE_LOGIN_BTN,
     NIH_AGREE,
     OTP,
     POST_OTP_STEPS,
@@ -235,23 +237,29 @@ def storage_state_path(settings: Settings, role: str) -> Path:
 def land_on_hub(page: Page, locators: LocatorLoader, settings: Settings) -> None:
     """goto Hub and dismiss the banner if it is up, without a 5s miss tax.
 
-    Wait until Continue or the username is visible. Click Continue only when
-    that is what appeared. Does not OTP.
+    Wait until Continue, the username, or the Hub Login button is visible.
+    Login means the cookie is dead — raise immediately so we OTP instead of
+    waiting 15s for a header that will not appear. Does not OTP itself.
     """
     login = LoginPage(page, locators)
     header = HeaderPage(page, locators)
     login.goto(settings.base_url)
     continue_btn = login._loc(SYSTEM_USE_CONTINUE).first
     username = header.username_btn
-    # Both can be visible (banner on top of Hub). or_() without .first is strict-mode.
-    continue_btn.or_(username).first.wait_for(state="visible")
+    login_btn = login._loc(LOGIN_PAGE_LOGIN_BTN).first
+    # Banner, username, and Login can overlap in the DOM. or_() without .first is strict-mode.
+    continue_btn.or_(username).or_(login_btn).first.wait_for(state="visible")
     if continue_btn.is_visible():
         continue_btn.click()
         try:
             login._loc(SYSTEM_USE_DIALOG).first.wait_for(state="hidden", timeout=10_000)
         except PlaywrightTimeoutError:
             pass
-        username.wait_for(state="visible")
+        username.or_(login_btn).first.wait_for(state="visible")
+    if username.is_visible():
+        return
+    log.info("Hub is showing Login; saved session is not signed in")
+    raise PlaywrightTimeoutError("Hub is showing Login; storage_state is not signed in")
 
 
 def ensure_storage_state(
@@ -289,17 +297,18 @@ def open_signed_in_page(
     locators: LocatorLoader,
     settings: Settings,
     role: str,
+    create_context: Callable[..., BrowserContext] | None = None,
 ) -> Page:
     """New context from storage_state, then land on Hub. One OTP retry if the cookie died."""
     path = ensure_storage_state(browser, locators, settings, role)
-    context, page = _new_hub_context(browser, path)
+    context, page = _new_hub_context(browser, path, create_context=create_context)
     try:
         land_on_hub(page, locators, settings)
         return page
     except PlaywrightTimeoutError:
         context.close()
         path = ensure_storage_state(browser, locators, settings, role, force=True)
-        context, page = _new_hub_context(browser, path)
+        context, page = _new_hub_context(browser, path, create_context=create_context)
         land_on_hub(page, locators, settings)
         return page
 
@@ -310,14 +319,27 @@ def switch_user(hub: Hub, role: str) -> None:
     if browser is None:
         raise RuntimeError("switch_user: page has no browser")
     old = hub.page.context
-    page = open_signed_in_page(browser, hub.locators, hub.settings, role)
+    page = open_signed_in_page(
+        browser,
+        hub.locators,
+        hub.settings,
+        role,
+        create_context=hub.create_context,
+    )
     hub.page = page
     hub.role = role
     old.close()
 
 
-def _new_hub_context(browser: Browser, path: Path) -> tuple[BrowserContext, Page]:
-    context = browser.new_context(storage_state=str(path), viewport=VIEWPORT)
+def _new_hub_context(
+    browser: Browser,
+    path: Path,
+    create_context: Callable[..., BrowserContext] | None = None,
+) -> tuple[BrowserContext, Page]:
+    if create_context is not None:
+        context = create_context(storage_state=str(path), viewport=VIEWPORT)
+    else:
+        context = browser.new_context(storage_state=str(path), viewport=VIEWPORT)
     context.set_default_timeout(BasePage.DEFAULT_MS)
     return context, context.new_page()
 
