@@ -30,6 +30,8 @@ from crdc_pw.pages.base import BasePage
 
 log = logging.getLogger("crdc_pw")
 
+pytest_plugins = ["crdc_pw.utils.excel_ds_test_runner.test_collector"]
+
 _FAILURE_PNG = pytest.StashKey[bytes]()
 
 

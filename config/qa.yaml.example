@@ -27,3 +27,8 @@ UserSecret:
 MasterEmail:
 MasterPassword:
 MasterSecret:
+
+# Excel-driven metadata VR cases (tests/DataValidation/**/*.xlsx). See docs/excel-ds-validation.md.
+excel_ds_validation:
+  enabled: true
+  excel_cases_glob: tests/DataValidation/**/*.xlsx
