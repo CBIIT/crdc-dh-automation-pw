@@ -236,15 +236,17 @@ class DataSubmissionDetailPage(BasePage):
         log.info("Upload finished for %s (%s files)", tc_name, len(files))
 
     def click_validate(self) -> None:
-        """Click Validate and wait until the button is enabled again (Katalon 5 minutes).
+        """Click Validate, wait until it is disabled, then until it is enabled again.
 
-        First wait is Katalon waitForElementClickable (30s). After click, Hub disables
-        the button while validation runs; enabled again means it finished.
+        First wait is Katalon waitForElementClickable (30s). Hub disables the button
+        while validation runs. Playwright can observe enabled before that disable
+        lands, so wait for disabled (started) then enabled (Katalon 5 minutes).
         """
         btn = self._loc(VALIDATE)
         expect(btn).to_be_enabled(timeout=30_000)
         btn.click()
         log.info("Waiting for Validation to finish - waiting up to 5 minutes")
+        expect(btn).to_be_disabled(timeout=self.DEFAULT_MS)
         expect(btn).to_be_enabled(timeout=self.VALIDATE_MS)
 
     def open_validation_results(self) -> None:
@@ -363,16 +365,17 @@ class DataSubmissionDetailPage(BasePage):
         option.first.click()
 
     def _wait_loading_gone(self) -> None:
-        """Probe for the circular spinner, then wait until it is hidden (Katalon 15s)."""
+        """Probe for the circular spinner, then wait until it is hidden (Katalon 15s).
+
+        Appearance is optional (spinner may never show). A still-visible spinner
+        after 15s fails, same as Katalon waitForElementToDisappear.
+        """
         icon = self._loc(LOADING_ICON).first
         try:
             icon.wait_for(state="visible", timeout=self.PROBE_MS)
         except PlaywrightTimeoutError:
             pass
-        try:
-            icon.wait_for(state="hidden", timeout=15_000)
-        except PlaywrightTimeoutError:
-            pass
+        icon.wait_for(state="hidden", timeout=15_000)
 
     def _cell_text(self, cells: Locator, index: int) -> str:
         """Katalon getCellText: short values as-is; else truncated-text-wrapper aria-label.
