@@ -31,6 +31,7 @@ fixture hub  →  test (scenario + asserts)  →  page object  →  YAML locator
 | `tests/conftest.py` | `hub` fixture (browser + login). Default role Admin; parametrize `hub` with `indirect=True` for multi-role (TC18). |
 | `tests/AuxiliaryTests/` | Live Hub cases (Katalon area name, **no** `CRDC/` prefix) |
 | `tests/Pbac/` | TC01 PBAC Fedlead defaults |
+| `tests/DataSubmissions/` | GC metadata VR (TC08 invalid integer) |
 | `tests/unit/` | No browser (`-m unit`) |
 | `src/crdc_pw/pages/` | Screen objects |
 | `src/crdc_pw/auth.py` | Login.gov OTP / Grant (fixture) |

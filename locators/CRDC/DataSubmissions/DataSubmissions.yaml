@@ -1,6 +1,7 @@
 # CRDC/DataSubmissions
 
 ChooseFiles-Btn: "//input[@type='file']"
+DataSubmissionName-Link: "//a[contains(@href,'/upload-activity')]"
 CrossValidate-Btn: "//button[.='Cross Validate']"
 DataSubmListTable-Row: "//tbody/tr"
 Loading-Icon: "//*[contains(@class,'Circular')]"
