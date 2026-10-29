@@ -40,6 +40,7 @@ def pytest_configure(config: pytest.Config) -> None:
     Writes reports/report-YYYYMMDD-HHMMSS.html (gitignored). tryfirst so
     pytest-html sees the path when it registers.
     """
+    expect.set_options(timeout=BasePage.DEFAULT_MS)
     if getattr(config.option, "htmlpath", None):
         return
     reports = repo_root() / "reports"
@@ -48,7 +49,6 @@ def pytest_configure(config: pytest.Config) -> None:
     path = reports / f"report-{stamp}.html"
     config.option.htmlpath = str(path)
     config.option.self_contained_html = True
-    expect.set_options(timeout=BasePage.DEFAULT_MS)
     log.info("HTML report: %s", path)
 
 

@@ -19,6 +19,7 @@ from crdc_pw.locators.loader import LocatorLoader, repo_root
 from crdc_pw.pages.base import BasePage
 from crdc_pw.pages.header import HeaderPage
 from crdc_pw.pages.login import (
+    EMAIL,
     GRANT,
     NIH_AGREE,
     OTP,
@@ -132,6 +133,12 @@ class LoginSession:
             self._drop_browser_session()
             self.navigate()
             self.login_page.start_login_gov()
+            if self.signed_in_as(role):
+                log.info("Login %s: Hub after Login click (SSO session reuse)", role)
+                return
+        if self._finish_sso_without_email(role):
+            self._confirm_hub_role(role)
+            return
         self.login_page.submit_credentials(creds.email, creds.password)
         log.info("Login %s: submitted credentials, waiting for OTP or Grant (up to 60s)", role)
 
@@ -178,6 +185,24 @@ class LoginSession:
         if not logged_in:
             raise RuntimeError(f"OTP failed after {OTP_MAX_ATTEMPTS} attempts for role {role}")
 
+        self._confirm_hub_role(role)
+
+    def _finish_sso_without_email(self, role: str) -> bool:
+        """True if NIH SSO is already on Grant or Hub — do not wait for the email field."""
+        try:
+            step = self.login_page.wait_for_any(
+                (EMAIL, GRANT, SYSTEM_USE_CONTINUE, USERNAME),
+                20_000,
+            )
+        except PlaywrightTimeoutError:
+            return False
+        if step == EMAIL:
+            return False
+        log.info("Login %s: after Login click, saw %s (skipping credentials)", role, _step_name(step))
+        return self._finish_if_hub_or_grant(step)
+
+    def _confirm_hub_role(self, role: str) -> None:
+        """Banner off, header is this PBAC automation user."""
         self.login_page.dismiss_system_use_warning(timeout_ms=3000)
         username = self.header.username(timeout_ms=20000)
         log.info("Login %s: Hub header username is %r", role, username)
