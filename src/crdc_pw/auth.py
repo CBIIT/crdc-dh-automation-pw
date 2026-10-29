@@ -282,7 +282,7 @@ def ensure_storage_state(
     with lock:
         if not force and key in _validated and path.is_file():
             return path
-        if not force and path.is_file() and _storage_is_valid(browser, locators, settings, path, role):
+        if path.is_file() and _storage_is_valid(browser, locators, settings, path, role):
             log.info("Login %s: saved session %s is valid", role, path.name)
             _validated.add(key)
             return path
@@ -298,10 +298,18 @@ def open_signed_in_page(
     settings: Settings,
     role: str,
     create_context: Callable[..., BrowserContext] | None = None,
+    on_page: Callable[[Page], None] | None = None,
 ) -> Page:
-    """New context from storage_state, then land on Hub. One OTP retry if the cookie died."""
+    """New context from storage_state, then land on Hub. One OTP retry if the cookie died.
+
+    on_page is called as soon as a Hub tab exists (and again after a retry
+    replaces it) so the fixture can screenshot a setup failure. The last tab
+    is left open when land_on_hub raises.
+    """
     path = ensure_storage_state(browser, locators, settings, role)
     context, page = _new_hub_context(browser, path, create_context=create_context)
+    if on_page is not None:
+        on_page(page)
     try:
         land_on_hub(page, locators, settings)
         return page
@@ -309,6 +317,8 @@ def open_signed_in_page(
         context.close()
         path = ensure_storage_state(browser, locators, settings, role, force=True)
         context, page = _new_hub_context(browser, path, create_context=create_context)
+        if on_page is not None:
+            on_page(page)
         land_on_hub(page, locators, settings)
         return page
 

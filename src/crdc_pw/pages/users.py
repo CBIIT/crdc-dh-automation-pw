@@ -157,8 +157,7 @@ class ManageUsersPage(PermissionForm):
                     f"Reached the last page. User '{needle}' not found in Manage Users table."
                 )
             next_btn.click()
-            self._wait_for_table()
-            settled = True
+            settled = False
 
     def _filter_user(self, needle: str) -> None:
         """Type into the Name filter when Hub shows it. No-op if the box is missing."""

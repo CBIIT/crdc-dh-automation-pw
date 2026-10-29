@@ -132,9 +132,19 @@ def hub(
     create_context = request.getfixturevalue("new_context")
     page: Page | None = None
     live: Hub | None = None
+
+    def remember_page(opened: Page) -> None:
+        nonlocal page
+        page = opened
+
     try:
         page = open_signed_in_page(
-            browser, locators, settings, role, create_context=create_context
+            browser,
+            locators,
+            settings,
+            role,
+            create_context=create_context,
+            on_page=remember_page,
         )
         live = Hub(
             page=page,
