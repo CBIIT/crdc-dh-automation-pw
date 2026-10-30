@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -139,6 +142,33 @@ def _write_minimal_excel_case(
 def test_committed_excel_case_workbook(case_path: Path) -> None:
     assert case_path.is_file(), case_path
     _validate_case_workbook(case_path)
+
+
+@pytest.mark.unit
+def test_excel_collection_applies_settings_role_to_hub_fixture() -> None:
+    """Excel File collector must expand @parametrize(hub) — otherwise hub defaults to Admin."""
+    case = (
+        repo_root()
+        / "tests/DataValidation/GC/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx"
+    )
+    env = {**os.environ, "CRDC_EXCEL_DS_VALIDATION": "1"}
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            str(case),
+            "--collect-only",
+            "-q",
+        ],
+        cwd=repo_root(),
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "[Submitter]" in proc.stdout, proc.stdout
 
 
 @pytest.mark.unit

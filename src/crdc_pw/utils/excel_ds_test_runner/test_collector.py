@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from _pytest.python import Function, FunctionDefinition, Metafunc
 
 from crdc_pw.config import load_settings
 from crdc_pw.locators.loader import repo_root
@@ -39,6 +41,44 @@ def _make_test_fn(case_path: Path, role: str):
     return test_fn
 
 
+def _yield_parametrized_functions(
+    parent: pytest.Collector, name: str, callobj: object
+) -> Iterator[Function]:
+    """Apply @pytest.mark.parametrize on callobj (PyCollector._genfunctions parity)."""
+    definition = FunctionDefinition.from_parent(parent, name=name, callobj=callobj)
+    fixtureinfo = definition._fixtureinfo
+    metafunc = Metafunc(
+        definition=definition,
+        fixtureinfo=fixtureinfo,
+        config=parent.config,
+        module=None,
+        _ispytest=True,
+    )
+    for marker in definition.iter_markers(name="parametrize"):
+        metafunc.parametrize(*marker.args, **marker.kwargs, _param_mark=marker)
+
+    if not metafunc._calls:
+        yield Function.from_parent(
+            parent, name=name, callobj=callobj, fixtureinfo=fixtureinfo
+        )
+        return
+
+    metafunc._recompute_direct_params_indices()
+    fixtureinfo.prune_dependency_tree()
+    for callspec in metafunc._calls:
+        subname = f"{name}[{callspec.id}]" if callspec._idlist else name
+        keywords = {callspec.id: True} if callspec._idlist else {}
+        yield Function.from_parent(
+            parent,
+            name=subname,
+            callobj=callobj,
+            callspec=callspec,
+            fixtureinfo=fixtureinfo,
+            keywords=keywords,
+            originalname=name,
+        )
+
+
 class ExcelCaseFile(pytest.File):
     """One TC*.xlsx → one pytest test."""
 
@@ -49,7 +89,7 @@ class ExcelCaseFile(pytest.File):
             return
         role = read_settings_role(case_path)
         fn = _make_test_fn(case_path, role)
-        yield pytest.Function.from_parent(self, name=case_path.stem, callobj=fn)
+        yield from _yield_parametrized_functions(self, case_path.stem, fn)
 
 
 def pytest_collect_file(file_path, parent):
