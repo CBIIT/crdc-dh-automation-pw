@@ -1,4 +1,4 @@
-"""Unit tests for Excel DS Meta/Steps loader and step runner (no browser)."""
+"""Unit tests for Excel DS Settings/Steps loader and step runner (no browser)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import shutil
 
 from crdc_pw.config import Settings, load_settings, profile_paths
 from crdc_pw.utils.excel_ds_test_runner.config_helpers import excel_ds_cases_glob, excel_ds_enabled
-from crdc_pw.utils.excel_ds_test_runner.loader import ExcelLoadError, load_steps, read_meta_role
+from crdc_pw.utils.excel_ds_test_runner.loader import ExcelLoadError, load_steps, read_settings_role
 from crdc_pw.utils.excel_ds_test_runner.step_runner import run_testcase_excel
 from crdc_pw.locators.loader import repo_root
 
@@ -22,7 +22,7 @@ def _write_minimal_excel_case(
     input_root: str,
     steps: list[tuple[str, str, str]],
 ) -> None:
-    """Minimal Meta + Steps workbook for loader/runner unit tests only."""
+    """Minimal Settings + Steps workbook for loader/runner unit tests only."""
     import openpyxl
 
     wb = openpyxl.Workbook()
@@ -32,21 +32,21 @@ def _write_minimal_excel_case(
     ws.append([input_root, None, None, None])
     for action, params, model in steps:
         ws.append([None, action, params, model])
-    meta = wb.create_sheet("Meta")
-    meta.append(["key", "value"])
-    meta.append(["role", role])
-    meta.append(["enabled", "Y"])
+    settings_ws = wb.create_sheet("Settings")
+    settings_ws.append(["key", "value"])
+    settings_ws.append(["role", role])
+    settings_ws.append(["enabled", "Y"])
     wb.save(out_path)
 
 
 @pytest.mark.unit
-def test_tc08_committed_workbook_meta_and_steps() -> None:
+def test_tc08_committed_workbook_settings_and_steps() -> None:
     path = (
         repo_root()
         / "tests/DataValidation/GC/TC08_CRDC-VerifyInvalidIntegerValue.xlsx"
     )
     assert path.is_file(), path
-    assert read_meta_role(path) == "Submitter"
+    assert read_settings_role(path) == "Submitter"
     _input_root, steps = load_steps(path)
     assert _input_root.endswith("MetadataData/TC08")
     actions = [s.action for s in steps]
@@ -78,7 +78,7 @@ def test_missing_steps_sheet_raises(tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
-def test_invalid_role_in_meta_raises(tmp_path: Path) -> None:
+def test_invalid_role_in_settings_raises(tmp_path: Path) -> None:
     path = tmp_path / "TC99_role.xlsx"
     _write_minimal_excel_case(
         path,
@@ -86,8 +86,8 @@ def test_invalid_role_in_meta_raises(tmp_path: Path) -> None:
         input_root="InputFiles/CRDC/MetadataData/TC08",
         steps=[("open_data_submissions", "", "")],
     )
-    with pytest.raises(ExcelLoadError, match="Invalid Meta role"):
-        read_meta_role(path)
+    with pytest.raises(ExcelLoadError, match="Invalid Settings role"):
+        read_settings_role(path)
 
 
 @pytest.mark.unit

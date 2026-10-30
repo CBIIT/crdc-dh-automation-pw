@@ -36,7 +36,7 @@ def _split_pipe_params(params: str, *, count: int, action: str, path: Path, row:
 
 
 def run_testcase_excel(hub: Hub, excel_path: Path) -> None:
-    """Run one TC*.xlsx test case (Meta role must match hub.role)."""
+    """Run one TC*.xlsx test case (Settings role must match hub.role)."""
     path = Path(excel_path)
     input_root, steps = load_steps(path)
     log.info("Excel case %s (%d steps), input_root=%s", path.name, len(steps), input_root or "(none)")

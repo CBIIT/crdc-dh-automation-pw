@@ -1,4 +1,4 @@
-"""Load Meta and Steps from CRDC Excel test case workbooks."""
+"""Load Settings and Steps from CRDC Excel test case workbooks."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from openpyxl import load_workbook
 from crdc_pw.config import ROLES
 from crdc_pw.locators.loader import repo_root
 
-META_SHEET = "Meta"
+SETTINGS_SHEET = "Settings"
 STEPS_SHEET = "Steps"
 
 _COL_INPUT = 0
@@ -64,10 +64,10 @@ def _read_workbook_rows(path: Path, sheet: str) -> list[tuple[object, ...]]:
         wb.close()
 
 
-def read_meta(path: Path) -> dict[str, str]:
-    """Parse Meta sheet as key/value pairs (column A = key, B = value)."""
-    rows = _read_workbook_rows(path, META_SHEET)
-    meta: dict[str, str] = {}
+def read_settings(path: Path) -> dict[str, str]:
+    """Parse Settings sheet as key/value pairs (column A = key, B = value)."""
+    rows = _read_workbook_rows(path, SETTINGS_SHEET)
+    settings: dict[str, str] = {}
     for row in rows:
         if not row or row[0] is None:
             continue
@@ -75,19 +75,19 @@ def read_meta(path: Path) -> dict[str, str]:
         if not key or key == "key":
             continue
         val = _cell_str(row[1]) if len(row) > 1 else ""
-        meta[key] = val
-    return meta
+        settings[key] = val
+    return settings
 
 
-def read_meta_role(path: Path) -> str:
-    """Return hub role from Meta sheet; validates against ROLES."""
-    meta = read_meta(path)
-    role = meta.get("role", "")
+def read_settings_role(path: Path) -> str:
+    """Return hub role from Settings sheet; validates against ROLES."""
+    settings = read_settings(path)
+    role = settings.get("role", "")
     if not role:
-        raise ExcelLoadError("Meta sheet must include role", path=path)
+        raise ExcelLoadError("Settings sheet must include role", path=path)
     if role not in ROLES:
         raise ExcelLoadError(
-            f"Invalid Meta role '{role}'; expected one of: {', '.join(ROLES)}",
+            f"Invalid Settings role '{role}'; expected one of: {', '.join(ROLES)}",
             path=path,
         )
     return role

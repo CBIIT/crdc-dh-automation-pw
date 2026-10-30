@@ -5,7 +5,7 @@ from crdc_pw.utils.excel_ds_test_runner.config_helpers import (
     excel_ds_enabled,
     excel_ds_scenarios_glob,
 )
-from crdc_pw.utils.excel_ds_test_runner.loader import ExcelLoadError, StepRow, load_steps, read_meta_role
+from crdc_pw.utils.excel_ds_test_runner.loader import ExcelLoadError, StepRow, load_steps, read_settings_role
 from crdc_pw.utils.excel_ds_test_runner.step_runner import run_testcase_excel
 
 __all__ = [
@@ -15,6 +15,6 @@ __all__ = [
     "excel_ds_enabled",
     "excel_ds_scenarios_glob",
     "load_steps",
-    "read_meta_role",
+    "read_settings_role",
     "run_testcase_excel",
 ]
