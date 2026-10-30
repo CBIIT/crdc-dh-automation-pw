@@ -16,7 +16,7 @@ KNOWN_ACTIONS = (
     "create_data_submission",
     "upload_metadata_folder",
     "click_validate",
-    "verify_validation_results_for_tc",
+    "verify_validation_results",
 )
 
 
@@ -70,12 +70,12 @@ def run_testcase_excel(hub: Hub, excel_path: Path) -> None:
             if detail is None:
                 detail = DataSubmissionDetailPage(hub.page, hub.locators)
             detail.click_validate()
-        elif action == "verify_validation_results_for_tc":
+        elif action == "verify_validation_results":
             tc_name = step.params
             model = step.model
             if not tc_name or not model:
                 raise ExcelLoadError(
-                    "verify_validation_results_for_tc needs tc name in Params and model in Model",
+                    "verify_validation_results needs case id in Params and model in Model",
                     path=path,
                     row=step.excel_row,
                 )

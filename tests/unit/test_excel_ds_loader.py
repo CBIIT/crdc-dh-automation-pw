@@ -55,7 +55,7 @@ def test_tc08_committed_workbook_settings_and_steps() -> None:
         "create_data_submission",
         "upload_metadata_folder",
         "click_validate",
-        "verify_validation_results_for_tc",
+        "verify_validation_results",
     ]
 
 
@@ -106,7 +106,7 @@ def test_run_testcase_excel_dispatches_steps(tmp_path: Path) -> None:
             ),
             ("upload_metadata_folder", "TC08", ""),
             ("click_validate", "", ""),
-            ("verify_validation_results_for_tc", "TC08", "GC"),
+            ("verify_validation_results", "TC08", "GC"),
         ],
     )
     calls: list[tuple[str, ...]] = []

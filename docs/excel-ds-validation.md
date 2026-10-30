@@ -45,10 +45,10 @@ Add `--headed` to watch the browser.
 | create_data_submission | New | metadata only | GC | autoQA - AutomationQA_Study | |
 | upload_metadata_folder | `<caseId>` | |
 | click_validate | | |
-| verify_validation_results_for_tc | `<caseId>` | `GC` |
+| verify_validation_results | `<caseId>` | `GC` |
 
 - **create_data_submission:** four fields in **Params**, separated by `|` e.g. `New|metadata only|GC|autoQA - AutomationQA_Study`.
-- **verify_validation_results_for_tc:** case id in **Params**, commons in **Model** (GC, ICDC, CTDC).
+- **verify_validation_results:** case id in **Params**, commons in **Model** (GC, ICDC, CTDC).
 
 **Settings** (tab 2): `role`, `enabled` (Y/N). Workbook run settings—not `config/qa.yaml`.
 
