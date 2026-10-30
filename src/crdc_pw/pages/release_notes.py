@@ -40,7 +40,9 @@ class ReleaseNotesPage(BasePage):
         link = self._loc(_FOOTER_LINK)
         link.wait_for(state="visible", timeout=self.RELEASE_NOTES_MS)
         link.click()
-        self.page.wait_for_url("**/release-notes", timeout=self.RELEASE_NOTES_MS)
+        # Hub uses client-side routing on some envs (e.g. QA2): URL and content update
+        # without a new document "load", so wait_for_url(..., wait_until="load") can time
+        # out while the page is already correct. Readiness = markdown or error visible.
         self.wait_until_ready()
         log.info("Release Notes page loaded")
 
