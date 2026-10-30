@@ -202,7 +202,7 @@ crdc-dh-automation-pw/
 | Test Suite `CRDC_Auxiliary.ts` | `pytest -m CRDC_Auxiliary` |
 | Test Suite `CRDC_PBAC.ts` | `pytest -m CRDC_PBAC` |
 | Test Suite `CRDC_DataValidation.ts` | `pytest -m CRDC_DataValidation` |
-| `Test Cases/CRDC/DataSubmissions/GC/CRDCDH-686-Partial/TC08_...` | `tests/DataSubmissions/GC/test_TC08_CRDC-VerifyInvalidIntegerValue.py` |
+| `Test Cases/CRDC/DataSubmissions/GC/CRDCDH-686-Partial/TC08_...` | Python: `tests/DataSubmissions/GC/test_TC08_CRDC-VerifyInvalidIntegerValue.py`; Excel: `tests/DataValidation/GC/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx` |
 
 ### Fixture, page, test (no keyword layer)
 

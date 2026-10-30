@@ -22,7 +22,7 @@ Add `--headed` to watch the browser.
 
 ## Add a new test case
 
-1. **Copy** `tests/DataValidation/GC/TC08_CRDC-VerifyInvalidIntegerValue.xlsx` → `tests/DataValidation/<model>/TC09_<name>.xlsx` (name must start with **TC**).
+1. **Copy** `tests/DataValidation/GC/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx` → `tests/DataValidation/<model>/TC09_CRDCDH-###_<Scenario>.xlsx` (must start with **TC**; include ticket id for traceability, e.g. **CRDCDH-686**).
 2. **Copy** `InputFiles/CRDC/MetadataData/TC08/` → `MetadataData/TC09/` (or your case id). Replace upload `*.tsv` and files under `expected-ValidationResults/`.
 3. **Edit Settings** (2nd tab): `role` = e.g. **Submitter**; `enabled` = **Y** (or **N** while drafting).
 4. **Edit Steps** (1st tab): row 2 = input root e.g. `InputFiles/CRDC/MetadataData/TC09`; update create/upload/verify rows for your **study**, **model**, and folder name (see [Workbook format](#workbook-format)).

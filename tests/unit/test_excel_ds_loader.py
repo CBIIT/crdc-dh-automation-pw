@@ -43,7 +43,7 @@ def _write_minimal_excel_case(
 def test_tc08_committed_workbook_settings_and_steps() -> None:
     path = (
         repo_root()
-        / "tests/DataValidation/GC/TC08_CRDC-VerifyInvalidIntegerValue.xlsx"
+        / "tests/DataValidation/GC/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx"
     )
     assert path.is_file(), path
     assert read_settings_role(path) == "Submitter"
