@@ -51,6 +51,13 @@ pytest -m CRDC_Smoke
 pytest -m CRDC_PBAC
 ```
 
+Excel Data Validation (`.xlsx` under `tests/DataValidation/`; see [docs/excel-ds-validation.md](docs/excel-ds-validation.md)):
+
+```bash
+python scripts/run_excel_ds_validation.py          # all enabled Excel cases
+python scripts/run_excel_ds_validation.py TC08     # one case
+```
+
 Every run writes a timestamped HTML report to `reports/report-YYYYMMDD-HHMMSS.html` (gitignored). Pass `--html=...` to override the path. Failed live tests attach a full-page screenshot to that report (and `reports/screenshots/`). They also keep a Playwright trace of the Hub tab under `test-results/` (gitignored); open it with `playwright show-trace test-results/.../trace.zip`.
 
 Optional lint (does not run on `git commit`):

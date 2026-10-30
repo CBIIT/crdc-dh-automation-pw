@@ -361,7 +361,7 @@ def test_TC01_CRDC_PbacDefaultPermissions_Fedlead(hub: Hub) -> None:
 
 **TC08 invalid integer** (`tests/DataSubmissions/GC/test_TC08_CRDC-VerifyInvalidIntegerValue.py`) is Submitter, not Admin. Marker `CRDC_DataValidation` so `pytest -m CRDC_Auxiliary -k TC08` still means Manage Studies only. Same steps as Katalon after login: create a New GC metadata-only DS, `upload_folder("TC08")`, `click_validate()`, then `verify_validation_results_vs_expected_for_tc("TC08", model="GC")`. Expected TSV matching is `utils/validation_results.py`. It leaves the `auto-test_*` submission (Katalon does too).
 
-**Excel Data Validation** cases (commons-style `Steps` sheet, `TC*.xlsx` under `tests/DataValidation/`): collected when `excel_ds_validation.enabled` is true (default in profile examples). See [excel-ds-validation.md](excel-ds-validation.md). Python TC08 under `tests/DataSubmissions/GC/` stays collected in parallel.
+**Excel Data Validation** cases (commons-style `Steps` sheet, `TC*.xlsx` under `tests/DataValidation/`): collected when `excel_ds_validation.enabled` is true (default in profile examples). See [excel-ds-validation.md](excel-ds-validation.md) (Katalon backlog + how to add cases). Run all: `python scripts/run_excel_ds_validation.py`; one case: `python scripts/run_excel_ds_validation.py TC08`. Python TC08 under `tests/DataSubmissions/GC/` stays collected in parallel.
 
 ---
 
@@ -475,6 +475,8 @@ Always activate the venv first (`source .venv/bin/activate`).
 | TC01 PBAC Fedlead defaults | `pytest -m CRDC_PBAC -k TC01` |
 | Katalon Data Validation suite | `pytest -m CRDC_DataValidation` |
 | TC08 invalid integer (GC metadata VR) | `pytest -m CRDC_DataValidation -k "VerifyInvalidInteger"` |
+| **All Excel DS validation cases** | `python scripts/run_excel_ds_validation.py` |
+| **One Excel case** (e.g. TC08) | `python scripts/run_excel_ds_validation.py TC08` |
 | CRDCDH-3974 Release Notes | `pytest -m CRDC_Auxiliary -k 3974` |
 | TC18 file only | `pytest tests/AuxiliaryTests/test_TC18_LoginAllRolesAndSwitchUser.py` |
 | Against QA2 | `CRDC_PROFILE=qa2 pytest -m CRDC_Auxiliary` |
