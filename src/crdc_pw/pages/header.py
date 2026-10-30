@@ -1,7 +1,8 @@
 """Hub chrome: the signed-in user menu in the desktop header.
 
-Used by list pages (open Manage Studies / Programs) and by the login fixture
-(is the username visible yet?). Tests can also read username() after login.
+Used by list pages (open Manage Studies / Programs / Data Submissions) and by
+the login fixture (is the username visible yet?). Tests can also read
+username() after login.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ _MANAGE_STUDIES = "CRDC/AILocators/Global/Header/Desktop/ManageStudies-Link"
 _MANAGE_PROGRAMS = "CRDC/AILocators/Global/Header/Desktop/ManagePrograms-Link"
 _MANAGE_USERS = "CRDC/AILocators/Global/Header/Desktop/ManageUsers-Link"
 _USER_PROFILE = "CRDC/AILocators/Global/Header/Desktop/UserProfile-Link"
+_DATA_SUBMISSIONS = "CRDC/AILocators/Global/Header/Desktop/DataSubmissions-Tab"
 
 
 class HeaderPage(BasePage):
@@ -80,3 +82,9 @@ class HeaderPage(BasePage):
         link = self._loc(_USER_PROFILE)
         link.wait_for(state="visible")
         link.click()
+
+    def open_data_submissions(self) -> None:
+        """Nav bar Data Submissions. Katalon clickTab DataSubmissions-Tab."""
+        tab = self._loc(_DATA_SUBMISSIONS)
+        tab.wait_for(state="visible")
+        tab.click()
