@@ -18,7 +18,7 @@ Each `**TC*.xlsx**` has **Steps** (Hub actions) and **Settings** (`role`, `enabl
                                     │
               ┌─────────────────────┴─────────────────────┐
               │               test_collector              │
-              │  tests/DataValidation/**/TC*.xlsx         │
+              │     tests/DataValidation/**/TC*.xlsx      │
               └─────────────────────┬─────────────────────┘
                                     │
                          ┌──────────▼────────────┐
@@ -37,11 +37,11 @@ Each `**TC*.xlsx**` has **Steps** (Hub actions) and **Settings** (`role`, `enabl
      upload step    │                             │ verify step
      reads *.tsv    │                             │ scrapes Validation Results tab
                     ▼                             ▼
-         ┌──────────────────────┐      ┌──────────────────────┐
-         │ MetadataData/<case>/ │      │ validation_results   │
-         │ upload TSVs          │      │ .py                  │
-         │ expected-VR/*.tsv ───┼─────►│ UI vs expected TSVs  │
-         └──────────────────────┘      └──────────────────────┘
+         ┌──────────────────────┐      ┌───────────────────────┐
+         │ MetadataData/<case>/ │      │ validation_results.py │
+         │ upload TSVs          │      │                       │
+         │ expected-VR/*.tsv ───┼─────►│ UI vs expected TSVs   │
+         └──────────────────────┘      └───────────────────────┘
 ```
 
 ---
