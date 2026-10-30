@@ -18,21 +18,15 @@ It is aimed at **QA engineers**: you supply **different datasets** (another **da
 
 Add `--headed` to watch the browser.
 
-**Check workbooks without the Hub** (Steps/Settings rules for every committed `TC*.xlsx`):
-
-```bash
-pytest tests/unit/test_excel_ds_loader.py -m unit
-```
-
 ---
 
 ## Add a new test case
 
 1. **Copy** `tests/DataValidation/GC/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx` → `tests/DataValidation/<model>/TC09_CRDCDH-###_<Scenario>.xlsx` (must start with **TC**; include ticket id for traceability, e.g. **CRDCDH-686**).
-2. **Copy** `InputFiles/CRDC/MetadataData/TC08/` → `MetadataData/TC09/` (or your case id). Replace upload `*.tsv` and files under `expected-ValidationResults/`.
-3. **Edit Settings** (2nd tab): `role` = e.g. **Submitter**; `enabled` = **Y** (or **N** while drafting).
-4. **Edit Steps** (1st tab): row 2 = input root e.g. `InputFiles/CRDC/MetadataData/TC09`; update create/upload/verify rows for your **study**, **model**, and folder name (see [Workbook format](#workbook-format)).
-5. **Run** using command above.
+2. **Copy** `InputFiles/CRDC/MetadataData/TC08/` → `MetadataData/TC09/` (or your case id). Replace upload `*.tsv` and files under `expected-ValidationResults/` and update the data as needed.
+3. In the test case, edit **Settings** (2nd tab): `role` = e.g. **Submitter**; `enabled` = **Y** (or **N** while drafting).
+4. Edit **Steps** (1st tab): row 2 = input root e.g. `InputFiles/CRDC/MetadataData/TC09`; update create/upload/verify rows for your **study**, **model**, and folder name (see [Workbook format](#workbook-format)).
+5. Save all workbook changes and run the test case.
 
 ---
 
@@ -58,7 +52,13 @@ pytest tests/unit/test_excel_ds_loader.py -m unit
 
 **Settings** (tab 2): `role`, `enabled` (Y/N). Workbook run settings—not `config/qa.yaml`.
 
-**TSV naming (upload + expected):** Put upload files in the case folder root (not under `expected-ValidationResults/`). Use the same pattern as TC08—`<model>_<node>_v<version>.tsv` (example: `GC_diagnosis_v11.0.3.tsv`). For each node you assert in Validation Results, add a matching file under **`expected-ValidationResults/`** named `<model>_<node>_v<version>_expected-ValidationResults.tsv` (example: `GC_diagnosis_v11.0.3_expected-ValidationResults.tsv`). When adding a case, copy an existing folder for your model and change file contents only; keep upload and expected names paired the same way TC08 does.
+**TSV naming (upload + expected):** Put upload files in the case folder root (not under `expected-ValidationResults/`). Use the same pattern as TC08—`<model>_<node>_v<version>.tsv` (example: `GC_diagnosis_v11.0.3.tsv`). For each node you assert in Validation Results, add a matching file under `expected-ValidationResults/` named `<model>_<node>_v<version>_expected-ValidationResults.tsv` (example: `GC_diagnosis_v11.0.3_expected-ValidationResults.tsv`). When adding a case, copy an existing folder for your model and change file contents only; keep upload and expected names paired the same way TC08 does.
+
+A test is available to check your test cases are written in the right format **(Steps/Settings are correct)**:
+
+```bash
+pytest tests/unit/test_excel_ds_loader.py -m unit
+```
 
 ---
 
