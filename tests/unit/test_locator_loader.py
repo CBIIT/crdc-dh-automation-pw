@@ -72,6 +72,7 @@ def test_login_and_header_paths_used_by_smoke(locators: LocatorLoader) -> None:
     assert locators.get("CRDC/AILocators/Global/Footer/DesktopFooter")
     assert "/release-notes" in locators.get("CRDC/AILocators/Global/Footer/ReleaseNotes-Link")
     markdown = locators.get("CRDC/AILocators/ReleaseNotes/MarkdownContent")
+    assert "release-notes-markdown" in markdown
     assert "Release Notes" in markdown
     assert "release-notes-error" in locators.get("CRDC/AILocators/ReleaseNotes/ErrorAlert")
 
