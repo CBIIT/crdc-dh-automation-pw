@@ -1,4 +1,4 @@
-"""Xray CRDCDH-4006 / story CRDCDH-3974 — CMS-managed Release Notes.
+"""Xray CRDCDH-4006 — CMS-managed Release Notes (story CRDCDH-3974).
 
 Hub loads markdown from CBIIT/crdc-datahub-static-content on a git branch that
 matches the run profile (qa2 → branch qa2, file content/release-notes.md). We
@@ -28,12 +28,12 @@ from crdc_pw.utils.static_content import (
     assert_rendered_notes_hide_frontmatter,
 )
 
-log = logging.getLogger("crdc_pw.tc_crdcdh_3974")
+log = logging.getLogger("crdc_pw.tc_crdcdh_4006")
 
 pytestmark = pytest.mark.CRDC_Auxiliary
 
 
-def test_TC_CRDCDH_3974_ReleaseNotesPage(hub: Hub) -> None:
+def test_TC_CRDCDH_4006_ReleaseNotesPage(hub: Hub) -> None:
     notes = ReleaseNotesPage(hub.page, hub.locators)
 
     # 1. Navigate: scroll footer into view, click Release Notes, wait for content.
@@ -53,4 +53,4 @@ def test_TC_CRDCDH_3974_ReleaseNotesPage(hub: Hub) -> None:
     # 5. Verify frontmatter stripping: users must not see raw --- / title: from the .md source.
     assert_rendered_notes_hide_frontmatter(text)
 
-    log.info("PASS CRDCDH-3974: Release Notes verified for profile=%s as %s", hub.settings.profile, hub.role)
+    log.info("PASS CRDCDH-4006: Release Notes verified for profile=%s as %s", hub.settings.profile, hub.role)

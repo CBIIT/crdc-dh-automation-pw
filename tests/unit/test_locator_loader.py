@@ -5,7 +5,7 @@ broken catalog or a renamed Katalon path before a live smoke pays OTP.
 
 Flow (this file):
   1. Catalog size matches the conversion report
-  2. Paths used by login + TC08/TC09 + CRDCDH-3974 still resolve
+  2. Paths used by login + TC08/TC09 + CRDCDH-4006 still resolve
   3. Missing path raises
   4. Placeholder substitution (Katalon ${role} and {role})
 """
@@ -68,7 +68,7 @@ def test_login_and_header_paths_used_by_smoke(locators: LocatorLoader) -> None:
     assert locators.get("CRDC/AILocators/Programs/List/Filters/ProgramName-TxtBx")
     assert locators.get("CRDC/AILocators/Programs/List/Filters/StudyName-TxtBx")
 
-    # CRDCDH-3974 Release Notes (footer link + page body)
+    # CRDCDH-4006 Release Notes (footer link + page body)
     assert locators.get("CRDC/AILocators/Global/Footer/DesktopFooter")
     assert "/release-notes" in locators.get("CRDC/AILocators/Global/Footer/ReleaseNotes-Link")
     markdown = locators.get("CRDC/AILocators/ReleaseNotes/MarkdownContent")
