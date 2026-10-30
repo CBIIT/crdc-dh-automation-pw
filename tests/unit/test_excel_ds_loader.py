@@ -11,8 +11,99 @@ import shutil
 from crdc_pw.config import Settings, load_settings, profile_paths
 from crdc_pw.utils.excel_ds_test_runner.config_helpers import excel_ds_cases_glob, excel_ds_enabled
 from crdc_pw.utils.excel_ds_test_runner.loader import ExcelLoadError, load_steps, read_settings_role
-from crdc_pw.utils.excel_ds_test_runner.step_runner import run_testcase_excel
+from crdc_pw.utils.excel_ds_test_runner.step_runner import KNOWN_ACTIONS, run_testcase_excel
 from crdc_pw.locators.loader import repo_root
+
+CANONICAL_VR_SEQUENCE = (
+    "open_data_submissions",
+    "create_data_submission",
+    "upload_metadata_folder",
+    "click_validate",
+    "verify_validation_results",
+)
+
+
+def _norm_action(action: str) -> str:
+    return action.strip().lower().replace(" ", "_").replace("-", "_")
+
+
+def _discover_committed_excel_cases() -> list[Path]:
+    root = repo_root()
+    paths = sorted(
+        p
+        for p in root.glob("tests/DataValidation/**/TC*.xlsx")
+        if p.is_file()
+        and not p.name.startswith("~$")
+        and not p.name.startswith("TC_Template")
+    )
+    return paths
+
+
+def _validate_case_workbook(path: Path) -> None:
+    """Offline checks for committed TC*.xlsx (same Params/Model rules as step_runner)."""
+    read_settings_role(path)
+    input_root, steps = load_steps(path)
+    if not steps:
+        pytest.fail(f"{path}: Steps sheet has no action rows")
+
+    normalized = [_norm_action(s.action) for s in steps]
+    if normalized != list(CANONICAL_VR_SEQUENCE):
+        pytest.fail(
+            f"{path}: expected VR step sequence {CANONICAL_VR_SEQUENCE}, got {tuple(normalized)}"
+        )
+
+    upload_folder: str | None = None
+    verify_case_id: str | None = None
+    verify_model: str | None = None
+    create_commons: str | None = None
+
+    for step in steps:
+        action = _norm_action(step.action)
+        params = step.params.strip()
+        model = step.model.strip()
+        loc = f"{path} row {step.excel_row} action {step.action!r}"
+
+        if action not in KNOWN_ACTIONS:
+            pytest.fail(f"{loc}: unknown action; use one of: {', '.join(KNOWN_ACTIONS)}")
+
+        if action in ("open_data_submissions", "click_validate"):
+            if params or model:
+                pytest.fail(f"{loc}: Params and Model must be empty")
+        elif action == "create_data_submission":
+            if model:
+                pytest.fail(f"{loc}: Model must be empty (use Params with four pipe-separated values)")
+            parts = [p.strip() for p in params.split("|")]
+            if len(parts) != 4:
+                pytest.fail(f"{loc}: Params need four pipe-separated values, got {len(parts)}")
+            create_commons = parts[2]
+        elif action == "upload_metadata_folder":
+            if model:
+                pytest.fail(f"{loc}: Model must be empty")
+            if not params:
+                pytest.fail(f"{loc}: Params must be the MetadataData folder name (e.g. TC08)")
+            upload_folder = params
+        elif action == "verify_validation_results":
+            if not params or not model:
+                pytest.fail(f"{loc}: Params = case folder id, Model = commons (GC, ICDC, CTDC)")
+            verify_case_id = params
+            verify_model = model
+
+    assert upload_folder is not None and verify_case_id is not None and verify_model is not None
+    if upload_folder != verify_case_id:
+        pytest.fail(
+            f"{path}: upload_metadata_folder Params {upload_folder!r} "
+            f"must match verify_validation_results Params {verify_case_id!r}"
+        )
+    expected_suffix = f"MetadataData/{verify_case_id}".replace("\\", "/")
+    if not input_root.replace("\\", "/").endswith(expected_suffix):
+        pytest.fail(
+            f"{path}: row 2 input root {input_root!r} must end with {expected_suffix!r}"
+        )
+    if create_commons and create_commons != verify_model:
+        pytest.fail(
+            f"{path}: create_data_submission commons {create_commons!r} "
+            f"must match verify_validation_results Model {verify_model!r}"
+        )
 
 
 def _write_minimal_excel_case(
@@ -40,23 +131,14 @@ def _write_minimal_excel_case(
 
 
 @pytest.mark.unit
-def test_tc08_committed_workbook_settings_and_steps() -> None:
-    path = (
-        repo_root()
-        / "tests/DataValidation/GC/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx"
-    )
-    assert path.is_file(), path
-    assert read_settings_role(path) == "Submitter"
-    _input_root, steps = load_steps(path)
-    assert _input_root.endswith("MetadataData/TC08")
-    actions = [s.action for s in steps]
-    assert actions == [
-        "open_data_submissions",
-        "create_data_submission",
-        "upload_metadata_folder",
-        "click_validate",
-        "verify_validation_results",
-    ]
+@pytest.mark.parametrize(
+    "case_path",
+    _discover_committed_excel_cases(),
+    ids=lambda p: p.stem,
+)
+def test_committed_excel_case_workbook(case_path: Path) -> None:
+    assert case_path.is_file(), case_path
+    _validate_case_workbook(case_path)
 
 
 @pytest.mark.unit

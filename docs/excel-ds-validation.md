@@ -18,6 +18,12 @@ It is aimed at **QA engineers**: you supply **different datasets** (another **da
 
 Add `--headed` to watch the browser.
 
+**Check workbooks without the Hub** (Steps/Settings rules for every committed `TC*.xlsx`):
+
+```bash
+pytest tests/unit/test_excel_ds_loader.py -m unit
+```
+
 ---
 
 ## Add a new test case
