@@ -1,0 +1,6 @@
+type	 study.study_id	consent_group_id	consent_group_name	consent_group_number
+consent_group	phs769076	auto_consent_1	auto_gp name1	10
+consent_group	phs769076	auto_consent_2	auto_gp name2	3
+consent_group	phs769076	auto_consent_3	auto_gp name3	-2
+consent_group	phs769076	auto_consent_4	auto_gp name4	23
+consent_group	phs769076	auto_consent_5	auto_gp name5	30
