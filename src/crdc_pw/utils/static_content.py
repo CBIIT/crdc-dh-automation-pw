@@ -2,11 +2,10 @@
 
 ReleaseNotesPage only reads Hub DOM. This module is the content oracle: GET
 the published file on CBIIT/crdc-datahub-static-content, drop YAML frontmatter,
-and pick one heading or bullet the page should contain.
+and pick normalized lines from the first release section the Hub page should contain.
 
-Hub profile qa / qa2 / stage maps to the same git branch name. Fill NOTES_FILE
-when 3979 lands (path on that branch). Live tests must not call fetch until
-the qa branch exists and the repo is reachable without extra auth.
+Hub profile qa / qa2 / stage maps to the same git branch name on
+CBIIT/crdc-datahub-static-content (file under content/).
 """
 
 from __future__ import annotations
@@ -17,9 +16,14 @@ import urllib.request
 
 log = logging.getLogger("crdc_pw.utils.static_content")
 
+# Hub release notes innerText can be very long; logs show a prefix only.
+HUB_TEXT_LOG_PREVIEW = 400
+_MATCH_CONTEXT_CHARS = 60
+# Lines from the first ## block (until the next ##) to assert as substrings in Hub text.
+ORACLE_MAX_LINES = 5
+
 REPO = "CBIIT/crdc-datahub-static-content"
-# Path inside the repo. Update when 3979 publishes the notes file.
-NOTES_FILE = "release-notes.md"
+NOTES_FILE = "content/release-notes.md"
 RAW_HOST = "https://raw.githubusercontent.com"
 
 
@@ -52,22 +56,61 @@ def strip_yaml_frontmatter(raw: str) -> str:
     return rest[end + len(closer) :].lstrip()
 
 
-def first_stable_heading_or_bullet(body: str) -> str:
-    """Return the first heading or list item from the markdown body.
+def _oracle_line_from_markdown(line: str) -> str | None:
+    """Map one markdown source line to plain text Hub should contain, or skip."""
+    stripped = line.strip()
+    if not stripped or stripped == "---":
+        return None
+    if stripped.startswith("#"):
+        title = stripped.lstrip("#").strip()
+        if title.lower() == "release notes":
+            return None
+        return title
+    if stripped[0] in "-*":
+        return stripped[1:].lstrip("\t ").strip() or None
+    dot = stripped.find(".")
+    if dot > 0 and stripped[:dot].isdigit():
+        return stripped[dot + 1 :].strip() or None
+    return None
 
-    Hub inner text will not match the raw file 1:1 (lists, whitespace). One
-    heading or bullet is enough to prove Hub is serving this file. Skip blank
-    lines and leftover --- so a stray fence is not used as the snippet.
+
+def published_notes_oracle_lines(
+    body: str,
+    max_lines: int = ORACLE_MAX_LINES,
+) -> list[str]:
+    """Normalized lines from the first ## section (version block) for Hub substring checks.
+
+    Stops at the next ## (next release) or max_lines. Skips # Release Notes before the
+    first ##. Hub innerText will not match markdown syntax; each line is checked with ``in``.
     """
-    for line in body.splitlines():
-        line = line.strip()
-        if not line or line == "---":
+    oracles: list[str] = []
+    in_first_section = False
+    for raw_line in body.splitlines():
+        if len(oracles) >= max_lines:
+            break
+        stripped = raw_line.strip()
+        is_h2 = stripped.startswith("##") and not stripped.startswith("###")
+        if is_h2:
+            if in_first_section:
+                break
+            in_first_section = True
+        if not in_first_section:
             continue
-        if line.startswith("#"):
-            return line.lstrip("#").strip()
-        if line.startswith(("- ", "* ")):
-            return line[2:].strip()
-    raise ValueError("static-content markdown had no heading or bullet")
+        parsed = _oracle_line_from_markdown(raw_line)
+        if parsed:
+            oracles.append(parsed)
+    if not oracles:
+        for raw_line in body.splitlines():
+            parsed = _oracle_line_from_markdown(raw_line)
+            if parsed:
+                return [parsed]
+        raise ValueError("static-content markdown had no oracle lines in first ## section")
+    return oracles
+
+
+def first_stable_heading_or_bullet(body: str) -> str:
+    """Return the first oracle line (first ## section). Kept for small unit tests."""
+    return published_notes_oracle_lines(body, max_lines=1)[0]
 
 
 def fetch_raw_notes(branch: str, timeout_s: int = 30) -> str:
@@ -88,11 +131,77 @@ def fetch_raw_notes(branch: str, timeout_s: int = 30) -> str:
         ) from exc
 
 
-def published_notes_snippet(branch: str, timeout_s: int = 30) -> str:
-    """Fetch, strip frontmatter, and return one heading or bullet from that file.
-
-    This is what the live test should call later: assert the snippet is in
-    ReleaseNotesPage.markdown_text(). Does not open Hub.
-    """
+def published_notes_oracle_lines_for_branch(
+    branch: str,
+    timeout_s: int = 30,
+    max_lines: int = ORACLE_MAX_LINES,
+) -> list[str]:
+    """Fetch tier markdown and return oracle lines for Hub parity checks."""
     raw = fetch_raw_notes(branch, timeout_s=timeout_s)
-    return first_stable_heading_or_bullet(strip_yaml_frontmatter(raw))
+    return published_notes_oracle_lines(strip_yaml_frontmatter(raw), max_lines=max_lines)
+
+
+def published_notes_snippet(branch: str, timeout_s: int = 30) -> str:
+    """First oracle line only (legacy helper)."""
+    return published_notes_oracle_lines_for_branch(branch, timeout_s=timeout_s, max_lines=1)[0]
+
+
+def _text_preview(text: str, max_chars: int = HUB_TEXT_LOG_PREVIEW) -> str:
+    if len(text) <= max_chars:
+        return text
+    return f"{text[:max_chars]}…"
+
+
+def assert_hub_notes_match_static_content(
+    hub_text: str,
+    branch: str,
+    timeout_s: int = 30,
+) -> None:
+    """Assert Hub rendered notes include the GitHub oracle for this tier; log expected vs actual.
+
+    hub_text is ReleaseNotesPage.markdown_text(). branch is the Hub profile (qa, qa2, …).
+    Logs the GitHub URL, expected lines, Hub length/preview, and match context on success.
+    """
+    preview = _text_preview(hub_text)
+    log.info(
+        "Release Notes Hub actual: length=%s preview=%r",
+        len(hub_text),
+        preview,
+    )
+    oracle_url = raw_notes_url(branch)
+    expected_lines = published_notes_oracle_lines_for_branch(branch, timeout_s=timeout_s)
+    log.info(
+        "Release Notes GitHub expected (branch=%s url=%s %s lines): %r",
+        branch,
+        oracle_url,
+        len(expected_lines),
+        expected_lines,
+    )
+    missing = [line for line in expected_lines if line not in hub_text]
+    if missing:
+        raise AssertionError(
+            f"Hub notes do not match static-content branch {branch!r} ({oracle_url}); "
+            f"missing {len(missing)}/{len(expected_lines)} oracle line(s): {missing!r}; "
+            f"expected all of {expected_lines!r}; Hub preview: {preview!r}"
+        )
+    first = expected_lines[0]
+    match_at = hub_text.find(first)
+    start = max(0, match_at - _MATCH_CONTEXT_CHARS)
+    end = min(len(hub_text), match_at + len(first) + _MATCH_CONTEXT_CHARS)
+    log.info(
+        "Release Notes CMS parity OK: %s/%s oracle lines found; first %r at index %s; context: %r",
+        len(expected_lines),
+        len(expected_lines),
+        first,
+        match_at,
+        hub_text[start:end],
+    )
+
+
+def assert_rendered_notes_hide_frontmatter(hub_text: str) -> None:
+    """Assert Hub did not render raw YAML frontmatter from the markdown source."""
+    if hub_text.strip().startswith("---"):
+        raise AssertionError("Release Notes showed raw YAML frontmatter")
+    if "title:" in hub_text[:200].lower():
+        raise AssertionError("Release Notes showed YAML title in body")
+    log.info("Release Notes: no YAML frontmatter in rendered text")
