@@ -32,7 +32,7 @@ The framework can:
 - Sign in through Login.gov with TOTP (one-time password)
 - Reuse a saved browser session so the next run does not pay OTP every time
 - Sign in as **Admin, Fedlead, Dcp, Submitter, User, and Master** and land on Hub (TC18)
-- Run **TC08** Manage Studies, **TC09** Manage Programs, **TC01** PBAC Fedlead defaults, **CRDCDH-3974** Release Notes, and **TC08** GC invalid-integer Data Submission (metadata VR)
+- Run **TC08** Manage Studies, **TC09** Manage Programs, **TC01** PBAC Fedlead defaults, **CRDCDH-4006** Release Notes, and **TC08** GC invalid-integer Data Submission (metadata VR)
 
 That is the floor everything else builds on. Submission Requests, remaining Data Submissions, emails, Mongo, and GraphQL are **not** here yet.
 
@@ -167,7 +167,7 @@ flowchart LR
 crdc-dh-automation-pw/
 ├── tests/                  # pytest files (Katalon Test Case / Script)
 │   ├── conftest.py         # builds `hub`: browser + login  ← start here if login fails
-│   ├── AuxiliaryTests/     # TC08 studies, TC09, TC18, CRDCDH-3974
+│   ├── AuxiliaryTests/     # TC08 studies, TC09, TC18, CRDCDH-4006
 │   ├── Pbac/               # TC01 Fedlead defaults
 │   ├── DataSubmissions/    # GC metadata VR (TC08 invalid integer)
 │   └── unit/               # no browser (locator, config, sheet, notes helpers)
@@ -333,7 +333,7 @@ pytest
 
 **TC18** only asserts that each role landed on Hub (header username, URL is Data Commons, not Login.gov). It parametrizes `hub` across the six roles; there is no list page after login.
 
-**CRDCDH-3974** (`tests/AuxiliaryTests/test_TC_CRDCDH-3974_ReleaseNotesPage.py`): footer → `/release-notes`, markdown visible, error alert hidden, text non-empty. A GitHub static-content compare is sketched in `utils/static_content.py` but not called until CRDCDH-3979.
+**CRDCDH-4006** (`tests/AuxiliaryTests/test_TC_CRDCDH-4006_ReleaseNotesPage.py`, story CRDCDH-3974): footer → `/release-notes`, markdown visible, error alert hidden, CMS parity vs static-content branch, no YAML frontmatter in UI.
 
 **TC01** (`tests/Pbac/test_TC01_CRDC-PbacDefaultPermissions-Fedlead.py`) is the **middle** of Katalon TC01 (not `loginToCrdcOtp` / `closeBrowser`). Fixture already signed in as Admin. The page reads checkboxes; `utils/pbac_sheet.py` owns the Excel compare — no `verify_*` on the page:
 
@@ -472,7 +472,7 @@ Always activate the venv first (`source .venv/bin/activate`).
 | TC01 PBAC Fedlead defaults | `pytest -m CRDC_PBAC -k TC01` |
 | Katalon Data Validation suite | `pytest -m CRDC_DataValidation` |
 | TC08 invalid integer (GC metadata VR) | `pytest -m CRDC_DataValidation -k "VerifyInvalidInteger"` |
-| CRDCDH-3974 Release Notes | `pytest -m CRDC_Auxiliary -k 3974` |
+| CRDCDH-4006 Release Notes | `pytest -m CRDC_Auxiliary -k 4006` |
 | TC18 file only | `pytest tests/AuxiliaryTests/test_TC18_LoginAllRolesAndSwitchUser.py` |
 | Against QA2 | `CRDC_PROFILE=qa2 pytest -m CRDC_Auxiliary` |
 

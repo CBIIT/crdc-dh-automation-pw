@@ -4,7 +4,7 @@ Playwright Python test framework for **CRDC Data Hub**. This is a behavior-prese
 
 **New to the team?** Start at **[docs/onboarding.md](docs/onboarding.md)** (setup, core pieces — conftest / auth / config / hub / pages — how to run tests, and what the port is aiming for). The map of those files is **Core pieces** in that doc.
 
-Phase 0 is the scaffold plus the first live cases: YAML object repository, profile config, Login.gov OTP, auth `storage_state`, six-role login smoke, TC08/TC09 lists, TC01 PBAC Fedlead, and CRDCDH-3974 Release Notes. Remaining suites are later phases. See [`ai/crdc/Playwright-Migration-Plan.md`](../../ai/crdc/Playwright-Migration-Plan.md).
+Phase 0 is the scaffold plus the first live cases: YAML object repository, profile config, Login.gov OTP, auth `storage_state`, six-role login smoke, TC08/TC09 lists, TC01 PBAC Fedlead, and CRDCDH-4006 Release Notes. Remaining suites are later phases. See [`ai/crdc/Playwright-Migration-Plan.md`](../../ai/crdc/Playwright-Migration-Plan.md).
 
 ## Requirements
 
