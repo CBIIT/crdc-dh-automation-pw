@@ -1,4 +1,8 @@
-"""Katalon utilities.SubmissionRequest keywords (CRDCDH-3948 TC02–TC04)."""
+"""Katalon utilities.SubmissionRequest workflow facade (inquire/approve/reopen, fill orchestration).
+
+Section A–D Excel filling currently lives here; planned home is SubmissionRequestFormPage.
+See docs/sr-form-section-fill-refactor.md.
+"""
 
 from __future__ import annotations
 

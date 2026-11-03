@@ -306,6 +306,8 @@ The test never sees the XPath or the Katalon path. If a locator is wrong, the fa
 
 The fixture is how we signed in. Tests do not call `login_otp` again. They call `auth.switch_user(hub, role)` only when the *scenario* changes user (PBAC). That closes the previous browser tab; after a switch, create page objects again with `hub.page` (do not reuse ones built before the switch — see PBAC snippet below and CRDCDH-3948 TC03/TC04). **Planned (post-3948):** framework-wide `SomePage(hub)` so role switches do not require re-instantiation — see [hub-backed-page-objects.md](hub-backed-page-objects.md).
 
+**Submission Request three modules:** list screen (`SubmissionRequestsListPage`), questionnaire (`SubmissionRequestFormPage`), and workflow facade (`SubmissionRequest` — inquire/approve/reopen orchestration, not a fourth UI page). Section A–D Excel fill will move onto the form page; the facade stays thin — see [sr-form-section-fill-refactor.md](sr-form-section-fill-refactor.md).
+
 ```
 pytest
   load qa.yaml + all YAML locators          (session)

@@ -144,6 +144,8 @@ Remove post-switch re-instantiation blocks in CRDCDH-3948 TC03/TC04 once Hub-bac
 
 **Recommended:** one PR, “Hub-backed page objects (framework-wide)” — pages, tests, docs, cursor rule.
 
+**Related:** [sr-form-section-fill-refactor.md](sr-form-section-fill-refactor.md) — move section filling onto `SubmissionRequestFormPage` and keep `SubmissionRequest` as a thin workflow facade. Can ship in the same PR as hub-backed pages or immediately after.
+
 **Risk if deferred:** new DS/SR ports copy post-switch constructor boilerplate and reintroduce stale-page failures.
 
 ---
