@@ -28,9 +28,9 @@ pytestmark = pytest.mark.CRDC_SubmissionRequests
 def test_TC02_CRDCDH_3948_InProgress_SaveRequiresNewContent(hub: Hub) -> None:
     hub.page.set_viewport_size({"width": 1920, "height": 1080})
 
-    sr_list = SubmissionRequestsListPage(hub.page, hub.locators)
-    form = SubmissionRequestFormPage(hub.page, hub.locators)
-    sr = SubmissionRequest(hub.page, hub.locators)
+    sr_list = SubmissionRequestsListPage(hub)
+    form = SubmissionRequestFormPage(hub)
+    sr = SubmissionRequest(hub)
 
     # Setup: partial Sections A + B, save, reopen from list
     sr_list.open()

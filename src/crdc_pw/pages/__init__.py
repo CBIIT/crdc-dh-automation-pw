@@ -1,4 +1,4 @@
-"""Page objects: one Hub screen each. Tests construct these from hub.page + hub.locators."""
+"""Page objects: one Hub screen each. Tests construct these with PageClass(hub)."""
 
 from crdc_pw.pages.header import HeaderPage
 from crdc_pw.pages.login import LoginPage

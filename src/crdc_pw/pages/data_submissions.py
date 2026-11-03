@@ -98,7 +98,7 @@ class DataSubmissionsListPage(BasePage):
     def open(self) -> None:
         """Nav bar → Data Submissions, then wait for the list filters."""
         log.info("Navigate: Data Submissions")
-        HeaderPage(self.page, self.locators).open_data_submissions()
+        HeaderPage(self._hub).open_data_submissions()
         self.container.wait_for(state="visible")
         log.info("Data Submissions list page loaded")
 

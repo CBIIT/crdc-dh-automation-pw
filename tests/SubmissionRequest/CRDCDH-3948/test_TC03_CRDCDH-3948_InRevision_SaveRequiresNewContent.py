@@ -2,7 +2,7 @@
 
 CRDCDH-3948 TC03 — Submission Request status: In Revision (after Fed Lead Inquire).
 Submitter submit → Fed Lead inquire → Submitter reopens form; Save rules; save keeps IN REVISION.
-Fixture starts signed in as Submitter; recreate page objects after each switch_user.
+Fixture starts signed in as Submitter; page objects are Hub-backed (survive switch_user).
 """
 
 from __future__ import annotations
@@ -29,9 +29,9 @@ pytestmark = pytest.mark.CRDC_SubmissionRequests
 def test_TC03_CRDCDH_3948_InRevision_SaveRequiresNewContent(hub: Hub) -> None:
     hub.page.set_viewport_size({"width": 1920, "height": 1080})
 
-    sr_list = SubmissionRequestsListPage(hub.page, hub.locators)
-    form = SubmissionRequestFormPage(hub.page, hub.locators)
-    sr = SubmissionRequest(hub.page, hub.locators)
+    sr_list = SubmissionRequestsListPage(hub)
+    form = SubmissionRequestFormPage(hub)
+    sr = SubmissionRequest(hub)
 
     # --- Submitter: full questionnaire and submit ---
     sr_list.open()
@@ -60,14 +60,10 @@ def test_TC03_CRDCDH_3948_InRevision_SaveRequiresNewContent(hub: Hub) -> None:
 
     # Step 1: Fed Lead inquires on that study — SR moves to In Revision.
     switch_user(hub, "Fedlead")
-    sr = SubmissionRequest(hub.page, hub.locators)
-    form = SubmissionRequestFormPage(hub.page, hub.locators)
     sr.inquire_submission_request(study_name)
 
     # Step 2: Submitter reopens form from list — verify status bar IN REVISION.
     switch_user(hub, "Submitter")
-    sr = SubmissionRequest(hub.page, hub.locators)
-    form = SubmissionRequestFormPage(hub.page, hub.locators)
     sr.open_submission_request_form_for_study(study_name)
     form.assert_status("IN REVISION")
 

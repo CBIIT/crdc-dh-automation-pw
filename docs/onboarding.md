@@ -216,7 +216,7 @@ Katalon had **no separate page layer**. `Login.groovy` was both the journey (`lo
 | Question it answers | Who is signed in, on which tab? | What can you do *on this screen*? | How does Hub compare to a file / GitHub / TOTP? | What is the scenario, and did it pass? |
 | Example | Login.gov OTP, saved cookies, `hub.role` | `open()`, `apply_filters()`, `markdown_text()` | `write_expected` / `compare_actual`, `published_notes_snippet` | `expect(studies.container).to_be_visible()` |
 | Uses | `auth.py` + `LoginPage` / `HeaderPage` | Locator properties → YAML → Playwright (15s `BasePage.DEFAULT_MS`) | Excel, HTTP GET, `pyotp` | Page objects + optional utils + `expect` / `assert` |
-| Test calls it? | Asks for `hub` (already signed in). Uses `auth.switch_user(hub, role)` only when the *scenario* changes user | Yes — `StudiesListPage(hub.page, hub.locators)` | Yes, when the case needs an oracle (TC01, later 3979) | This *is* the test |
+| Test calls it? | Asks for `hub` (already signed in). Uses `auth.switch_user(hub, role)` only when the *scenario* changes user | Yes — `StudiesListPage(hub)` | Yes, when the case needs an oracle (TC01, later 3979) | This *is* the test |
 
 Adding a new list case (TC12) does not touch `Hub` or `conftest.py`. You write a page object and a pytest file.
 
@@ -243,7 +243,7 @@ Command: `pytest -m CRDC_Auxiliary -k TC08`.
 
 ```python
 def test_TC08_ManageStudiesListAndFilter(hub: Hub) -> None:
-    studies = StudiesListPage(hub.page, hub.locators)
+    studies = StudiesListPage(hub)
     studies.open()
     expect(studies.container).to_be_visible()
     expect(studies.add_study).to_be_visible()
@@ -298,13 +298,13 @@ The test never sees the XPath or the Katalon path. If a locator is wrong, the fa
 
 | Line | What it is doing |
 |---|---|
-| `StudiesListPage(hub.page, hub.locators)` | Bind the Manage Studies screen to this tab |
+| `StudiesListPage(hub)` | Bind the Manage Studies screen to this tab |
 | `studies.open()` | User menu → Manage Studies, wait for the list |
 | `expect(studies.container)` / `studies.add_study` | List chrome is up |
 | `studies.apply_filters(study_name="autoQA", program="AutoTest-Program")` | Same filter values as Katalon |
 | `assert` row count / `"autoQA"` in a cell | Fail if the filtered table is empty or off |
 
-The fixture is how we signed in. Tests do not call `login_otp` again. They call `auth.switch_user(hub, role)` only when the *scenario* changes user (PBAC). That closes the previous browser tab; after a switch, create page objects again with `hub.page` (do not reuse ones built before the switch — see PBAC snippet below and CRDCDH-3948 TC03/TC04). **Planned (post-3948):** framework-wide `SomePage(hub)` so role switches do not require re-instantiation — see [hub-backed-page-objects.md](hub-backed-page-objects.md).
+The fixture is how we signed in. Tests do not call `login_otp` again. They call `auth.switch_user(hub, role)` only when the *scenario* changes user (PBAC, SR TC03/TC04). Page objects take `hub` and read the live tab via `@property page`, so you do **not** rebuild them after `switch_user` unless you introduce a new screen type for that leg. See [hub-backed-page-objects.md](hub-backed-page-objects.md).
 
 **Submission Request three modules:** list screen (`SubmissionRequestsListPage`), questionnaire (`SubmissionRequestFormPage`), and workflow facade (`SubmissionRequest` — inquire/approve/reopen orchestration, not a fourth UI page). Section A–D Excel fill will move onto the form page; the facade stays thin — see [sr-form-section-fill-refactor.md](sr-form-section-fill-refactor.md).
 
@@ -335,7 +335,7 @@ pytest
 
 ### Other live cases (same pattern)
 
-**TC09** is the Programs twin (`tests/AuxiliaryTests/test_TC09_ManageProgramsListAndFilter.py`): `ProgramsListPage(hub.page, hub.locators).open()`, then filters `AutoTest` / `autoQA`, then at least one row contains `auto`.
+**TC09** is the Programs twin (`tests/AuxiliaryTests/test_TC09_ManageProgramsListAndFilter.py`): `ProgramsListPage(hub).open()`, then filters `AutoTest` / `autoQA`, then at least one row contains `auto`.
 
 **TC18** only asserts that each role landed on Hub (header username, URL is Data Commons, not Login.gov). It parametrizes `hub` across the six roles; there is no list page after login.
 
@@ -345,7 +345,7 @@ pytest
 
 ```python
 def test_TC01_CRDC_PbacDefaultPermissions_Fedlead(hub: Hub) -> None:
-    users = ManageUsersPage(hub.page, hub.locators)
+    users = ManageUsersPage(hub)
     users.open()
     users.find_and_edit("Fedlead")
     users.reset_permissions("Fedlead")
@@ -355,7 +355,7 @@ def test_TC01_CRDC_PbacDefaultPermissions_Fedlead(hub: Hub) -> None:
     assert compare_actual("Fedlead", users.read_permission_rows())
 
     switch_user(hub, "Fedlead")
-    profile = UserProfilePage(hub.page, hub.locators)
+    profile = UserProfilePage(hub)
     profile.open()
     profile.expand_permission_panels()
     write_expected("Fedlead-self")

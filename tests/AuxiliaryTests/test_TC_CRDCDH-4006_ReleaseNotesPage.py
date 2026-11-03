@@ -34,7 +34,7 @@ pytestmark = pytest.mark.CRDC_Auxiliary
 
 
 def test_TC_CRDCDH_4006_ReleaseNotesPage(hub: Hub) -> None:
-    notes = ReleaseNotesPage(hub.page, hub.locators)
+    notes = ReleaseNotesPage(hub)
 
     # 1. Navigate: scroll footer into view, click Release Notes, wait for content.
     notes.open()

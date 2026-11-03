@@ -116,7 +116,7 @@ class ManageUsersPage(PermissionForm):
     def open(self) -> None:
         """User menu → Manage Users, then wait for the user table."""
         log.info("Navigate: Manage Users")
-        HeaderPage(self.page, self.locators).open_manage_users()
+        HeaderPage(self._hub).open_manage_users()
         self._wait_for_table()
         log.info("Manage Users list page loaded")
 
@@ -210,6 +210,6 @@ class UserProfilePage(PermissionForm):
     def open(self) -> None:
         """User menu → Profile, then wait for the permission form (or the page body)."""
         log.info("Navigate: User Profile")
-        HeaderPage(self.page, self.locators).open_profile()
+        HeaderPage(self._hub).open_profile()
         self._loc(PERMISSIONS_PANEL).wait_for(state="visible")
         log.info("User Profile page loaded")

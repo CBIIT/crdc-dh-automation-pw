@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import time
 
+from playwright.sync_api import Page
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
+from crdc_pw.locators.loader import LocatorLoader
 from crdc_pw.pages.base import BasePage
 
 SYSTEM_USE_CONTINUE = "CRDC/AILocators/Global/SystemUseWarning/Continue-Btn"
@@ -41,6 +43,20 @@ POST_OTP_STEPS = (GRANT, NIH_AGREE, RULES_ACCEPT, SYSTEM_USE_CONTINUE, USERNAME)
 
 
 class LoginPage(BasePage):
+    """Auth-only: constructed with (page, locators) before a test Hub exists."""
+
+    def __init__(self, page: Page, locators: LocatorLoader) -> None:
+        self._page = page
+        self._locators = locators
+
+    @property
+    def page(self) -> Page:
+        return self._page
+
+    @property
+    def locators(self) -> LocatorLoader:
+        return self._locators
+
     def goto(self, base_url: str) -> None:
         """Open Hub (QA / QA2 / Stage). Does not wait for login to finish."""
         self.page.goto(base_url, wait_until="domcontentloaded")
