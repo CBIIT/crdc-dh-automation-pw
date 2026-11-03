@@ -32,9 +32,9 @@ The framework can:
 - Sign in through Login.gov with TOTP (one-time password)
 - Reuse a saved browser session so the next run does not pay OTP every time
 - Sign in as **Admin, Fedlead, Dcp, Submitter, User, and Master** and land on Hub (TC18)
-- Run **TC08** Manage Studies, **TC09** Manage Programs, **TC01** PBAC Fedlead defaults, **CRDCDH-4006** Release Notes, and **TC08** GC invalid-integer Data Submission (metadata VR)
+- Run **TC08** Manage Studies, **TC09** Manage Programs, **TC01** PBAC Fedlead defaults, **CRDCDH-4006** Release Notes, **TC08** GC invalid-integer Data Submission (metadata VR), and **CRDCDH-3948** Submission Request TC01–TC04 (SRF Save / import-export / list reopen / Fed Lead inquire & reopen)
 
-That is the floor everything else builds on. Submission Requests, remaining Data Submissions, emails, Mongo, and GraphQL are **not** here yet.
+That is the floor everything else builds on. Other Submission Request suites, emails, Mongo, and GraphQL are **not** here yet.
 
 ### End goal (after the port)
 
@@ -169,8 +169,11 @@ crdc-dh-automation-pw/
 │   ├── conftest.py         # builds `hub`: browser + login  ← start here if login fails
 │   ├── AuxiliaryTests/     # TC08 studies, TC09, TC18, CRDCDH-4006
 │   ├── Pbac/               # TC01 Fedlead defaults
-│   ├── DataSubmissions/    # DS flow / Python scenarios (e.g. TC08 reference)
+│   ├── DataSubmissions/    # DS flow / GC metadata VR (e.g. TC08 invalid integer)
 │   ├── DataValidation/     # Excel workbook cases (Steps sheet); optional when flag on
+│   ├── SubmissionRequest/
+│   │   ├── CRDCDH-3948/    # TC01–TC04 SRF Save / import / Fed Lead (mirrors Katalon folder)
+│   │   └── CRDCDH-3952/    # TC01 Section D date tooltips (may fail until CRDCDH-3978 on QA)
 │   └── unit/               # no browser (locator, config, sheet, notes helpers)
 ├── src/crdc_pw/
 │   ├── hub.py              # thin session the fixture yields (page, locators, settings, role)
@@ -301,7 +304,9 @@ The test never sees the XPath or the Katalon path. If a locator is wrong, the fa
 | `studies.apply_filters(study_name="autoQA", program="AutoTest-Program")` | Same filter values as Katalon |
 | `assert` row count / `"autoQA"` in a cell | Fail if the filtered table is empty or off |
 
-The fixture is how we signed in. Tests do not call `login_otp` again. They call `auth.switch_user(hub, role)` only when the *scenario* changes user (PBAC).
+The fixture is how we signed in. Tests do not call `login_otp` again. They call `auth.switch_user(hub, role)` only when the *scenario* changes user (PBAC). That closes the previous browser tab; after a switch, create page objects again with `hub.page` (do not reuse ones built before the switch — see PBAC snippet below and CRDCDH-3948 TC03/TC04). **Planned (post-3948):** framework-wide `SomePage(hub)` so role switches do not require re-instantiation — see [hub-backed-page-objects.md](hub-backed-page-objects.md).
+
+**Submission Request three modules:** list screen (`SubmissionRequestsListPage`), questionnaire (`SubmissionRequestFormPage`), and workflow facade (`SubmissionRequest` — inquire/approve/reopen orchestration, not a fourth UI page). Section A–D Excel fill will move onto the form page; the facade stays thin — see [sr-form-section-fill-refactor.md](sr-form-section-fill-refactor.md).
 
 ```
 pytest
@@ -478,6 +483,8 @@ Always activate the venv first (`source .venv/bin/activate`).
 | **All Excel DS validation cases** | `pytest tests/DataValidation -m CRDC_DataValidation_Excel` |
 | **One Excel case** (e.g. TC08) | `pytest tests/DataValidation -m CRDC_DataValidation_Excel -k TC08` |
 | CRDCDH-4006 Release Notes | `pytest -m CRDC_Auxiliary -k 4006` |
+| CRDCDH-3948 SR TC01–TC04 | `pytest -m CRDC_SubmissionRequests -k 3948` |
+| CRDCDH-3952 Section D date tooltips | `pytest -m CRDC_SubmissionRequests -k 3952` |
 | TC18 file only | `pytest tests/AuxiliaryTests/test_TC18_LoginAllRolesAndSwitchUser.py` |
 | Against QA2 | `CRDC_PROFILE=qa2 pytest -m CRDC_Auxiliary` |
 

@@ -3,6 +3,8 @@
 CancelRequest-Btn: '//*[@data-testid="cancel-application-button"]'
 CancelSubmissionRequest-TxtBx: '//*[@name="comment"]'
 CancelSubmissionRequestConfirm-Btn: '//*[@id="error-dialog-delete-button"]'
+# Read & Accept on new SR (same button id as cancel confirm; scope via dialog in page code)
+ReadAndAcceptConfirm-Btn: '//*[@id="error-dialog-delete-button"]'
 FileTypeTable-Count-Header: "//*[@id='review-file-type-table-number-of-files']"
 FileTypeTable-Extension-Header: "//*[@id='review-file-type-table-file-extension']"
 FileTypeTable-FileType-Header: "//*[@id='review-file-type-table-file-type']"

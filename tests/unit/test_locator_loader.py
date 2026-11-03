@@ -20,9 +20,9 @@ from crdc_pw.locators.loader import LocatorLoader
 @pytest.mark.unit
 def test_loader_loads_converted_yaml(locators: LocatorLoader) -> None:
     """Whole locators/CRDC tree loaded; counts come from locators/CONVERSION_REPORT.md."""
-    # 91 YAML files / 721 locators from the Katalon conversion report.
-    assert locators.yaml_file_count == 91
-    assert locators.locator_count >= 700
+    # Base conversion report + SR import/export YAML added for CRDCDH-3948.
+    assert locators.yaml_file_count >= 95
+    assert locators.locator_count >= 725
 
 
 @pytest.mark.unit
@@ -95,6 +95,42 @@ def test_login_and_header_paths_used_by_smoke(locators: LocatorLoader) -> None:
     assert locators.get("CRDC/DataSubmissions/Validate-Btn")
     assert locators.get("CRDC/DataSubmissions/Validation/ValidationResults-Tab")
     assert locators.get("CRDC/DataSubmissions/Validation/Table-Row")
+
+    # CRDCDH-3948 Submission Request form (TC01)
+    assert locators.get("CRDC/AILocators/Global/Header/Desktop/SubmissionRequests-Tab")
+    assert locators.get("CRDC/AILocators/SubmissionRequests/List/Container")
+    assert locators.get("CRDC/SubmissionRequest/Start_a_SubmissionRequest-Btn")
+    assert locators.get("CRDC/AILocators/SubmissionRequests/StatusBar/Status-Lbl")
+    assert locators.get("CRDC/AILocators/SubmissionRequests/Form/Navigation/Save-Btn")
+    assert "submission-form-save-button" in locators.get(
+        "CRDC/AILocators/SubmissionRequests/Form/Navigation/Save-Btn-TooltipTrigger"
+    )
+    assert locators.get("CRDC/AILocators/SubmissionRequests/Form/ExportForm/ExportForm-Btn")
+    assert locators.get("CRDC/AILocators/SubmissionRequests/Form/ImportForm/ImportForm-Btn")
+    assert locators.get("CRDC/AILocators/SubmissionRequests/Form/ImportDialog/Upload-Input")
+    assert locators.get("CRDC/AILocators/SubmissionRequests/Form/SectionA/PI-Address-TxtBx")
+    assert locators.get("CRDC/AILocators/Global/Notistack-Snackbar")
+    assert locators.get("CRDC/AILocators/SubmissionRequests/List/View-Btn")
+    assert "reopen-application-button" in locators.get(
+        "CRDC/AILocators/SubmissionRequests/List/Reopen-Btn"
+    )
+    assert locators.get("CRDC/AILocators/SubmissionRequests/List/Filters/ResetFilters-Btn")
+    assert locators.get("CRDC/AILocators/SubmissionRequests/Form/Review/ProgressBar-Review")
+    assert locators.get("CRDC/AILocators/SubmissionRequests/Form/Navigation/Inquire-Btn")
+    inquire_comment = locators.get(
+        "CRDC/AILocators/SubmissionRequests/InquireDialog/ReviewComment-TxtBx"
+    )
+    assert "review-comment" in inquire_comment
+    assert "textbox" in inquire_comment
+
+    # CRDCDH-3952 Section D date tooltips
+    assert "section-d-targeted-data-submission-delivery-date" in locators.get(
+        "CRDC/AILocators/SubmissionRequests/Form/SectionD/TargetedDeliveryDate-TooltipTrigger"
+    )
+    assert "Toggle Tooltip" in locators.get(
+        "CRDC/AILocators/SubmissionRequests/Form/SectionD/ExpectedPubDate-TooltipTrigger"
+    )
+    assert locators.get("CRDC/AILocators/SubmissionRequests/Form/Review/ProgressBar-SectionD")
 
 
 @pytest.mark.unit
