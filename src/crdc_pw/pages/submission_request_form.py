@@ -44,11 +44,10 @@ SR_QUESTIONNAIRE_FUTURE_DATE = "05/12/2036"
 # CRDCDH-3952 — Section D date field tooltips (Jira CRDCDH-3952 / FE CRDCDH-3978)
 SR_SECTION_D_TARGETED_DELIVERY_TOOLTIP = (
     "The date that transfer of data from the submitter to CRDC Submission Portal is "
-    "expected to begin. The date must be today's date or a future date."
+    "expected to begin."
 )
 SR_SECTION_D_EXPECTED_PUB_TOOLTIP = (
-    "The date that submitters expect any paper using this data will be published. "
-    "The date must be today's date or a future date."
+    "The date that submitters expect any paper using this data will be published."
 )
 
 _DEFAULT_INQUIRE_COMMENT = "Automated test inquire - CRDC submission request."

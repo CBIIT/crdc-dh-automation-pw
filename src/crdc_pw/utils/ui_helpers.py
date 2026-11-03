@@ -24,6 +24,29 @@ def _normalize_whitespace(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def _dismiss_click_tooltip(page: Page, trigger: Locator) -> None:
+    """Close a click-toggle MUI tooltip so the next trigger is not covered."""
+    tooltips = page.locator("[role='tooltip']")
+    if tooltips.count() == 0:
+        return
+    try:
+        if not tooltips.first.is_visible():
+            return
+    except Exception:
+        return
+    page.keyboard.press("Escape")
+    try:
+        tooltips.first.wait_for(state="hidden", timeout=2000)
+        return
+    except PlaywrightTimeoutError:
+        pass
+    trigger.first.click(force=True)
+    try:
+        tooltips.first.wait_for(state="hidden", timeout=2000)
+    except PlaywrightTimeoutError:
+        log.warning("Tooltip still visible after dismiss attempt")
+
+
 def verify_tooltip_on_hover(
     page: Page,
     trigger: Locator,
@@ -94,6 +117,7 @@ def verify_tooltip_on_click(page: Page, trigger: Locator, expected: str) -> None
     assert actual_norm == expected_norm, (
         f"verify_tooltip_on_click: expected {expected_norm!r}, actual {actual_norm!r}"
     )
+    _dismiss_click_tooltip(page, trigger)
 
 
 def wait_for_button_stable(
