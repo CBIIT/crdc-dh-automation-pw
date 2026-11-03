@@ -6,6 +6,8 @@ import logging
 import re
 import time
 
+from typing import Protocol
+
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import expect
@@ -15,9 +17,17 @@ log = logging.getLogger("crdc_pw.ui_helpers")
 __all__ = [
     "assert_button_enabled",
     "verify_tooltip_on_click",
+    "verify_tooltip_on_click_path",
     "verify_tooltip_on_hover",
     "wait_for_button_stable",
 ]
+
+
+class _HubPageLike(Protocol):
+    page: Page
+
+    @property
+    def locators(self): ...
 
 
 def _normalize_whitespace(text: str) -> str:
@@ -72,6 +82,19 @@ def verify_tooltip_on_hover(
     expected = _normalize_whitespace(expected_full)
     assert match_text == expected, (
         f"verify_tooltip_on_hover: expected {expected!r}, actual {match_text!r}"
+    )
+
+
+def verify_tooltip_on_click_path(
+    page_obj: _HubPageLike,
+    yaml_path: str,
+    expected: str,
+) -> None:
+    """Click a YAML-backed trigger on a Hub page and assert tooltip copy."""
+    verify_tooltip_on_click(
+        page_obj.page,
+        page_obj.page.locator(page_obj.locators.get(yaml_path)),
+        expected,
     )
 
 

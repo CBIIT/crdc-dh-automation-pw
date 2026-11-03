@@ -1,6 +1,6 @@
 # Hub-backed page objects (framework-wide)
 
-**Status:** Planned — implement after CRDCDH-3948 is merged and green on QA/QA2.
+**Status:** Implemented on branch `feat/hub-backed-page-objects` (3948 merged).
 
 **Goal:** Tests construct `SomePage(hub)` once. `auth.switch_user(hub, role)` only updates `hub.page`; page objects always read the live tab. No re-instantiating page objects after every role change.
 
@@ -121,14 +121,15 @@ Remove post-switch re-instantiation blocks in CRDCDH-3948 TC03/TC04 once Hub-bac
 
 ## Implementation checklist
 
-- [ ] Add `HubPage` in `base.py`; `LoginPage` unchanged for auth
-- [ ] Convert all UI page classes in `src/crdc_pw/pages/` to `__init__(hub: Hub)`
-- [ ] Fix internal `HeaderPage(...)` and other nested constructions to pass `hub`
-- [ ] Update all tests: `X(hub)` instead of `X(hub.page, hub.locators)`
-- [ ] Update `docs/onboarding.md` (remove “recreate page objects after switch”)
-- [ ] Update `.cursor/rules/crdc-dh-automation-pw.mdc`
-- [ ] Update `src/crdc_pw/pages/__init__.py` docstring
+- [x] Add `HubPage` in `base.py`; `LoginPage` unchanged for auth
+- [x] Convert all UI page classes in `src/crdc_pw/pages/` to `__init__(hub: Hub)`
+- [x] Fix internal `HeaderPage(...)` and other nested constructions to pass `hub`
+- [x] Update all tests: `X(hub)` instead of `X(hub.page, hub.locators)`
+- [x] Update `docs/onboarding.md` (remove “recreate page objects after switch”)
+- [x] Update `.cursor/rules/crdc-dh-automation-pw.mdc`
+- [x] Update `src/crdc_pw/pages/__init__.py` docstring
 - [ ] Optional: link from `ai/crdc/Playwright-Migration-Plan.md`
+- [x] Optional: `verify_tooltip_on_click_path(form, yaml_path, expected)` for CRDCDH-3952
 
 ### Verification
 

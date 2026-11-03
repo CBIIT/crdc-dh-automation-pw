@@ -10,9 +10,7 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from playwright.sync_api import Page
-
-from crdc_pw.locators.loader import LocatorLoader
+from crdc_pw.hub import Hub
 from crdc_pw.pages.submission_request_form import SubmissionRequestFormPage
 from crdc_pw.pages.submission_requests_list import SubmissionRequestsListPage
 from crdc_pw.utils.submission_request_excel import get_sheet_row
@@ -95,12 +93,19 @@ class SubmissionRequest:
     last_entered_study_abbreviation: str | None = None
     last_entered_program_name: str | None = None
 
-    def __init__(self, page: Page, locators: LocatorLoader) -> None:
-        """Wire list and form page objects for the current browser tab."""
-        self.page = page
-        self.locators = locators
-        self.form = SubmissionRequestFormPage(page, locators)
-        self.list = SubmissionRequestsListPage(page, locators)
+    def __init__(self, hub: Hub) -> None:
+        """Wire list and form page objects bound to hub (survives switch_user)."""
+        self._hub = hub
+        self.form = SubmissionRequestFormPage(hub)
+        self.list = SubmissionRequestsListPage(hub)
+
+    @property
+    def page(self):
+        return self._hub.page
+
+    @property
+    def locators(self):
+        return self._hub.locators
 
     def _loc(self, path: str, **kw: str):
         """Resolve YAML path via the form page (section fill helpers)."""

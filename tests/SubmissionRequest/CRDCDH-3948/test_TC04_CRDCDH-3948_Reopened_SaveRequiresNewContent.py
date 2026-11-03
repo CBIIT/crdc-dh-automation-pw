@@ -2,7 +2,7 @@
 
 CRDCDH-3948 TC04 — Submission Request status: Reopened (Fed Lead Approve + Reopen on list).
 Same Save/import checks as TC01–TC03; save after edit transitions Reopened → In Progress.
-Fixture starts signed in as Submitter; recreate page objects after each switch_user.
+Fixture starts signed in as Submitter; page objects are Hub-backed (survive switch_user).
 """
 
 from __future__ import annotations
@@ -29,9 +29,9 @@ pytestmark = pytest.mark.CRDC_SubmissionRequests
 def test_TC04_CRDCDH_3948_Reopened_SaveRequiresNewContent(hub: Hub) -> None:
     hub.page.set_viewport_size({"width": 1920, "height": 1080})
 
-    sr_list = SubmissionRequestsListPage(hub.page, hub.locators)
-    form = SubmissionRequestFormPage(hub.page, hub.locators)
-    sr = SubmissionRequest(hub.page, hub.locators)
+    sr_list = SubmissionRequestsListPage(hub)
+    form = SubmissionRequestFormPage(hub)
+    sr = SubmissionRequest(hub)
 
     # --- Submitter: full questionnaire and submit ---
     sr_list.open()
@@ -60,15 +60,11 @@ def test_TC04_CRDCDH_3948_Reopened_SaveRequiresNewContent(hub: Hub) -> None:
 
     # Step 1: Fed Lead approves, then Reopen from list (does not open the questionnaire).
     switch_user(hub, "Fedlead")
-    sr = SubmissionRequest(hub.page, hub.locators)
-    form = SubmissionRequestFormPage(hub.page, hub.locators)
     sr.approve_submission_request(study_name)
     sr.reopen_approved_submission_request(study_name)
 
     # Step 2: Submitter opens form from list — verify status bar REOPENED.
     switch_user(hub, "Submitter")
-    sr = SubmissionRequest(hub.page, hub.locators)
-    form = SubmissionRequestFormPage(hub.page, hub.locators)
     sr.open_submission_request_form_for_study(study_name)
     form.assert_status("REOPENED")
 

@@ -36,7 +36,7 @@ class SubmissionRequestsListPage(BasePage):
 
     def open(self) -> None:
         """Nav bar → Submission Requests; wait for list container."""
-        HeaderPage(self.page, self.locators).open_submission_requests()
+        HeaderPage(self._hub).open_submission_requests()
         self.container.wait_for(state="visible")
         log.info("Submission Requests list open")
 

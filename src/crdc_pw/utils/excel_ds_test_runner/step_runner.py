@@ -49,26 +49,26 @@ def run_testcase_excel(hub: Hub, excel_path: Path) -> None:
         log.info("Step row %s: %s", step.excel_row, action)
 
         if action == "open_data_submissions":
-            ds = DataSubmissionsListPage(hub.page, hub.locators)
+            ds = DataSubmissionsListPage(hub)
             ds.open()
         elif action == "create_data_submission":
             sub_type, data_type, model, study = _split_pipe_params(
                 step.params, count=4, action=action, path=path, row=step.excel_row
             )
             if ds is None:
-                ds = DataSubmissionsListPage(hub.page, hub.locators)
+                ds = DataSubmissionsListPage(hub)
             ds.create_data_submission(sub_type, data_type, model, study)
-            detail = DataSubmissionDetailPage(hub.page, hub.locators)
+            detail = DataSubmissionDetailPage(hub)
         elif action == "upload_metadata_folder":
             folder = step.params
             if not folder:
                 raise ExcelLoadError("upload_metadata_folder needs folder name in Params", path=path, row=step.excel_row)
             if detail is None:
-                detail = DataSubmissionDetailPage(hub.page, hub.locators)
+                detail = DataSubmissionDetailPage(hub)
             detail.upload_folder(folder)
         elif action == "click_validate":
             if detail is None:
-                detail = DataSubmissionDetailPage(hub.page, hub.locators)
+                detail = DataSubmissionDetailPage(hub)
             detail.click_validate()
         elif action == "verify_validation_results":
             tc_name = step.params
@@ -80,7 +80,7 @@ def run_testcase_excel(hub: Hub, excel_path: Path) -> None:
                     row=step.excel_row,
                 )
             if detail is None:
-                detail = DataSubmissionDetailPage(hub.page, hub.locators)
+                detail = DataSubmissionDetailPage(hub)
             detail.verify_validation_results_vs_expected_for_tc(tc_name, model=model)
         else:
             raise ExcelLoadError(

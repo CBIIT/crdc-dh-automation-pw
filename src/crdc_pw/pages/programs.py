@@ -1,6 +1,6 @@
 """Manage Programs list screen.
 
-Tests construct this from hub (ProgramsListPage(hub.page, hub.locators)), then:
+Tests construct this from hub (ProgramsListPage(hub)), then:
   open()            — header user menu → Manage Programs
   apply_filters()   — type program name and/or study name
   read_table_rows() — current table as lists of cell text
@@ -39,7 +39,7 @@ class ProgramsListPage(BasePage):
     def open(self) -> None:
         """Click username → Manage Programs, then wait until the list container is visible."""
         log.info("Navigate: Manage Programs")
-        HeaderPage(self.page, self.locators).open_manage_programs()
+        HeaderPage(self._hub).open_manage_programs()
         self.wait_until_ready()
         log.info("Manage Programs list page loaded")
 

@@ -27,8 +27,8 @@ pytestmark = pytest.mark.CRDC_SubmissionRequests
 def test_TC01_CRDCDH_3948_New_SaveRequiresNewContent(hub: Hub) -> None:
     hub.page.set_viewport_size({"width": 1920, "height": 1080})
 
-    sr_list = SubmissionRequestsListPage(hub.page, hub.locators)
-    form = SubmissionRequestFormPage(hub.page, hub.locators)
+    sr_list = SubmissionRequestsListPage(hub)
+    form = SubmissionRequestFormPage(hub)
 
     # Step 1: Start a new Submission Request — verify status bar shows NEW.
     sr_list.open()

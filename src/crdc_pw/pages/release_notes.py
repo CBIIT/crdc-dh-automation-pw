@@ -1,6 +1,6 @@
 """Hub Release Notes screen (public /release-notes).
 
-Tests construct this from hub (ReleaseNotesPage(hub.page, hub.locators)), then:
+Tests construct this from hub (ReleaseNotesPage(hub)), then:
   open()           — footer System Info → Release Notes, wait for markdown or error
   markdown_text()  — rendered markdown inner text
 

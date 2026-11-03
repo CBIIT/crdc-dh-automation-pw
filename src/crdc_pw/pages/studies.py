@@ -1,6 +1,6 @@
 """Manage Studies list screen.
 
-Tests construct this from hub (StudiesListPage(hub.page, hub.locators)), then:
+Tests construct this from hub (StudiesListPage(hub)), then:
   open()            — header user menu → Manage Studies
   apply_filters()   — type/select any of study name, program, dbGaP, status, access
   read_table_rows() — current table as lists of cell text
@@ -45,7 +45,7 @@ class StudiesListPage(BasePage):
     def open(self) -> None:
         """Click username → Manage Studies, then wait until the list container is visible."""
         log.info("Navigate: Manage Studies")
-        HeaderPage(self.page, self.locators).open_manage_studies()
+        HeaderPage(self._hub).open_manage_studies()
         self.wait_until_ready()
         log.info("Manage Studies list page loaded")
 

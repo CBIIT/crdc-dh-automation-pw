@@ -17,7 +17,7 @@ from crdc_pw.pages.submission_request_form import (
     SubmissionRequestFormPage,
 )
 from crdc_pw.pages.submission_requests_list import SubmissionRequestsListPage
-from crdc_pw.utils.ui_helpers import verify_tooltip_on_click
+from crdc_pw.utils.ui_helpers import verify_tooltip_on_click_path
 
 log = logging.getLogger("crdc_pw.tc_crdcdh_3952")
 
@@ -35,8 +35,8 @@ _EXPECTED_PUB_TOOLTIP = (
 def test_TC01_CRDCDH_3952_SectionD_DateTooltips(hub: Hub) -> None:
     hub.page.set_viewport_size({"width": 1920, "height": 1080})
 
-    sr_list = SubmissionRequestsListPage(hub.page, hub.locators)
-    form = SubmissionRequestFormPage(hub.page, hub.locators)
+    sr_list = SubmissionRequestsListPage(hub)
+    form = SubmissionRequestFormPage(hub)
 
     # Step 1: Start a new Submission Request — verify status bar shows NEW.
     sr_list.open()
@@ -47,15 +47,15 @@ def test_TC01_CRDCDH_3952_SectionD_DateTooltips(hub: Hub) -> None:
     form.click_progress_bar_section_d()
 
     # Step 3: Targeted Data Submission Delivery Date info icon — full tooltip matches CRDCDH-3952 copy.
-    verify_tooltip_on_click(
-        hub.page,
-        hub.page.locator(hub.locators.get(_TARGETED_TOOLTIP)),
+    verify_tooltip_on_click_path(
+        form,
+        _TARGETED_TOOLTIP,
         SR_SECTION_D_TARGETED_DELIVERY_TOOLTIP,
     )
     # Step 4: Expected Publication Date info icon — full tooltip matches CRDCDH-3952 copy.
-    verify_tooltip_on_click(
-        hub.page,
-        hub.page.locator(hub.locators.get(_EXPECTED_PUB_TOOLTIP)),
+    verify_tooltip_on_click_path(
+        form,
+        _EXPECTED_PUB_TOOLTIP,
         SR_SECTION_D_EXPECTED_PUB_TOOLTIP,
     )
 
