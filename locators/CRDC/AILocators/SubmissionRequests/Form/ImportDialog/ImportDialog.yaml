@@ -1,0 +1,4 @@
+# CRDC/AILocators/SubmissionRequests/Form/ImportDialog
+
+Confirm-Btn: "//*[@data-testid='import-dialog-confirm-button']"
+Upload-Input: "//*[@data-testid='import-dialog']//input[@type='file']"

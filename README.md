@@ -4,7 +4,7 @@ Playwright Python test framework for **CRDC Data Hub**. This is a behavior-prese
 
 **New to the team?** Start at **[docs/onboarding.md](docs/onboarding.md)** (setup, core pieces — conftest / auth / config / hub / pages — how to run tests, and what the port is aiming for). The map of those files is **Core pieces** in that doc.
 
-Phase 0 is the scaffold plus the first live cases: YAML object repository, profile config, Login.gov OTP, auth `storage_state`, six-role login smoke, TC08/TC09 lists, TC01 PBAC Fedlead, and CRDCDH-4006 Release Notes. Remaining suites are later phases. See [`ai/crdc/Playwright-Migration-Plan.md`](../../ai/crdc/Playwright-Migration-Plan.md).
+Phase 0 is the scaffold plus the first live cases: YAML object repository, profile config, Login.gov OTP, auth `storage_state`, six-role login smoke, TC08/TC09 lists, TC01 PBAC Fedlead, CRDCDH-4006 Release Notes, and **CRDCDH-3948** Submission Request TC01 (SRF foundation). Remaining SR cases and suites are later phases. See [`ai/crdc/Playwright-Migration-Plan.md`](../../ai/crdc/Playwright-Migration-Plan.md).
 
 ## Requirements
 
@@ -49,6 +49,7 @@ pytest -m CRDC_Auxiliary
 pytest -m CRDC_Auxiliary --headed
 pytest -m CRDC_Smoke
 pytest -m CRDC_PBAC
+pytest -m CRDC_SubmissionRequests -k 3948
 ```
 
 Every run writes a timestamped HTML report to `reports/report-YYYYMMDD-HHMMSS.html` (gitignored). Pass `--html=...` to override the path. Failed live tests attach a full-page screenshot to that report (and `reports/screenshots/`). They also keep a Playwright trace of the Hub tab under `test-results/` (gitignored); open it with `playwright show-trace test-results/.../trace.zip`.

@@ -1,0 +1,3 @@
+# CRDC/AILocators/SubmissionRequests/Form/ExportForm
+
+ExportForm-Btn: "//*[@data-testid='export-application-excel-button']"

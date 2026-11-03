@@ -32,9 +32,9 @@ The framework can:
 - Sign in through Login.gov with TOTP (one-time password)
 - Reuse a saved browser session so the next run does not pay OTP every time
 - Sign in as **Admin, Fedlead, Dcp, Submitter, User, and Master** and land on Hub (TC18)
-- Run **TC08** Manage Studies, **TC09** Manage Programs, **TC01** PBAC Fedlead defaults, **CRDCDH-4006** Release Notes, and **TC08** GC invalid-integer Data Submission (metadata VR)
+- Run **TC08** Manage Studies, **TC09** Manage Programs, **TC01** PBAC Fedlead defaults, **CRDCDH-4006** Release Notes, **TC08** GC invalid-integer Data Submission (metadata VR), and **CRDCDH-3948** Submission Request TC01 (new SRF Save / import-export)
 
-That is the floor everything else builds on. Submission Requests, remaining Data Submissions, emails, Mongo, and GraphQL are **not** here yet.
+That is the floor everything else builds on. Remaining Submission Request cases (3948 TC02–TC04), other Data Submissions, emails, Mongo, and GraphQL are **not** here yet.
 
 ### End goal (after the port)
 
@@ -170,6 +170,7 @@ crdc-dh-automation-pw/
 │   ├── AuxiliaryTests/     # TC08 studies, TC09, TC18, CRDCDH-4006
 │   ├── Pbac/               # TC01 Fedlead defaults
 │   ├── DataSubmissions/    # GC metadata VR (TC08 invalid integer)
+│   ├── SubmissionRequest/  # CRDCDH-3948 SRF (TC01)
 │   └── unit/               # no browser (locator, config, sheet, notes helpers)
 ├── src/crdc_pw/
 │   ├── hub.py              # thin session the fixture yields (page, locators, settings, role)
@@ -473,6 +474,7 @@ Always activate the venv first (`source .venv/bin/activate`).
 | Katalon Data Validation suite | `pytest -m CRDC_DataValidation` |
 | TC08 invalid integer (GC metadata VR) | `pytest -m CRDC_DataValidation -k "VerifyInvalidInteger"` |
 | CRDCDH-4006 Release Notes | `pytest -m CRDC_Auxiliary -k 4006` |
+| CRDCDH-3948 SR TC01 (Submitter) | `pytest -m CRDC_SubmissionRequests -k 3948` |
 | TC18 file only | `pytest tests/AuxiliaryTests/test_TC18_LoginAllRolesAndSwitchUser.py` |
 | Against QA2 | `CRDC_PROFILE=qa2 pytest -m CRDC_Auxiliary` |
 
