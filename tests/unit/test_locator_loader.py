@@ -123,6 +123,15 @@ def test_login_and_header_paths_used_by_smoke(locators: LocatorLoader) -> None:
     assert "review-comment" in inquire_comment
     assert "textbox" in inquire_comment
 
+    # CRDCDH-3952 Section D date tooltips
+    assert "section-d-targeted-data-submission-delivery-date" in locators.get(
+        "CRDC/AILocators/SubmissionRequests/Form/SectionD/TargetedDeliveryDate-TooltipTrigger"
+    )
+    assert "Toggle Tooltip" in locators.get(
+        "CRDC/AILocators/SubmissionRequests/Form/SectionD/ExpectedPubDate-TooltipTrigger"
+    )
+    assert locators.get("CRDC/AILocators/SubmissionRequests/Form/Review/ProgressBar-SectionD")
+
 
 @pytest.mark.unit
 def test_missing_path_raises(locators: LocatorLoader) -> None:

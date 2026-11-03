@@ -1,7 +1,8 @@
 """Katalon: Test Cases/CRDC/SubmissionRequest/CRDCDH-3948/TC01_CRDCDH-3948_New_SaveRequiresNewContent
 
-Xray CRDCDH-3948 — New SRF: Save requires new content. Parent: CRDCDH-3880.
-hub is already signed in as Submitter.
+CRDCDH-3948 TC01 — Submission Request status: New.
+Submitter: Save stays disabled until the form is dirty; unchanged import; save moves status to In Progress.
+Parent: CRDCDH-3880. hub is already signed in as Submitter.
 """
 
 from __future__ import annotations
@@ -29,24 +30,27 @@ def test_TC01_CRDCDH_3948_New_SaveRequiresNewContent(hub: Hub) -> None:
     sr_list = SubmissionRequestsListPage(hub.page, hub.locators)
     form = SubmissionRequestFormPage(hub.page, hub.locators)
 
-    # Step 1: new questionnaire — status NEW
+    # Step 1: Start a new Submission Request — verify status bar shows NEW.
     sr_list.open()
     sr_list.start_new_submission_request()
     form.assert_status("NEW")
 
-    # Step 2: no edits — Save disabled + tooltip
+    # Step 2: With no unsaved edits — Save disabled and hover tooltip explains why.
     form.assert_save_disabled()
     form.assert_save_disabled_tooltip()
 
-    # Step 3: export, re-import same file — no-change snackbar; Save still disabled
+    # Step 3: Export form to Excel, re-import the same file — no-change snackbar (3948 req 3);
+    #         Save remains disabled because nothing new was applied.
     exported = form.export_form_excel()
     form.import_form_excel(exported)
     form.assert_snackbar_contains(SR_IMPORT_NO_CHANGES_MESSAGE)
     form.assert_save_disabled()
 
-    # Step 4–5: dirty PI address — Save enabled; Save → IN PROGRESS
+    # Step 4: Change PI Address — verify Save becomes enabled.
     form.set_pi_address("1 Automation Test Address")
     form.assert_save_enabled()
+
+    # Step 5: Click Save — verify status bar changes from NEW to IN PROGRESS.
     form.click_save()
     form.assert_status("IN PROGRESS")
 

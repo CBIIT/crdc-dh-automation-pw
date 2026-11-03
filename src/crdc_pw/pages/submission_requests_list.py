@@ -160,9 +160,7 @@ class SubmissionRequestsListPage(BasePage):
         self.apply_submission_requests_list_filters(
             {"study": token, "status": "Approved"}
         )
-        reopen = self._loc(_REOPEN_BTN).first
-        reopen.wait_for(state="visible", timeout=30_000)
-        reopen.click()
+        self._click_row_action(token, action="reopen")
         self._loc(_DELETE_DIALOG).wait_for(state="visible", timeout=10_000)
         self._loc(_DELETE_CONFIRM).first.click()
         self._loc(_DELETE_DIALOG).wait_for(state="hidden", timeout=30_000)
@@ -190,6 +188,8 @@ class SubmissionRequestsListPage(BasePage):
                     btn.first.click()
                     return True
                 btn = row.get_by_role("button", name=re.compile(r"^View$", re.I))
+            elif action == "reopen":
+                btn = row.locator("[data-testid='reopen-application-button']")
             else:
                 return False
             if btn.count() == 0:
@@ -210,6 +210,8 @@ class SubmissionRequestsListPage(BasePage):
             row = rows.nth(i)
             if action == "review":
                 has = row.get_by_role("button", name=re.compile(r"Review", re.I)).count() > 0
+            elif action == "reopen":
+                has = row.locator("[data-testid='reopen-application-button']").count() > 0
             else:
                 has = (
                     row.get_by_role("button", name=re.compile(r"Resume|View", re.I)).count()

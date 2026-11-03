@@ -65,8 +65,12 @@ _TOGGLE = "CRDC/SubmissionRequest/Toggle-Btn"
 
 
 def _stamp() -> str:
+    """Unique suffix for study/program names (Katalon M-d-yyyy-HH-mm plus seconds)."""
     now = datetime.now()
-    return f"{now.month}-{now.day}-{now.year}-{now.hour:02d}-{now.minute:02d}"
+    return (
+        f"{now.month}-{now.day}-{now.year}-"
+        f"{now.hour:02d}-{now.minute:02d}-{now.second:02d}"
+    )
 
 
 def _s(value: Any) -> str:

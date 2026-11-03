@@ -1,6 +1,8 @@
 """Katalon: Test Cases/CRDC/SubmissionRequest/CRDCDH-3948/TC03_CRDCDH-3948_InRevision_SaveRequiresNewContent
 
-Xray CRDCDH-3948 TC03 — In Revision SRF: Save requires new content.
+CRDCDH-3948 TC03 — Submission Request status: In Revision (after Fed Lead Inquire).
+Submitter submit → Fed Lead inquire → Submitter reopens form; Save rules; save keeps IN REVISION.
+Fixture starts signed in as Submitter; recreate page objects after each switch_user.
 """
 
 from __future__ import annotations
@@ -31,6 +33,7 @@ def test_TC03_CRDCDH_3948_InRevision_SaveRequiresNewContent(hub: Hub) -> None:
     form = SubmissionRequestFormPage(hub.page, hub.locators)
     sr = SubmissionRequest(hub.page, hub.locators)
 
+    # --- Submitter: full questionnaire and submit ---
     sr_list.open()
     sr_list.start_new_submission_request()
     sr.fill_submission_request_all_sections(
@@ -55,28 +58,34 @@ def test_TC03_CRDCDH_3948_InRevision_SaveRequiresNewContent(hub: Hub) -> None:
     assert study_name
     form.click_submit_button()
 
+    # Step 1: Fed Lead inquires on that study — SR moves to In Revision.
     switch_user(hub, "Fedlead")
     sr = SubmissionRequest(hub.page, hub.locators)
     form = SubmissionRequestFormPage(hub.page, hub.locators)
     sr.inquire_submission_request(study_name)
 
+    # Step 2: Submitter reopens form from list — verify status bar IN REVISION.
     switch_user(hub, "Submitter")
     sr = SubmissionRequest(hub.page, hub.locators)
     form = SubmissionRequestFormPage(hub.page, hub.locators)
     sr.open_submission_request_form_for_study(study_name)
     form.assert_status("IN REVISION")
 
+    # Step 3: No new edits — Save disabled and tooltip.
     form.assert_save_disabled()
     form.assert_save_disabled_tooltip()
 
+    # Step 4: Export and re-import unchanged Excel — no-change snackbar (3948 req 3); Save still disabled.
     exported = form.export_form_excel()
     form.import_form_excel(exported)
     form.assert_snackbar_contains(SR_IMPORT_NO_CHANGES_MESSAGE)
     form.assert_save_disabled()
 
+    # Step 5: Edit PI Address — verify Save enabled.
     form.set_pi_address("3 Automation Test Address")
     form.assert_save_enabled()
 
+    # Step 6: Save while In Revision — status remains IN REVISION (does not revert to In Progress).
     form.click_save()
     form.assert_status("IN REVISION")
 

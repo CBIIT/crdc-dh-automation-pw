@@ -41,6 +41,16 @@ SR_IMPORT_VALIDATION_ERRORS_FIXTURE = (
 )
 SR_QUESTIONNAIRE_FUTURE_DATE = "05/12/2036"
 
+# CRDCDH-3952 — Section D date field tooltips (Jira CRDCDH-3952 / FE CRDCDH-3978)
+SR_SECTION_D_TARGETED_DELIVERY_TOOLTIP = (
+    "The date that transfer of data from the submitter to CRDC Submission Portal is "
+    "expected to begin. The date must be today's date or a future date."
+)
+SR_SECTION_D_EXPECTED_PUB_TOOLTIP = (
+    "The date that submitters expect any paper using this data will be published. "
+    "The date must be today's date or a future date."
+)
+
 _DEFAULT_INQUIRE_COMMENT = "Automated test inquire - CRDC submission request."
 _DEFAULT_APPROVAL_COMMENT = "Automated test approval - CRDC submission request."
 
@@ -58,6 +68,10 @@ _SUBMIT_BTN = "CRDC/SubmissionRequest/Submit-Btn"
 _SUBMIT_CONFIRM = "CRDC/SubmissionRequest/PopUpConfirmToSubmit-Btn"
 _PC_POSITION = "CRDC/AILocators/SubmissionRequests/Form/SectionA/PrimaryContact-Position-TxtBx"
 _PROGRESS_A = "CRDC/AILocators/SubmissionRequests/Form/Review/ProgressBar-SectionA"
+_PROGRESS_D = "CRDC/AILocators/SubmissionRequests/Form/Review/ProgressBar-SectionD"
+_SECTION_D_TARGETED_DELIVERY = (
+    "CRDC/AILocators/SubmissionRequests/Form/SectionD/TargetedDeliveryDate-TxtBx"
+)
 _PROGRESS_REVIEW = "CRDC/AILocators/SubmissionRequests/Form/Review/ProgressBar-Review"
 _INQUIRE_BTN = "CRDC/AILocators/SubmissionRequests/Form/Navigation/Inquire-Btn"
 _APPROVE_BTN = "CRDC/AILocators/SubmissionRequests/Form/Navigation/Approve-Btn"
@@ -129,6 +143,11 @@ class SubmissionRequestFormPage(BasePage):
     def click_progress_bar_section_a(self) -> None:
         self._loc(_PROGRESS_A).first.click()
         log.info("Opened Section A via progress bar")
+
+    def click_progress_bar_section_d(self) -> None:
+        self._loc(_PROGRESS_D).first.click()
+        self._loc(_SECTION_D_TARGETED_DELIVERY).first.wait_for(state="visible", timeout=30_000)
+        log.info("Opened Section D via progress bar")
 
     def click_next(self) -> None:
         self._loc(_NEXT_BTN).first.click()

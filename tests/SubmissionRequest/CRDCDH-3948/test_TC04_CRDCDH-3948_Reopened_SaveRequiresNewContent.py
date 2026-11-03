@@ -1,6 +1,8 @@
 """Katalon: Test Cases/CRDC/SubmissionRequest/CRDCDH-3948/TC04_CRDCDH-3948_Reopened_SaveRequiresNewContent
 
-Xray CRDCDH-3948 TC04 — Reopened SRF: Save requires new content.
+CRDCDH-3948 TC04 — Submission Request status: Reopened (Fed Lead Approve + Reopen on list).
+Same Save/import checks as TC01–TC03; save after edit transitions Reopened → In Progress.
+Fixture starts signed in as Submitter; recreate page objects after each switch_user.
 """
 
 from __future__ import annotations
@@ -31,6 +33,7 @@ def test_TC04_CRDCDH_3948_Reopened_SaveRequiresNewContent(hub: Hub) -> None:
     form = SubmissionRequestFormPage(hub.page, hub.locators)
     sr = SubmissionRequest(hub.page, hub.locators)
 
+    # --- Submitter: full questionnaire and submit ---
     sr_list.open()
     sr_list.start_new_submission_request()
     sr.fill_submission_request_all_sections(
@@ -55,30 +58,36 @@ def test_TC04_CRDCDH_3948_Reopened_SaveRequiresNewContent(hub: Hub) -> None:
     assert study_name
     form.click_submit_button()
 
+    # Step 1: Fed Lead approves, then Reopen from list (does not open the questionnaire).
     switch_user(hub, "Fedlead")
     sr = SubmissionRequest(hub.page, hub.locators)
     form = SubmissionRequestFormPage(hub.page, hub.locators)
     sr.approve_submission_request(study_name)
     sr.reopen_approved_submission_request(study_name)
 
+    # Step 2: Submitter opens form from list — verify status bar REOPENED.
     switch_user(hub, "Submitter")
     sr = SubmissionRequest(hub.page, hub.locators)
     form = SubmissionRequestFormPage(hub.page, hub.locators)
     sr.open_submission_request_form_for_study(study_name)
     form.assert_status("REOPENED")
 
+    # Step 3: No new edits — Save disabled and tooltip.
     form.assert_save_disabled()
     form.assert_save_disabled_tooltip()
 
+    # Step 4: Export and re-import unchanged Excel — no-change snackbar (3948 req 3); Save still disabled.
     exported = form.export_form_excel()
     form.import_form_excel(exported)
     form.assert_snackbar_contains(SR_IMPORT_NO_CHANGES_MESSAGE)
     form.assert_save_disabled()
 
+    # Step 5: Edit editable field on Reopened form (Primary Contact position; PI address is read-only) — Save enabled.
     form.click_progress_bar_section_a()
     form.set_primary_contact_position("3948 Reopened Position")
     form.assert_save_enabled()
 
+    # Step 6: Save — verify status transitions from REOPENED to IN PROGRESS.
     form.click_save()
     form.assert_status("IN PROGRESS")
 

@@ -172,7 +172,8 @@ crdc-dh-automation-pw/
 │   ├── DataSubmissions/    # DS flow / GC metadata VR (e.g. TC08 invalid integer)
 │   ├── DataValidation/     # Excel workbook cases (Steps sheet); optional when flag on
 │   ├── SubmissionRequest/
-│   │   └── CRDCDH-3948/    # TC01–TC04 SRF Save / import / Fed Lead (mirrors Katalon folder)
+│   │   ├── CRDCDH-3948/    # TC01–TC04 SRF Save / import / Fed Lead (mirrors Katalon folder)
+│   │   └── CRDCDH-3952/    # TC01 Section D date tooltips (may fail until CRDCDH-3978 on QA)
 │   └── unit/               # no browser (locator, config, sheet, notes helpers)
 ├── src/crdc_pw/
 │   ├── hub.py              # thin session the fixture yields (page, locators, settings, role)
@@ -481,6 +482,7 @@ Always activate the venv first (`source .venv/bin/activate`).
 | **One Excel case** (e.g. TC08) | `pytest tests/DataValidation -m CRDC_DataValidation_Excel -k TC08` |
 | CRDCDH-4006 Release Notes | `pytest -m CRDC_Auxiliary -k 4006` |
 | CRDCDH-3948 SR TC01–TC04 | `pytest -m CRDC_SubmissionRequests -k 3948` |
+| CRDCDH-3952 Section D date tooltips | `pytest -m CRDC_SubmissionRequests -k 3952` |
 | TC18 file only | `pytest tests/AuxiliaryTests/test_TC18_LoginAllRolesAndSwitchUser.py` |
 | Against QA2 | `CRDC_PROFILE=qa2 pytest -m CRDC_Auxiliary` |
 

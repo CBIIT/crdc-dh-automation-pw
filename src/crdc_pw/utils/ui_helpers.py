@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import time
 
@@ -9,8 +10,11 @@ from playwright.sync_api import Locator, Page
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import expect
 
+log = logging.getLogger("crdc_pw.ui_helpers")
+
 __all__ = [
     "assert_button_enabled",
+    "verify_tooltip_on_click",
     "verify_tooltip_on_hover",
     "wait_for_button_stable",
 ]
@@ -45,6 +49,50 @@ def verify_tooltip_on_hover(
     expected = _normalize_whitespace(expected_full)
     assert match_text == expected, (
         f"verify_tooltip_on_hover: expected {expected!r}, actual {match_text!r}"
+    )
+
+
+def verify_tooltip_on_click(page: Page, trigger: Locator, expected: str) -> None:
+    """Click trigger and assert a MUI tooltip equals expected (full string, whitespace-normalized)."""
+    expected_norm = _normalize_whitespace(expected)
+    trigger.first.click()
+    tooltips = page.locator("[role='tooltip']")
+    try:
+        tooltips.first.wait_for(state="visible", timeout=5000)
+    except PlaywrightTimeoutError:
+        log.info("Tooltip expected: %s", expected_norm)
+        log.info("Tooltip actual: (no visible tooltip after click)")
+        raise AssertionError(
+            f"verify_tooltip_on_click: no visible tooltip; expected {expected_norm!r}"
+        ) from None
+
+    count = tooltips.count()
+    actual_norm: str | None = None
+    all_normalized: list[str] = []
+    for i in range(count):
+        text = tooltips.nth(i).inner_text()
+        if not tooltips.nth(i).is_visible():
+            continue
+        norm = _normalize_whitespace(text)
+        all_normalized.append(norm)
+        if norm == expected_norm:
+            actual_norm = norm
+            break
+
+    if actual_norm is None:
+        actual_norm = all_normalized[0] if all_normalized else "(empty)"
+        log.info("Tooltip expected: %s", expected_norm)
+        log.info("Tooltip actual: %s", actual_norm)
+        if len(all_normalized) > 1:
+            log.info("Tooltip all visible: %s", all_normalized)
+        raise AssertionError(
+            f"verify_tooltip_on_click: expected {expected_norm!r}, actual {actual_norm!r}"
+        )
+
+    log.info("Tooltip expected: %s", expected_norm)
+    log.info("Tooltip actual: %s", actual_norm)
+    assert actual_norm == expected_norm, (
+        f"verify_tooltip_on_click: expected {expected_norm!r}, actual {actual_norm!r}"
     )
 
 
