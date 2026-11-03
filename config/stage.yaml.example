@@ -27,3 +27,7 @@ UserSecret:
 MasterEmail:
 MasterPassword:
 MasterSecret:
+
+excel_ds_validation:
+  enabled: true
+  excel_cases_glob: tests/DataValidation/**/*.xlsx
