@@ -1,10 +1,10 @@
 """No-browser checks for CMS notes markdown helpers (CRDCDH-3979).
 
-Does not hit GitHub or Hub. Fetch stays unwired until the qa branch exists.
+Does not hit GitHub or Hub in unit tests.
 
 Flow (this file):
   1. Frontmatter block is dropped; body without --- is unchanged
-  2. First heading or bullet is the snippet
+  2. Oracle lines from first ## section (max 5)
   3. Empty body raises
   4. Raw URL uses the tier branch
 """
@@ -16,7 +16,9 @@ import pytest
 from crdc_pw.utils.static_content import (
     NOTES_FILE,
     REPO,
+    assert_rendered_notes_hide_frontmatter,
     first_stable_heading_or_bullet,
+    published_notes_oracle_lines,
     raw_notes_url,
     strip_yaml_frontmatter,
 )
@@ -47,6 +49,35 @@ def test_first_stable_heading() -> None:
 
 
 @pytest.mark.unit
+def test_first_stable_prefers_section_over_page_title() -> None:
+    body = "# Release Notes\n\n## 3.7.1 (Released XX/XX/2026)\n"
+    assert first_stable_heading_or_bullet(body) == "3.7.1 (Released XX/XX/2026)"
+
+
+@pytest.mark.unit
+def test_published_notes_oracle_lines_first_section_cap() -> None:
+    body = (
+        "# Release Notes\n\n"
+        "## 3.7.1 (Released XX/XX/2026)\n\n"
+        "### Submission request\n"
+        "1. Test1\n"
+        "2. Test 2\n"
+        "3. Test 3\n\n"
+        "### Data Submission\n"
+        "- Hello\n\n"
+        "## 3.7.0 (Released 10/22/2026)\n"
+        "- old release\n"
+    )
+    assert published_notes_oracle_lines(body) == [
+        "3.7.1 (Released XX/XX/2026)",
+        "Submission request",
+        "Test1",
+        "Test 2",
+        "Test 3",
+    ]
+
+
+@pytest.mark.unit
 def test_first_stable_bullet_when_no_heading() -> None:
     body = "- Previously approved forms can be reopened.\n"
     assert (
@@ -57,7 +88,7 @@ def test_first_stable_bullet_when_no_heading() -> None:
 
 @pytest.mark.unit
 def test_first_stable_heading_raises_when_empty() -> None:
-    with pytest.raises(ValueError, match="no heading or bullet"):
+    with pytest.raises(ValueError, match="no oracle lines"):
         first_stable_heading_or_bullet("\n\n---\n")
 
 
@@ -68,3 +99,14 @@ def test_raw_notes_url_uses_tier_branch() -> None:
     assert REPO in url
     assert "/qa/" in url
     assert url.endswith(NOTES_FILE)
+
+
+@pytest.mark.unit
+def test_assert_rendered_notes_hide_frontmatter_passes() -> None:
+    assert_rendered_notes_hide_frontmatter("# Release Notes\n\n## 3.7.0\n")
+
+
+@pytest.mark.unit
+def test_assert_rendered_notes_hide_frontmatter_rejects_yaml() -> None:
+    with pytest.raises(AssertionError, match="frontmatter"):
+        assert_rendered_notes_hide_frontmatter("---\ntitle: x\n---\nbody")
