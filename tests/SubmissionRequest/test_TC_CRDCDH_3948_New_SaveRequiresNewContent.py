@@ -13,9 +13,11 @@ import logging
 import pytest
 
 from crdc_pw.hub import Hub
-from crdc_pw.pages.submission_request_form import SubmissionRequestFormPage
+from crdc_pw.pages.submission_request_form import (
+    SR_IMPORT_NO_CHANGES_MESSAGE,
+    SubmissionRequestFormPage,
+)
 from crdc_pw.pages.submission_requests_list import SubmissionRequestsListPage
-from crdc_pw.submission_request.constants import SR_IMPORT_NO_CHANGES_MESSAGE
 
 log = logging.getLogger("crdc_pw.tc_crdcdh_3948")
 

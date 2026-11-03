@@ -11,10 +11,6 @@ from playwright.sync_api import Locator
 
 from crdc_pw.locators.loader import repo_root
 from crdc_pw.pages.base import BasePage
-from crdc_pw.submission_request.constants import (
-    SR_SAVE_DISABLED_TOOLTIP,
-    SR_SAVE_DISABLED_TOOLTIP_SUBSTRING,
-)
 from crdc_pw.utils.ui_helpers import (
     assert_button_enabled,
     verify_tooltip_on_hover,
@@ -22,6 +18,15 @@ from crdc_pw.utils.ui_helpers import (
 )
 
 log = logging.getLogger("crdc_pw.submission_request_form")
+
+# CRDCDH-3948 — aligned with utilities.SubmissionRequest (Katalon)
+SR_SAVE_DISABLED_TOOLTIP = (
+    "No changes have been made. Please make edits to the form then click save."
+)
+SR_SAVE_DISABLED_TOOLTIP_SUBSTRING = "No changes have been made"
+SR_IMPORT_NO_CHANGES_MESSAGE = (
+    "No changes were applied. The imported file matches the current form."
+)
 
 _STATUS_LBL = "CRDC/AILocators/SubmissionRequests/StatusBar/Status-Lbl"
 _SAVE_BTN = "CRDC/AILocators/SubmissionRequests/Form/Navigation/Save-Btn"
