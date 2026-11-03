@@ -110,6 +110,18 @@ def test_login_and_header_paths_used_by_smoke(locators: LocatorLoader) -> None:
     assert locators.get("CRDC/AILocators/SubmissionRequests/Form/ImportDialog/Upload-Input")
     assert locators.get("CRDC/AILocators/SubmissionRequests/Form/SectionA/PI-Address-TxtBx")
     assert locators.get("CRDC/AILocators/Global/Notistack-Snackbar")
+    assert locators.get("CRDC/AILocators/SubmissionRequests/List/View-Btn")
+    assert "reopen-application-button" in locators.get(
+        "CRDC/AILocators/SubmissionRequests/List/Reopen-Btn"
+    )
+    assert locators.get("CRDC/AILocators/SubmissionRequests/List/Filters/ResetFilters-Btn")
+    assert locators.get("CRDC/AILocators/SubmissionRequests/Form/Review/ProgressBar-Review")
+    assert locators.get("CRDC/AILocators/SubmissionRequests/Form/Navigation/Inquire-Btn")
+    inquire_comment = locators.get(
+        "CRDC/AILocators/SubmissionRequests/InquireDialog/ReviewComment-TxtBx"
+    )
+    assert "review-comment" in inquire_comment
+    assert "textbox" in inquire_comment
 
 
 @pytest.mark.unit

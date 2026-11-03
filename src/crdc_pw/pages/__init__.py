@@ -6,6 +6,7 @@ from crdc_pw.pages.programs import ProgramsListPage
 from crdc_pw.pages.release_notes import ReleaseNotesPage
 from crdc_pw.pages.studies import StudiesListPage
 from crdc_pw.pages.submission_request_form import SubmissionRequestFormPage
+from crdc_pw.pages.submission_request import SubmissionRequest
 from crdc_pw.pages.submission_requests_list import SubmissionRequestsListPage
 from crdc_pw.pages.users import ManageUsersPage, UserProfilePage
 
@@ -16,6 +17,7 @@ __all__ = [
     "ProgramsListPage",
     "ReleaseNotesPage",
     "StudiesListPage",
+    "SubmissionRequest",
     "SubmissionRequestFormPage",
     "SubmissionRequestsListPage",
     "UserProfilePage",

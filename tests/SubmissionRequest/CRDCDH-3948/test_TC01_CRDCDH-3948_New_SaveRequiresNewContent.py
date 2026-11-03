@@ -1,8 +1,6 @@
-"""Xray CRDCDH-3948 — New SRF: Save requires new content (TC01).
+"""Katalon: Test Cases/CRDC/SubmissionRequest/CRDCDH-3948/TC01_CRDCDH-3948_New_SaveRequiresNewContent
 
-Parent story: CRDCDH-3880. Katalon:
-Test Cases/CRDC/SubmissionRequest/CRDCDH-3948/TC01_CRDCDH-3948_New_SaveRequiresNewContent
-
+Xray CRDCDH-3948 — New SRF: Save requires new content. Parent: CRDCDH-3880.
 hub is already signed in as Submitter.
 """
 
@@ -25,7 +23,7 @@ pytestmark = pytest.mark.CRDC_SubmissionRequests
 
 
 @pytest.mark.parametrize("hub", ["Submitter"], indirect=True)
-def test_TC_CRDCDH_3948_New_SaveRequiresNewContent(hub: Hub) -> None:
+def test_TC01_CRDCDH_3948_New_SaveRequiresNewContent(hub: Hub) -> None:
     hub.page.set_viewport_size({"width": 1920, "height": 1080})
 
     sr_list = SubmissionRequestsListPage(hub.page, hub.locators)

@@ -27,6 +27,22 @@ SR_SAVE_DISABLED_TOOLTIP_SUBSTRING = "No changes have been made"
 SR_IMPORT_NO_CHANGES_MESSAGE = (
     "No changes were applied. The imported file matches the current form."
 )
+SR_IMPORT_VALIDATION_ERRORS_MESSAGE = (
+    "Your data has been imported, but some pages contain validation errors. "
+    "Please review each page and resolve before submitting."
+)
+SR_IMPORT_ALL_PASSED_VALIDATION_MESSAGE = (
+    "Your data has been imported and all passed validation. "
+    "You may proceed to Review & Submit."
+)
+SR_IMPORT_VALIDATION_ERRORS_FIXTURE = (
+    "InputFiles/CRDC/SubmissionRequest/CRDCDH-3948/"
+    "CRDCDH-3948_TC02_import-with-validation-errors.xlsx"
+)
+SR_QUESTIONNAIRE_FUTURE_DATE = "05/12/2036"
+
+_DEFAULT_INQUIRE_COMMENT = "Automated test inquire - CRDC submission request."
+_DEFAULT_APPROVAL_COMMENT = "Automated test approval - CRDC submission request."
 
 _STATUS_LBL = "CRDC/AILocators/SubmissionRequests/StatusBar/Status-Lbl"
 _SAVE_BTN = "CRDC/AILocators/SubmissionRequests/Form/Navigation/Save-Btn"
@@ -37,6 +53,18 @@ _IMPORT_BTN = "CRDC/AILocators/SubmissionRequests/Form/ImportForm/ImportForm-Btn
 _IMPORT_UPLOAD = "CRDC/AILocators/SubmissionRequests/Form/ImportDialog/Upload-Input"
 _IMPORT_CONFIRM = "CRDC/AILocators/SubmissionRequests/Form/ImportDialog/Confirm-Btn"
 _SNACKBAR = "CRDC/AILocators/Global/Notistack-Snackbar"
+_NEXT_BTN = "CRDC/AILocators/SubmissionRequests/Form/Navigation/Next-Btn"
+_SUBMIT_BTN = "CRDC/SubmissionRequest/Submit-Btn"
+_SUBMIT_CONFIRM = "CRDC/SubmissionRequest/PopUpConfirmToSubmit-Btn"
+_PC_POSITION = "CRDC/AILocators/SubmissionRequests/Form/SectionA/PrimaryContact-Position-TxtBx"
+_PROGRESS_A = "CRDC/AILocators/SubmissionRequests/Form/Review/ProgressBar-SectionA"
+_PROGRESS_REVIEW = "CRDC/AILocators/SubmissionRequests/Form/Review/ProgressBar-Review"
+_INQUIRE_BTN = "CRDC/AILocators/SubmissionRequests/Form/Navigation/Inquire-Btn"
+_APPROVE_BTN = "CRDC/AILocators/SubmissionRequests/Form/Navigation/Approve-Btn"
+_INQUIRE_COMMENT = "CRDC/AILocators/SubmissionRequests/InquireDialog/ReviewComment-TxtBx"
+_INQUIRE_CONFIRM = "CRDC/AILocators/SubmissionRequests/InquireDialog/ConfirmInquire-Btn"
+_APPROVE_COMMENT = "CRDC/AILocators/SubmissionRequests/ApproveDialog/ReviewComment-TxtBx"
+_APPROVE_CONFIRM = "CRDC/AILocators/SubmissionRequests/ApproveDialog/ConfirmApprove-Btn"
 
 _DOWNLOAD_DIR = repo_root() / "test-results" / "downloads"
 
@@ -91,6 +119,74 @@ class SubmissionRequestFormPage(BasePage):
         field.click()
         field.fill(text)
         log.info("PI address set")
+
+    def set_primary_contact_position(self, text: str) -> None:
+        field = self._loc(_PC_POSITION).first
+        field.click()
+        field.fill(text)
+        log.info("Primary contact position set")
+
+    def click_progress_bar_section_a(self) -> None:
+        self._loc(_PROGRESS_A).first.click()
+        log.info("Opened Section A via progress bar")
+
+    def click_next(self) -> None:
+        self._loc(_NEXT_BTN).first.click()
+        log.info("Clicked Next")
+
+    def click_submit_button(self) -> None:
+        """Submit + confirm; wait until list Start button is back (Katalon clickSubmitButton)."""
+        self._loc(_SUBMIT_BTN).first.click()
+        self.page.wait_for_timeout(500)
+        confirm = self._loc(_SUBMIT_CONFIRM).first
+        try:
+            confirm.wait_for(state="visible", timeout=5000)
+        except Exception:
+            confirm = self.page.get_by_role("button", name=re.compile(r"confirm", re.I)).first
+        confirm.click()
+        self.page.wait_for_timeout(500)
+        self.page.get_by_role(
+            "button", name=re.compile(r"Start\s+a\s+Submission\s+Request", re.I)
+        ).wait_for(state="visible", timeout=40_000)
+        log.info("Submitted submission request")
+
+    def _confirm_review_decision(
+        self,
+        action_path: str,
+        comment_path: str,
+        confirm_path: str,
+        comment: str,
+    ) -> None:
+        btn = self._loc(action_path).first
+        btn.scroll_into_view_if_needed()
+        btn.click()
+        comment_field = self._loc(comment_path).first
+        comment_field.wait_for(state="visible", timeout=10_000)
+        comment_field.click()
+        # MUI + react-hook-form: fill does not always update state; match Katalon click + sendKeys.
+        comment_field.press_sequentially(comment, delay=20)
+        confirm = self._loc(confirm_path).first
+        confirm.wait_for(state="visible", timeout=10_000)
+        confirm.click()
+        self.page.wait_for_timeout(2000)
+        log.info("Review decision confirmed")
+
+    def click_review_progress_bar(self) -> None:
+        bar = self._loc(_PROGRESS_REVIEW).first
+        bar.wait_for(state="visible", timeout=45_000)
+        bar.click()
+        self.page.wait_for_timeout(2000)
+        log.info("Opened Review section via progress bar")
+
+    def inquire_with_comment(self, comment: str = _DEFAULT_INQUIRE_COMMENT) -> None:
+        self._confirm_review_decision(
+            _INQUIRE_BTN, _INQUIRE_COMMENT, _INQUIRE_CONFIRM, comment
+        )
+
+    def approve_with_comment(self, comment: str = _DEFAULT_APPROVAL_COMMENT) -> None:
+        self._confirm_review_decision(
+            _APPROVE_BTN, _APPROVE_COMMENT, _APPROVE_CONFIRM, comment
+        )
 
     def click_save(self) -> None:
         self.save_button.first.click()
