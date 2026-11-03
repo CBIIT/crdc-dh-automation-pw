@@ -118,7 +118,7 @@ flowchart TB
 | **auth** | `src/crdc_pw/auth.py` | Login.gov OTP / Grant, file-locked `storage_state`. Fixture only. Tests do not call this unless the *scenario* switches user |
 | **hub** | `src/crdc_pw/hub.py` | Thin bag the fixture hands the test: this tab, this role, locators, settings. Not the Hub website |
 | **pages** | `src/crdc_pw/pages/` | One Hub screen each (`StudiesListPage`, `HeaderPage`, …). Clicks and reads. `BasePage` holds locator resolve, Hub timeouts, and shared table / dropdown / snackbar helpers |
-| **tests** | `tests/AuxiliaryTests/`, `tests/Pbac/`, `tests/DataSubmissions/` | Scenario + pass/fail. Same Katalon suite names (`CRDC_Auxiliary`, `CRDC_PBAC`, `CRDC_Smoke`, `CRDC_DataValidation`) |
+| **tests** | `tests/AuxiliaryTests/`, `tests/Pbac/`, `tests/DataSubmissions/`, `tests/DataValidation/` | Scenario + pass/fail. Same Katalon suite names (`CRDC_Auxiliary`, `CRDC_PBAC`, `CRDC_Smoke`, `CRDC_DataValidation`) |
 | **utils** | `src/crdc_pw/utils/` | Optional oracles (Excel, TOTP, GitHub raw). Not a screen |
 
 How one live test runs:
@@ -169,7 +169,8 @@ crdc-dh-automation-pw/
 │   ├── conftest.py         # builds `hub`: browser + login  ← start here if login fails
 │   ├── AuxiliaryTests/     # TC08 studies, TC09, TC18, CRDCDH-4006
 │   ├── Pbac/               # TC01 Fedlead defaults
-│   ├── DataSubmissions/    # GC metadata VR (TC08 invalid integer)
+│   ├── DataSubmissions/    # DS flow / GC metadata VR (e.g. TC08 invalid integer)
+│   ├── DataValidation/     # Excel workbook cases (Steps sheet); optional when flag on
 │   ├── SubmissionRequest/
 │   │   └── CRDCDH-3948/    # TC01–TC04 SRF Save / import / Fed Lead (mirrors Katalon folder)
 │   └── unit/               # no browser (locator, config, sheet, notes helpers)
@@ -203,7 +204,7 @@ crdc-dh-automation-pw/
 | Test Suite `CRDC_Auxiliary.ts` | `pytest -m CRDC_Auxiliary` |
 | Test Suite `CRDC_PBAC.ts` | `pytest -m CRDC_PBAC` |
 | Test Suite `CRDC_DataValidation.ts` | `pytest -m CRDC_DataValidation` |
-| `Test Cases/CRDC/DataSubmissions/GC/CRDCDH-686-Partial/TC08_...` | `tests/DataSubmissions/GC/test_TC08_CRDC-VerifyInvalidIntegerValue.py` |
+| `Test Cases/CRDC/DataSubmissions/GC/CRDCDH-686-Partial/TC08_...` | Python: `tests/DataSubmissions/GC/test_TC08_CRDC-VerifyInvalidIntegerValue.py`; Excel: `tests/DataValidation/GC/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx` |
 
 ### Fixture, page, test (no keyword layer)
 
@@ -362,6 +363,8 @@ def test_TC01_CRDC_PbacDefaultPermissions_Fedlead(hub: Hub) -> None:
 
 **TC08 invalid integer** (`tests/DataSubmissions/GC/test_TC08_CRDC-VerifyInvalidIntegerValue.py`) is Submitter, not Admin. Marker `CRDC_DataValidation` so `pytest -m CRDC_Auxiliary -k TC08` still means Manage Studies only. Same steps as Katalon after login: create a New GC metadata-only DS, `upload_folder("TC08")`, `click_validate()`, then `verify_validation_results_vs_expected_for_tc("TC08", model="GC")`. Expected TSV matching is `utils/validation_results.py`. It leaves the `auto-test_*` submission (Katalon does too).
 
+**Excel Data Validation** cases (commons-style `Steps` sheet, `TC*.xlsx` under `tests/DataValidation/`): collected when `excel_ds_validation.enabled` is true (default in profile examples). See [excel-ds-validation.md](excel-ds-validation.md). Run all: `pytest tests/DataValidation -m CRDC_DataValidation_Excel`; one case: add `-k TC08`. Python TC08 under `tests/DataSubmissions/GC/` stays collected in parallel.
+
 ---
 
 ## Environments (QA / QA2 / Stage)
@@ -474,6 +477,8 @@ Always activate the venv first (`source .venv/bin/activate`).
 | TC01 PBAC Fedlead defaults | `pytest -m CRDC_PBAC -k TC01` |
 | Katalon Data Validation suite | `pytest -m CRDC_DataValidation` |
 | TC08 invalid integer (GC metadata VR) | `pytest -m CRDC_DataValidation -k "VerifyInvalidInteger"` |
+| **All Excel DS validation cases** | `pytest tests/DataValidation -m CRDC_DataValidation_Excel` |
+| **One Excel case** (e.g. TC08) | `pytest tests/DataValidation -m CRDC_DataValidation_Excel -k TC08` |
 | CRDCDH-4006 Release Notes | `pytest -m CRDC_Auxiliary -k 4006` |
 | CRDCDH-3948 SR TC01–TC04 | `pytest -m CRDC_SubmissionRequests -k 3948` |
 | TC18 file only | `pytest tests/AuxiliaryTests/test_TC18_LoginAllRolesAndSwitchUser.py` |

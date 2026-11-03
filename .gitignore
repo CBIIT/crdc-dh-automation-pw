@@ -29,3 +29,6 @@ traces/
 .DS_Store
 reports/
 OutputFiles/
+
+# Local Excel DS porting checklist (not shared)
+docs/excel-ds-validation-katalon-todo.md
