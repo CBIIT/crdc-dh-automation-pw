@@ -13,6 +13,7 @@ INPUT_RELATIVE = Path("InputFiles/CRDC/SubmissionRequest/SubmissionRequest.xlsx"
 
 
 def workbook_path(root: Path | None = None) -> Path:
+    """Absolute path to SubmissionRequest.xlsx under InputFiles/CRDC/SubmissionRequest."""
     return (root or repo_root()) / INPUT_RELATIVE
 
 
@@ -37,6 +38,7 @@ def get_sheet_row(sheet_name: str, data_row_num: int, root: Path | None = None) 
 
 
 def _cell_str(value: Any) -> str:
+    """Header cell value as stripped string."""
     if value is None:
         return ""
     return str(value).strip()

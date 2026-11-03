@@ -27,8 +27,11 @@ _DELETE_CONFIRM = "CRDC/AILocators/DeleteDialog/Confirm-Btn"
 _DELETE_DIALOG = "CRDC/AILocators/DeleteDialog/Dialog"
 
 class SubmissionRequestsListPage(BasePage):
+    """Submission Requests table: filters and per-row Resume/View/Review/Reopen."""
+
     @property
     def container(self) -> Locator:
+        """Main list page wrapper (table and filters)."""
         return self._loc(_LIST_CONTAINER)
 
     def open(self) -> None:
@@ -58,6 +61,7 @@ class SubmissionRequestsListPage(BasePage):
         log.info("New submission request form ready")
 
     def reset_submission_requests_filters(self) -> None:
+        """Clear list filters when Reset is visible."""
         reset = self._loc(_RESET_FILTERS).first
         if reset.is_visible():
             reset.click()
@@ -90,6 +94,7 @@ class SubmissionRequestsListPage(BasePage):
         self.page.wait_for_timeout(2000)
 
     def _select_status_filter(self, status_csv: str) -> None:
+        """Multi-select status dropdown; values are comma-separated UI labels."""
         values = [s.strip() for s in status_csv.split(",") if s.strip()]
         if not values:
             return
@@ -124,6 +129,7 @@ class SubmissionRequestsListPage(BasePage):
 
     @staticmethod
     def _xpath_literal(text: str) -> str:
+        """Safe XPath string literal for filter option text."""
         if "'" not in text:
             return f"'{text}'"
         if '"' not in text:
@@ -132,11 +138,13 @@ class SubmissionRequestsListPage(BasePage):
         return "concat(" + ", \"'\", ".join(f"'{p}'" for p in parts) + ")"
 
     def _table_rows(self) -> Locator:
+        """Data rows in the generic SR list table."""
         return self._loc(_TABLE).locator("tbody tr")
 
     def open_submission_request_form_for_study(
         self, study_name: str, list_status: str | None = None
     ) -> None:
+        """Filter by study (and optional status), then Resume or View the matching row."""
         token = (study_name or "").strip()
         if len(token) < 3:
             raise ValueError("study_name must be at least 3 characters for Study filter")
@@ -150,9 +158,11 @@ class SubmissionRequestsListPage(BasePage):
         self._loc(_STATUS_LBL).wait_for(state="visible", timeout=40_000)
 
     def click_review_for_study_row(self, study_token: str) -> None:
+        """Click Review on the row for study_token (caller applies filters first)."""
         self._click_row_action(study_token, action="review")
 
     def reopen_approved_submission_request(self, study_name: str) -> None:
+        """Filter Approved + study, Reopen on the matching row, confirm dialog (stays on list)."""
         token = (study_name or "").strip()
         if len(token) < 3:
             raise ValueError("study_name must be at least 3 characters")
@@ -168,9 +178,11 @@ class SubmissionRequestsListPage(BasePage):
         log.info("Reopened approved submission request on list")
 
     def _click_resume_or_view_for_study_row(self, study_token: str) -> None:
+        """Submitter row action: Resume if present, else View."""
         self._click_row_action(study_token, action="resume_or_view")
 
     def _click_row_action(self, study_token: str, *, action: str) -> None:
+        """Find row by study text, single-row fallback, or suffix; click review/resume/view/reopen."""
         rows = self._table_rows()
         count = rows.count()
         if count == 0:

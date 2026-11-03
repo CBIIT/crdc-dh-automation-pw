@@ -78,28 +78,36 @@ def _stamp() -> str:
 
 
 def _s(value: Any) -> str:
+    """Normalize Excel cell value to stripped string."""
     if value is None:
         return ""
     return str(value).strip()
 
 
 class SubmissionRequest:
-    """Port of utilities.SubmissionRequest static state + @Keyword methods."""
+    """Workflow facade: list + form orchestration and Katalon fillSubmRequest keywords.
+
+    Section field entry lives here until moved to SubmissionRequestFormPage
+    (see docs/sr-form-section-fill-refactor.md).
+    """
 
     last_entered_study_title: str | None = None
     last_entered_study_abbreviation: str | None = None
     last_entered_program_name: str | None = None
 
     def __init__(self, page: Page, locators: LocatorLoader) -> None:
+        """Wire list and form page objects for the current browser tab."""
         self.page = page
         self.locators = locators
         self.form = SubmissionRequestFormPage(page, locators)
         self.list = SubmissionRequestsListPage(page, locators)
 
     def _loc(self, path: str, **kw: str):
+        """Resolve YAML path via the form page (section fill helpers)."""
         return self.form._loc(path, **kw)
 
     def _fill_if_empty(self, path: str, value: str) -> None:
+        """Fill text field only when empty (PI fields on partial forms)."""
         field = self._loc(path).first
         field.wait_for(state="visible", timeout=20_000)
         existing = field.input_value()
@@ -109,12 +117,14 @@ class SubmissionRequest:
         field.fill(_s(value))
 
     def _fill(self, path: str, value: str) -> None:
+        """Click and fill a text field with the given value."""
         field = self._loc(path).first
         field.wait_for(state="visible", timeout=20_000)
         field.click()
         field.fill(_s(value))
 
     def _click_dd_option(self, dd_path: str, option_text: str) -> None:
+        """Open CRDC dropdown and select option by visible label."""
         self._loc(dd_path).first.click()
         self.page.wait_for_timeout(500)
         xpath = self.locators.get(
@@ -125,6 +135,7 @@ class SubmissionRequest:
         opt.click()
 
     def enter_principal_investigator_info(self, data_row_num: int) -> None:
+        """Section A PI fields from SubmissionRequest.xlsx section-a row (Katalon enterPrincipalInvestigatorInfo)."""
         row = get_sheet_row("section-a", data_row_num)
         mapping = [
             (_A_PI_FN, "pi-first-name"),
@@ -146,6 +157,7 @@ class SubmissionRequest:
                 self._fill_if_empty(path, new_val)
 
     def enter_primary_contact_info(self, data_row_num: int) -> None:
+        """Section A primary contact from section-a row (Katalon enterPrimaryContactInfo)."""
         row = get_sheet_row("section-a", data_row_num)
         for path, key in [
             (_A_PC_FN, "pc-first-name"),
@@ -158,6 +170,7 @@ class SubmissionRequest:
             self._fill(path, _s(row.get(key)))
 
     def enter_program_info(self, dd_value: str, data_row_num: int) -> None:
+        """Section B program dropdown and optional Other program fields with timestamp suffix."""
         row = get_sheet_row("section-b", data_row_num)
         ts = _stamp()
         self._click_dd_option(_B_PROGRAM, dd_value)
@@ -175,6 +188,7 @@ class SubmissionRequest:
             raise ValueError(f"Unsupported program dropdown value: {dd_value!r}")
 
     def enter_study_info(self, data_row_num: int) -> None:
+        """Section B study title/abbrev/description; sets last_entered_study_* class attrs."""
         row = get_sheet_row("section-b", data_row_num)
         ts = _stamp()
         title = _s(row.get("study-title")) + ts
@@ -186,6 +200,7 @@ class SubmissionRequest:
         self._fill(_B_STUDY_DESC, _s(row.get("study-description")))
 
     def enter_funding_agency_info(self, data_row_num: int) -> None:
+        """Section B funding agency, grant, and NCI program officer from section-b row."""
         row = get_sheet_row("section-b", data_row_num)
         self._fill(_B_FUND_AGENCY, _s(row.get("funding-agency")))
         self._fill(_B_GRANT, _s(row.get("grant-number")))
@@ -194,6 +209,7 @@ class SubmissionRequest:
     def enter_data_access_type_and_dbgap_reg_info(
         self, access_type: str, db_gap_registered: str
     ) -> None:
+        """Section C open/controlled/both access and optional dbGaP registration."""
         access = access_type.strip().lower()
         if access == "open":
             self._loc(_C_OPEN).first.click()
@@ -211,6 +227,7 @@ class SubmissionRequest:
     def enter_cancer_type_and_subjects_info(
         self, cancer_type: str, species_of_subjects: str, data_row_num: int
     ) -> None:
+        """Section C cancer type, pre-cancer text, species, and subject count."""
         row = get_sheet_row("section-c", data_row_num)
         self._click_dd_option(_C_CANCER, cancer_type)
         self.page.keyboard.press("Tab")
@@ -220,12 +237,14 @@ class SubmissionRequest:
         self._fill(_C_NUM_SUBJ, _s(row.get("num-of-subjects-included")))
 
     def enter_target_delivery_and_expected_publication_date(self) -> None:
+        """Section D delivery and publication dates using shared future date constant."""
         from crdc_pw.pages.submission_request_form import SR_QUESTIONNAIRE_FUTURE_DATE
 
         self._fill(_D_TARGET_DATE, SR_QUESTIONNAIRE_FUTURE_DATE)
         self._fill(_D_PUB_DATE, SR_QUESTIONNAIRE_FUTURE_DATE)
 
     def select_data_types(self, *labels: str) -> None:
+        """Section D data type toggles/checkboxes (e.g. genomics, proteomics, imaging)."""
         self.page.wait_for_timeout(1000)
         for raw in labels:
             label = raw.lower()
@@ -260,6 +279,7 @@ class SubmissionRequest:
         num_of_files_row: int,
         estimated_data_size_row: int,
     ) -> None:
+        """Section D first file-type row, de-identified yes, and additional comment from Excel."""
         ft_row = get_sheet_row("section-d", file_type_row)
         fe_row = get_sheet_row("section-d", file_extension_row)
         nf_row = get_sheet_row("section-d", num_of_files_row)
@@ -294,6 +314,7 @@ class SubmissionRequest:
         num_of_files_row: int,
         estimated_data_size_row: int,
     ) -> None:
+        """Fill Sections A–D with Save/Next between sections (Katalon fillSubmissionRequestAllSections)."""
         self.enter_principal_investigator_info(section_a_row)
         self.enter_primary_contact_info(section_a_row)
         self.form.click_save()
@@ -327,16 +348,19 @@ class SubmissionRequest:
         self.form.click_next()
 
     def click_submit_button(self) -> None:
+        """Submit questionnaire and confirm (delegates to form page)."""
         self.form.click_submit_button()
 
     def open_submission_request_form_for_study(
         self, study_name: str, list_status: str | None = None
     ) -> None:
+        """List filter + Resume/View to open the form for study_name."""
         self.list.open_submission_request_form_for_study(study_name, list_status)
 
     def inquire_submission_request(
         self, study_name: str, inquire_comment: str | None = None
     ) -> None:
+        """Fed Lead: filter list, Review row, Review section, Inquire with comment."""
         self._open_submission_request_review(study_name)
         self.form.inquire_with_comment(
             inquire_comment or "Automated test inquire - CRDC submission request."
@@ -345,15 +369,18 @@ class SubmissionRequest:
     def approve_submission_request(
         self, study_name: str, approval_comment: str | None = None
     ) -> None:
+        """Fed Lead: filter list, Review row, Review section, Approve with comment."""
         self._open_submission_request_review(study_name)
         self.form.approve_with_comment(
             approval_comment or "Automated test approval - CRDC submission request."
         )
 
     def reopen_approved_submission_request(self, study_name: str) -> None:
+        """Fed Lead: Reopen an Approved SR from the list (does not open the form)."""
         self.list.reopen_approved_submission_request(study_name)
 
     def _open_submission_request_review(self, study_name: str) -> None:
+        """Navigate list → Review on row → Review progress bar section."""
         token = (study_name or "").strip()
         if len(token) < 3:
             raise ValueError("study_name must be at least 3 characters")
@@ -365,6 +392,7 @@ class SubmissionRequest:
 
 
 def _xpath_literal(text: str) -> str:
+    """XPath string literal for dynamic checkbox id contains() lookups."""
     if "'" not in text:
         return f"'{text}'"
     if '"' not in text:
