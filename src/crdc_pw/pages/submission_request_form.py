@@ -83,12 +83,16 @@ _DOWNLOAD_DIR = repo_root() / "test-results" / "downloads"
 
 
 class SubmissionRequestFormPage(BasePage):
+    """SR questionnaire UI: status bar, navigation, Save/import/export, review dialogs."""
+
     @property
     def save_button(self) -> Locator:
+        """Sidebar Save button."""
         return self._loc(_SAVE_BTN)
 
     @property
     def status_label(self) -> Locator:
+        """Status bar label (NEW, IN PROGRESS, IN REVISION, …)."""
         return self._loc(_STATUS_LBL)
 
     def assert_status(self, expected: str, *, wait_s: float = 30) -> None:
@@ -108,17 +112,21 @@ class SubmissionRequestFormPage(BasePage):
         )
 
     def wait_save_stable(self, *, enabled: bool, timeout_s: float = 30) -> None:
+        """Poll until Save enabled/disabled state is stable (Katalon waitUntilStableForButton)."""
         wait_for_button_stable(self.save_button, enabled=enabled, timeout_s=timeout_s)
 
     def assert_save_disabled(self) -> None:
+        """Assert Save is disabled after state stabilizes."""
         self.wait_save_stable(enabled=False)
         assert_button_enabled(self.save_button, False)
 
     def assert_save_enabled(self) -> None:
+        """Assert Save is enabled after state stabilizes."""
         self.wait_save_stable(enabled=True)
         assert_button_enabled(self.save_button, True)
 
     def assert_save_disabled_tooltip(self) -> None:
+        """Hover Save wrapper and assert the no-changes disabled tooltip (CRDCDH-3948)."""
         verify_tooltip_on_hover(
             self.page,
             self._loc(_SAVE_TOOLTIP),
@@ -128,27 +136,32 @@ class SubmissionRequestFormPage(BasePage):
         log.info("Save disabled tooltip verified")
 
     def set_pi_address(self, text: str) -> None:
+        """Set Section A PI address (used to dirty the form in 3948 tests)."""
         field = self._loc(_PI_ADDRESS).first
         field.click()
         field.fill(text)
         log.info("PI address set")
 
     def set_primary_contact_position(self, text: str) -> None:
+        """Set Section A primary contact position (editable on Reopened SR)."""
         field = self._loc(_PC_POSITION).first
         field.click()
         field.fill(text)
         log.info("Primary contact position set")
 
     def click_progress_bar_section_a(self) -> None:
+        """Jump to Section A via the progress bar."""
         self._loc(_PROGRESS_A).first.click()
         log.info("Opened Section A via progress bar")
 
     def click_progress_bar_section_d(self) -> None:
+        """Jump to Section D and wait for the targeted delivery date field."""
         self._loc(_PROGRESS_D).first.click()
         self._loc(_SECTION_D_TARGETED_DELIVERY).first.wait_for(state="visible", timeout=30_000)
         log.info("Opened Section D via progress bar")
 
     def click_next(self) -> None:
+        """Click Next to advance to the following questionnaire section."""
         self._loc(_NEXT_BTN).first.click()
         log.info("Clicked Next")
 
@@ -175,6 +188,7 @@ class SubmissionRequestFormPage(BasePage):
         confirm_path: str,
         comment: str,
     ) -> None:
+        """Open Inquire or Approve, enter review comment, and confirm the dialog."""
         btn = self._loc(action_path).first
         btn.scroll_into_view_if_needed()
         btn.click()
@@ -190,6 +204,7 @@ class SubmissionRequestFormPage(BasePage):
         log.info("Review decision confirmed")
 
     def click_review_progress_bar(self) -> None:
+        """Open the Review section from the progress bar (Fed Lead on Review screen)."""
         bar = self._loc(_PROGRESS_REVIEW).first
         bar.wait_for(state="visible", timeout=45_000)
         bar.click()
@@ -197,16 +212,19 @@ class SubmissionRequestFormPage(BasePage):
         log.info("Opened Review section via progress bar")
 
     def inquire_with_comment(self, comment: str = _DEFAULT_INQUIRE_COMMENT) -> None:
+        """Fed Lead: Inquire with comment (form must be on Review with Inquire visible)."""
         self._confirm_review_decision(
             _INQUIRE_BTN, _INQUIRE_COMMENT, _INQUIRE_CONFIRM, comment
         )
 
     def approve_with_comment(self, comment: str = _DEFAULT_APPROVAL_COMMENT) -> None:
+        """Fed Lead: Approve with comment (form must be on Review with Approve visible)."""
         self._confirm_review_decision(
             _APPROVE_BTN, _APPROVE_COMMENT, _APPROVE_CONFIRM, comment
         )
 
     def click_save(self) -> None:
+        """Click Save without waiting for side effects."""
         self.save_button.first.click()
         log.info("Clicked Save")
 
@@ -225,6 +243,7 @@ class SubmissionRequestFormPage(BasePage):
         return dest
 
     def import_form_excel(self, path: Path) -> None:
+        """Import Form dialog: upload .xlsx and confirm (Katalon importSubmissionRequestExcel)."""
         if not path.is_file():
             raise FileNotFoundError(path)
         self._loc(_IMPORT_BTN).first.click()

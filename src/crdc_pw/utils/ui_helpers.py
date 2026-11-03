@@ -76,7 +76,7 @@ def verify_tooltip_on_hover(
 
 
 def verify_tooltip_on_click(page: Page, trigger: Locator, expected: str) -> None:
-    """Click trigger and assert a MUI tooltip equals expected (full string, whitespace-normalized)."""
+    """Click trigger, assert full tooltip text, then dismiss (Section D info icons, CRDCDH-3952)."""
     expected_norm = _normalize_whitespace(expected)
     trigger.first.click()
     tooltips = page.locator("[role='tooltip']")
