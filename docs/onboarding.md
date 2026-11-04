@@ -118,7 +118,7 @@ flowchart TB
 | **auth** | `src/crdc_pw/auth.py` | Login.gov OTP / Grant, file-locked `storage_state`. Fixture only. Tests do not call this unless the *scenario* switches user |
 | **hub** | `src/crdc_pw/hub.py` | Thin bag the fixture hands the test: this tab, this role, locators, settings. Not the Hub website |
 | **pages** | `src/crdc_pw/pages/` | One Hub screen each (`StudiesListPage`, `HeaderPage`, …). Clicks and reads. `BasePage` holds locator resolve, Hub timeouts, and shared table / dropdown / snackbar helpers |
-| **tests** | `tests/AuxiliaryTests/`, `tests/Pbac/`, `tests/DataSubmissions/`, `tests/DataValidation/` | Scenario + pass/fail. Same Katalon suite names (`CRDC_Auxiliary`, `CRDC_PBAC`, `CRDC_Smoke`, `CRDC_DataValidation`) |
+| **tests** | `tests/AuxiliaryTests/`, `tests/Pbac/`, `tests/SuiteSetup/`, `tests/DataSubmissions/`, `tests/DataValidation/` | Scenario + pass/fail. Same Katalon suite names (`CRDC_Auxiliary`, `CRDC_PBAC`, `CRDC_Smoke`, `CRDC_DataValidation`) |
 | **utils** | `src/crdc_pw/utils/` | Optional oracles (Excel, TOTP, GitHub raw). Not a screen |
 
 How one live test runs:
@@ -169,6 +169,7 @@ crdc-dh-automation-pw/
 │   ├── conftest.py         # builds `hub`: browser + login  ← start here if login fails
 │   ├── AuxiliaryTests/     # TC08 studies, TC09, TC18, CRDCDH-4006
 │   ├── Pbac/               # TC01 Fedlead defaults
+│   ├── SuiteSetup/         # EnableAllPermissions (CRDC_PBAC restore, Master)
 │   ├── DataSubmissions/    # DS flow / GC metadata VR (e.g. TC08 invalid integer)
 │   ├── DataValidation/     # Excel workbook cases (Steps sheet); optional when flag on
 │   ├── SubmissionRequest/
@@ -203,7 +204,8 @@ crdc-dh-automation-pw/
 | `Profiles/CRDC_QA.glbl` / `GlobalVariable` | `config/qa.yaml` |
 | Test Suite `CRDC_Smoke.ts` | `pytest -m CRDC_Smoke` |
 | Test Suite `CRDC_Auxiliary.ts` | `pytest -m CRDC_Auxiliary` |
-| Test Suite `CRDC_PBAC.ts` | `pytest -m CRDC_PBAC` |
+| Test Suite `CRDC_PBAC.ts` | `pytest -m CRDC_PBAC` (TC01 then EnableAll; run serial, no `-n`) |
+| `Test Cases/CRDC/SuiteSetup/EnableAllPermissions` | `tests/SuiteSetup/test_EnableAllPermissions.py` |
 | Test Suite `CRDC_DataValidation.ts` | `pytest -m CRDC_DataValidation` |
 | `Test Cases/CRDC/DataSubmissions/GC/CRDCDH-686-Partial/TC08_...` | Python: `tests/DataSubmissions/GC/test_TC08_CRDC-VerifyInvalidIntegerValue.py`; Excel: `tests/DataValidation/GC/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx` |
 
@@ -341,7 +343,7 @@ pytest
 
 **CRDCDH-4006** (`tests/AuxiliaryTests/test_TC_CRDCDH-4006_ReleaseNotesPage.py`, story CRDCDH-3974): footer → `/release-notes`, markdown visible, error alert hidden, CMS parity vs static-content branch, no YAML frontmatter in UI.
 
-**TC01** (`tests/Pbac/test_TC01_CRDC-PbacDefaultPermissions-Fedlead.py`) is the **middle** of Katalon TC01 (not `loginToCrdcOtp` / `closeBrowser`). Fixture already signed in as Admin. The page reads checkboxes; `utils/pbac_sheet.py` owns the Excel compare — no `verify_*` on the page:
+**TC01** (`tests/Pbac/test_TC01_CRDC-PbacDefaultPermissions-Fedlead.py`) is the **middle** of Katalon TC01 (not `loginToCrdcOtp` / `closeBrowser`). Fixture already signed in as Admin. The page reads checkboxes; `utils/pbac_sheet.py` owns the Excel compare — no `verify_*` on the page. Standalone `pytest -m CRDC_PBAC -k TC01` leaves Fedlead at **sheet defaults**; full `pytest -m CRDC_PBAC` also runs **EnableAllPermissions** (Master) and restores optional permissions for all five automation users — see [enable-all-permissions.md](enable-all-permissions.md).
 
 ```python
 def test_TC01_CRDC_PbacDefaultPermissions_Fedlead(hub: Hub) -> None:
@@ -472,12 +474,13 @@ Always activate the venv first (`source .venv/bin/activate`).
 | Katalon Auxiliary suite | `pytest -m CRDC_Auxiliary` |
 | Katalon Smoke subset (TC08, TC09 today) | `pytest -m CRDC_Smoke` |
 | Same smoke, four workers (cookies warm) | `pytest -m CRDC_Smoke -n 4` |
-| Katalon PBAC suite | `pytest -m CRDC_PBAC` |
+| Katalon PBAC suite (TC01 + EnableAll restore) | `pytest -m CRDC_PBAC` — serial; do not use `-n` |
 | Same, watch the browser | `pytest -m CRDC_Auxiliary --headed` |
 | TC18 one role | `pytest -m CRDC_Auxiliary -k Admin` |
 | TC08 Manage Studies list only | `pytest -m CRDC_Auxiliary -k TC08` |
 | TC09 Manage Programs list only | `pytest -m CRDC_Auxiliary -k TC09` |
-| TC01 PBAC Fedlead defaults | `pytest -m CRDC_PBAC -k TC01` |
+| TC01 PBAC Fedlead defaults (no EnableAll restore) | `pytest -m CRDC_PBAC -k TC01` |
+| EnableAllPermissions only (Master) | `pytest tests/SuiteSetup/test_EnableAllPermissions.py` |
 | Katalon Data Validation suite | `pytest -m CRDC_DataValidation` |
 | TC08 invalid integer (GC metadata VR) | `pytest -m CRDC_DataValidation -k "VerifyInvalidInteger"` |
 | **All Excel DS validation cases** | `pytest tests/DataValidation -m CRDC_DataValidation_Excel` |
