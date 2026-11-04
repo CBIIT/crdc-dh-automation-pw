@@ -14,9 +14,10 @@ It is aimed at **QA engineers**: you supply **different datasets** (another **da
 | Goal | Command |
 |------|---------|
 | Run all Excel test cases | `pytest tests/DataValidation -m CRDC_DataValidation_Excel` |
+| Run all in parallel (shared Submitter) | `pytest tests/DataValidation -m CRDC_DataValidation_Excel -n 4` |
 | Run a specific test case | `pytest tests/DataValidation -m CRDC_DataValidation_Excel -k TC09` |
 
-Add `--headed` to watch the browser.
+Add `--headed` to watch the browser. Create step assigns a **25-character** name `auto-test_yyyyMMdd_HHxxxx` (`xxxx` = random hex for parallel runs; Hub truncates longer names).
 
 ---
 

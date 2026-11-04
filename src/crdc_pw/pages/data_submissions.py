@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 import re
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -86,6 +87,8 @@ _UUID = re.compile(
 # Katalon getCellText: values this short are used as-is (no truncated-wrapper lookup)
 _TRUNCATED = 15
 _UPLOAD_MS = 60_000
+# Hub stores at most 25 characters (Katalon auto-test_yyyyMMdd_HHmmss fits exactly).
+AUTOMATION_SUBMISSION_NAME_LEN = 25
 
 
 def parse_submission_id_from_text(text: str | None) -> str | None:
@@ -94,6 +97,19 @@ def parse_submission_id_from_text(text: str | None) -> str | None:
         return None
     match = _UUID.search(text)
     return match.group(0) if match else None
+
+
+def _automation_submission_name() -> str:
+    """Unique auto-test name within Hub 25-char limit (date + HH + 4 hex in time segment)."""
+    date_part = datetime.now().strftime("%Y%m%d")
+    hour = datetime.now().strftime("%H")
+    segment = f"{hour}{uuid.uuid4().hex[:4]}"
+    name = f"auto-test_{date_part}_{segment}"
+    if len(name) != AUTOMATION_SUBMISSION_NAME_LEN:
+        raise RuntimeError(
+            f"automation submission name must be {AUTOMATION_SUBMISSION_NAME_LEN} chars, got {len(name)}: {name!r}"
+        )
+    return name
 
 
 class DataSubmissionsListPage(BasePage):
@@ -121,7 +137,7 @@ class DataSubmissionsListPage(BasePage):
         """Fill the create dialog, then open the new row from the list.
 
         Same args as Katalon createDataSubmission (New, metadata only, GC, study).
-        Returns the auto-test_yyyyMMdd_HHmmss name. Does not delete the leftover DS.
+        Returns 25-char auto-test_yyyyMMdd_HHxxxx name (xxxx = hex). Does not delete the leftover DS.
         """
         self._loc(CREATE_BTN).click()
 
@@ -145,8 +161,7 @@ class DataSubmissionsListPage(BasePage):
         self._loc(STUDY_DDN).click()
         self._click_study_option(study)
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        submission_name = f"auto-test_{timestamp}"
+        submission_name = _automation_submission_name()
         log.info("Creating data submission with name %s", submission_name)
         name_box = self._loc(SUBMISSION_NAME)
         name_box.wait_for(state="visible")
