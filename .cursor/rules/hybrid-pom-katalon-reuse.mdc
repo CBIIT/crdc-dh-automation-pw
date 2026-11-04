@@ -25,12 +25,15 @@ Katalon has **keyword classes**, not page objects (`Keywords/utilities/*.groovy`
 
 | Katalon `verifyX` | Playwright |
 |---|---|
-| 1 test (most list / export / SR-ticket) | Inline `expect` / `assert` in **that** test. Page `read_*` only. |
+| 1 test, **simple** (one locator, one string, list row contains) | Inline `expect` / `assert` in **that** test. Page `read_*` only. |
+| 1 test, **heavy compare** (multi-field header/status, normalize + log each field, aggregate failure) | Page `read_*` + `verify_*` / `assert_*` that takes **expected from the test** (mapping or args). Test stays thin: build oracle, call verify. Example: `verify_summary_header_fields(expected, actual=...)`. |
 | Role / TC **family** (PBAC defaults × 5, functional × 10) | One helper + same test shape, different role / args. |
 | Many DS cases vs files (batch row, validation TSV, error modal, CLI errors) | Page `read_*` + TSV utils. Reused Katalon keywords like `verifyValidationResultsVsExpectedForTC` live on the detail page, not a tests/ sidecar. |
 | `verifyButtonEnabled` / `verifyElementText` | Playwright `expect` in the test. Never a page/`WebUIUtils` wrapper. |
 
-`expect_loaded()` on a page is OK. A `verify_*` options-map is not. Do not recreate Katalon keyword verifies on list pages.
+**Page verify is OK when:** the test supplies pass/fail inputs; the page owns DOM reads, normalization, logging, and compare loops. **Not OK when:** the page hardcodes which case passed (no parameters) or encodes list-filter scenario rules (`row_contains="autoQA"` inside verify).
+
+`expect_loaded()` on a page is OK. Do not recreate Katalon keyword verifies on **list** pages.
 
 When porting Katalon **DataSubmissions** or **SubmissionRequest** keywords, route by **screen**: list/create → `data_submissions_list.py` or `submission_requests_list.py`; upload/validate/VR/error dialog → `data_submission_details.py`; SR sections/fields → `submission_request_form.py`. If unsure, follow where the Groovy script clicks after login (list chrome vs open submission vs form).
 
@@ -70,3 +73,25 @@ detail.verify_validation_results_vs_expected_for_tc("TC08", model="GC")
 ```
 
 The test still names case-specific values (`TC08`, `GC`). Utils own the expected TSV matching. Do not add `tests/DataSubmissions/metadata_vr.py`.
+
+**DS summary headers (CRDCDH-697 TC01) — test oracle, page compare:**
+
+```python
+actual = detail.read_summary_header()
+expected_submitter = f"{HeaderPage(hub).username().lower()} Please Do Not Edit"
+detail.verify_summary_header_fields(
+    {
+        "submission_name": submission_name,
+        "submitter": expected_submitter,
+        "submission_type": DS_EXPECTED_SUBMISSION_TYPE_NEW,
+        "collaborators": DS_EXPECTED_COLLABORATORS_COUNT,
+        "study": DS_EXPECTED_STUDY_HEADER,
+        "data_commons": "GC",
+        "program": DS_EXPECTED_PROGRAM,
+        "data_concierge": DS_EXPECTED_DATA_CONCIERGE,
+    },
+    actual=actual,
+)
+```
+
+Katalon `verifyDataSubmissionHeaders` maps to read + verify on the detail page; the Groovy script still decides expected submitter/name for the run.
