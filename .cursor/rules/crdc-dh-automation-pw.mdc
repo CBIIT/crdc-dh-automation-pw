@@ -14,15 +14,15 @@ Human walkthrough: `docs/onboarding.md` (section **Core pieces** names conftest,
 ## Layers (do not revive keywords)
 
 ```
-fixture hub  →  test (scenario + asserts)  →  page object  →  YAML locators
+fixture hub  →  test (scenario + oracles)  →  page object  →  YAML locators
                  ↘ utils/ (Excel, GitHub raw, TOTP) when the case needs an oracle
 ```
 
 - **`hub`** (`src/crdc_pw/hub.py`): thin session — `page`, `locators`, `settings`, `role`. No `studies` / `programs` / `login` / `header` fields. Do not grow `Hub` or `conftest.py` when adding a case.
 - **Pages** (`src/crdc_pw/pages/`): one Hub screen; `BasePage.__init__(hub: Hub)` with `@property page` / `locators` from `hub`. Actions and reads: `open()`, `apply_filters()`, `read_table_rows()`, `row_count()`. YAML paths stay on the page; tests use locator **properties** (`studies.container`). Required waits inherit `BasePage.DEFAULT_MS` (15s); optional chrome uses `PROBE_MS`. Do not `except: pass` on a required wait. Shared table read, MUI dropdown, and snackbar helpers live on `BasePage` (not `utils/` and not a `components/` package).
-- **Tests** (`tests/`): construct pages (`StudiesListPage(hub)`), drive them, **own asserts**. Hub-backed page objects survive `switch_user`; do not pass `hub.page` into constructors.
+- **Tests** (`tests/`): construct pages (`StudiesListPage(hub)`), drive them, **own scenario steps and oracles** (what should be true for this case). Keep tests readable: one-liner `expect` / simple `assert` when that is enough; call page `read_*` and heavier `verify_*` / `assert_*` when compare logic would clutter the test. Hub-backed page objects survive `switch_user`; do not pass `hub.page` into constructors.
 - **Auth** (`src/crdc_pw/auth.py`): Login.gov OTP / Grant for the **fixture only**. `ensure_storage_state` file-locks `auth/<profile>/<Role>.json` so OTP runs once per role. Tests do not call `login_otp`. Role change: `auth.switch_user(hub, role)` (new context from that role’s json). `LoginPage` stays `(page, locators)` inside auth only.
-- **No** `keywords/` package and **no** `App` facade. Do not add `verify_*` wrappers that take a Katalon-style expectations map.
+- **No** `keywords/` package and **no** `App` facade. Do not add page `verify_*` that **embed case pass/fail inside the page** (magic strings, thresholds, or “did TC01 pass?” with no inputs from the test). **Do** add page `verify_*` / `assert_*` that take **explicit expected data from the test** (mapping, tc name, file path) and perform multi-step read, normalize, log, and compare — same idea as DS validation TSV helpers on `DataSubmissionDetailPage`.
 
 ## Layout
 
@@ -58,27 +58,43 @@ fixture hub  →  test (scenario + asserts)  →  page object  →  YAML locator
 - Match existing import style: `from crdc_pw.hub import Hub`, `from crdc_pw.pages.studies import ...`.
 - **Data Submissions and Submission Request** use **two page modules** (list vs detail/form), like Katalon list then drill-in. When porting a Katalon keyword or step, put it on the page that owns that Hub screen—do not add a barrel `data_submissions.py`.
   - **DS list** (`data_submissions_list.py`): nav to Data Submissions, list filters, Create dialog, open a row by name (through the upload-activity link wait).
-  - **DS detail** (`data_submission_details.py`): choose files, Upload, Validate, Validation Results tab/filters/table, error-details dialog, and reused `verify_*_for_tc` that compare to TSV oracles (helpers stay in `utils/validation_results.py`).
+  - **DS detail** (`data_submission_details.py`): choose files, Upload, Validate, Validation Results tab/filters/table, error-details dialog, summary header read/compare (`read_summary_header`, `verify_summary_header_fields`), and reused `verify_*_for_tc` that compare to TSV oracles (helpers stay in `utils/validation_results.py`).
   - **SR list** (`submission_requests_list.py`): SR list, filters, open/create navigation to a request.
   - **SR form** (`submission_request_form.py`): sections, fields, save/submit, and form-specific reads on an open request.
   - Tests construct **both** objects from `hub` when the case crosses list → detail (see hybrid rule DS example).
 
 ## Asserts (Playwright-native)
 
-**Default:** `expect` / `assert` in the test. Pages **read**; tests **decide pass/fail**.
+**Split:** tests **choose** expected values for the case; pages **read the UI** and run **reusable compare machinery** when a check is more than a line or two (multi-field normalize, per-field logging, TSV diff, dialog issue lists).
+
+**Default for list/simple checks:** `expect` / `assert` in the test after `read_*`.
 
 ```python
-# BAD — keyword-style verify on the page
+# BAD — scenario thresholds baked into the page (Katalon keyword cosplay)
 studies.verify_filter_results(expect_at_least_rows=1, row_contains="autoQA")
 
-# GOOD — page acts/reads; test asserts case-specific values
+# GOOD — list filter: page reads; test asserts case-specific values
 studies.apply_filters(study_name="autoQA", program="AutoTest-Program")
 rows = studies.read_table_rows()
 assert len(rows) >= 1
 assert any("autoQA" in (cell or "") for row in rows for cell in row)
+
+# GOOD — multi-field summary: test builds expected; page compares + logs (CRDCDH-697 TC01)
+actual = detail.read_summary_header()
+detail.verify_summary_header_fields(
+    {
+        "submission_name": submission_name,
+        "submitter": expected_submitter,
+        "study": DS_EXPECTED_STUDY_HEADER,
+        # ...
+    },
+    actual=actual,
+)
 ```
 
-Extract a helper only when Katalon reuse justifies it (DS TSV/batch, PBAC sheet, third copy of the same check). See rule **hybrid-pom-katalon-reuse**. `expect_loaded()` on a page is OK. A `verify_*` options-map is not.
+Shared QA automation constants (e.g. `DS_*` on the detail page) mirror Katalon static defaults; the test still passes dynamic values (`submission_name`, submitter) into verify helpers.
+
+See rule **hybrid-pom-katalon-reuse** for when to inline vs extract. `expect_loaded()` on a page is OK.
 
 Prefer Playwright `expect(locator).to_be_visible()` over bool-return + `assert` so auto-wait stays. Hub `expect` and action timeouts are 15s (`BasePage.DEFAULT_MS`). Login.gov keeps its own probes.
 
