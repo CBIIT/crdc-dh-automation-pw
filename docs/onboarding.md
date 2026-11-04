@@ -170,7 +170,7 @@ crdc-dh-automation-pw/
 │   ├── AuxiliaryTests/     # TC08 studies, TC09, TC18, CRDCDH-4006
 │   ├── Pbac/               # TC01 Fedlead defaults
 │   ├── DataSubmissions/    # DS flow / GC metadata VR (e.g. TC08 invalid integer)
-│   ├── DataValidation/     # Excel workbook cases (Steps sheet); optional when flag on
+│   ├── DataValidation/     # Excel VR cases: GC/, ICDC/, CTDC/ (Steps sheet); optional when flag on
 │   ├── SubmissionRequest/
 │   │   ├── CRDCDH-3948/    # TC01–TC04 SRF Save / import / Fed Lead (mirrors Katalon folder)
 │   │   └── CRDCDH-3952/    # TC01 Section D date tooltips (may fail until CRDCDH-3978 on QA)

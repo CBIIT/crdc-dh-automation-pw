@@ -1,0 +1,2 @@
+type	Issue_Type	Expected_Severity	Expected_Issues	 program.program_acronym	clinical_study_id	clinical_study_designation	clinical_study_name	clinical_study_description	clinical_study_type	date_of_iacuc_approval	dates_of_conduct	accession_id	study_disposition
+study	Value not permitted	Error	"[ICDC_study_v2.0.0.tsv: line 2] ""Under Embargo1"" is not a permissible value for property ""study_disposition""."	AUTOPROGRAM		autoQA	AutomationQA_Study	ICDC std des	Adverse Effect Mitigation Study*Cure Study		January 2021 to March 2026	Test	Under Embargo1

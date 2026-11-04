@@ -1,0 +1,3 @@
+type	 study.clinical_study_designation	consent_group_record_id	consent_group_name	consent_group_number
+consent_group	autoQA	ICDC_Consent1	icdc_gpname	2
+consent_group	autoQA	ICDC_Consent2	icdc_gpname	-1
