@@ -4,7 +4,7 @@ This framework allows Excel-driven test cases for Data Submission validation. Ea
 
 It is aimed at **QA engineers**: you supply **different datasets** (another **data commons** (GC, ICDC, CTDC, …), another **study**, upload TSVs + expected Validation Results) and the **Steps** sheet; automation handles login (from Settings `role`), navigation, and comparison.
 
-`tests/DataValidation/` — Excel-driven data validation cases only.
+`tests/DataValidation/` — Excel-driven data validation cases only. Layout mirrors Katalon: `tests/DataValidation/<GC|ICDC|CTDC>/<ticket-folder>/TC##_....xlsx` (e.g. `GC/CRDCDH-686-Partial/TC08_...`).
 `tests/DataSubmissions/` — Other DS lifecycle tests.
 
 ---
@@ -22,7 +22,7 @@ Add `--headed` to watch the browser.
 
 ## Add a new test case
 
-1. **Copy** `tests/DataValidation/GC/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx` → `tests/DataValidation/<model>/TC09_CRDCDH-###_<Scenario>.xlsx` (must start with **TC**; include ticket id for traceability, e.g. **CRDCDH-686**).
+1. **Copy** `tests/DataValidation/GC/CRDCDH-686-Partial/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx` → `tests/DataValidation/<model>/<ticket-folder>/TC09_CRDCDH-###_<Scenario>.xlsx` (mirror Katalon `Test Cases/CRDC/DataSubmissions/...`; name must start with **TC**).
 2. **Copy** `InputFiles/CRDC/MetadataData/TC08/` → `MetadataData/TC09/` (or your case id). Replace upload `*.tsv` and files under `expected-ValidationResults/` and update the data as needed.
 3. In the test case, edit **Settings** (2nd tab): `role` = e.g. **Submitter**; `enabled` = **Y** (or **N** while drafting).
 4. Edit **Steps** (1st tab): row 2 = input root e.g. `InputFiles/CRDC/MetadataData/TC09`; update create/upload/verify rows for your **study**, **model**, and folder name (see [Workbook format](#workbook-format)).

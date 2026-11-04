@@ -170,7 +170,7 @@ crdc-dh-automation-pw/
 │   ├── AuxiliaryTests/     # TC08 studies, TC09, TC18, CRDCDH-4006
 │   ├── Pbac/               # TC01 Fedlead defaults
 │   ├── DataSubmissions/    # DS flow / GC metadata VR (e.g. TC08 invalid integer)
-│   ├── DataValidation/     # Excel VR cases: GC/, ICDC/, CTDC/ (Steps sheet); optional when flag on
+│   ├── DataValidation/     # Excel VR: GC|ICDC|CTDC/<ticket>/TC*.xlsx (mirrors Katalon DataSubmissions tree)
 │   ├── SubmissionRequest/
 │   │   ├── CRDCDH-3948/    # TC01–TC04 SRF Save / import / Fed Lead (mirrors Katalon folder)
 │   │   └── CRDCDH-3952/    # TC01 Section D date tooltips (may fail until CRDCDH-3978 on QA)
@@ -205,7 +205,7 @@ crdc-dh-automation-pw/
 | Test Suite `CRDC_Auxiliary.ts` | `pytest -m CRDC_Auxiliary` |
 | Test Suite `CRDC_PBAC.ts` | `pytest -m CRDC_PBAC` |
 | Test Suite `CRDC_DataValidation.ts` | `pytest -m CRDC_DataValidation` |
-| `Test Cases/CRDC/DataSubmissions/GC/CRDCDH-686-Partial/TC08_...` | Python: `tests/DataSubmissions/GC/test_TC08_CRDC-VerifyInvalidIntegerValue.py`; Excel: `tests/DataValidation/GC/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx` |
+| `Test Cases/CRDC/DataSubmissions/GC/CRDCDH-686-Partial/TC08_...` | Python: `tests/DataSubmissions/GC/test_TC08_...`; Excel: `tests/DataValidation/GC/CRDCDH-686-Partial/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx` |
 
 ### Fixture, page, test (no keyword layer)
 

@@ -149,7 +149,7 @@ def test_excel_collection_applies_settings_role_to_hub_fixture() -> None:
     """Excel File collector must expand @parametrize(hub) — otherwise hub defaults to Admin."""
     case = (
         repo_root()
-        / "tests/DataValidation/GC/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx"
+        / "tests/DataValidation/GC/CRDCDH-686-Partial/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx"
     )
     env = {**os.environ, "CRDC_EXCEL_DS_VALIDATION": "1"}
     proc = subprocess.run(
