@@ -32,6 +32,8 @@ Katalon has **keyword classes**, not page objects (`Keywords/utilities/*.groovy`
 
 `expect_loaded()` on a page is OK. A `verify_*` options-map is not. Do not recreate Katalon keyword verifies on list pages.
 
+When porting Katalon **DataSubmissions** or **SubmissionRequest** keywords, route by **screen**: list/create → `data_submissions_list.py` or `submission_requests_list.py`; upload/validate/VR/error dialog → `data_submission_details.py`; SR sections/fields → `submission_request_form.py`. If unsure, follow where the Groovy script clicks after login (list chrome vs open submission vs form).
+
 ## What new tests look like
 
 **List (TC08 shape) — no reuse:**
@@ -52,11 +54,16 @@ write_expected("Submitter")
 assert compare_actual("Submitter", users.read_permission_rows())
 ```
 
-**DS validation TSV — test looks like Katalon; compare keyword is on the detail page:**
+**DS validation TSV — list page then detail page; compare keyword is on detail only:**
 
 ```python
-ds.open()
-ds.create_data_submission("New", "metadata only", "GC", "autoQA - AutomationQA_Study")
+from crdc_pw.pages.data_submission_details import DataSubmissionDetailPage
+from crdc_pw.pages.data_submissions_list import DataSubmissionsListPage
+
+ds_list = DataSubmissionsListPage(hub)
+ds_list.open()
+ds_list.create_data_submission("New", "metadata only", "GC", "autoQA - AutomationQA_Study")
+detail = DataSubmissionDetailPage(hub)
 detail.upload_folder("TC08")
 detail.click_validate()
 detail.verify_validation_results_vs_expected_for_tc("TC08", model="GC")
