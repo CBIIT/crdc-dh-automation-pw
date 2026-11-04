@@ -32,7 +32,7 @@ fixture hub  →  test (scenario + asserts)  →  page object  →  YAML locator
 | `tests/AuxiliaryTests/` | Live Hub cases (Katalon area name, **no** `CRDC/` prefix) |
 | `tests/Pbac/` | TC01 PBAC Fedlead defaults |
 | `tests/SuiteSetup/` | EnableAllPermissions — `CRDC_PBAC` restore after TC01 (Master; run PBAC serial) |
-| `tests/DataSubmissions/` | GC metadata VR (TC08 invalid integer) |
+| `tests/DataSubmissions/` | DS flow tests (e.g. CRDCDH-697 headers); metadata VR is Excel under `tests/DataValidation/` |
 | `src/crdc_pw/pages/data_submissions_list.py` | DS list/create (`DataSubmissionsListPage`) |
 | `src/crdc_pw/pages/data_submission_details.py` | DS upload/validate/VR/error dialog (`DataSubmissionDetailPage`) |
 | `src/crdc_pw/pages/submission_requests_list.py` | SR list/filters (`SubmissionRequestsListPage`) |

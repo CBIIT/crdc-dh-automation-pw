@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import re
 from pathlib import Path
+from typing import Mapping
 
 from playwright.sync_api import Locator, expect
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -30,6 +31,34 @@ from crdc_pw.utils.validation_results import (
 
 log = logging.getLogger("crdc_pw.data_submission_details")
 
+# QA automation DS create + summary header oracles (Katalon utilities.DataSubmissions static defaults)
+DS_AUTOMATION_STUDY_CREATE = "autoQA - AutomationQA_Study"
+DS_EXPECTED_STUDY_HEADER = "autoQA"
+DS_EXPECTED_PROGRAM = "AUTOPROGRAM"
+DS_EXPECTED_SUBMISSION_TYPE_NEW = "New/Update"
+DS_EXPECTED_COLLABORATORS_COUNT = "0"
+DS_EXPECTED_DATA_CONCIERGE = "pbac.dcp-automation Please Do Not Edit"
+DS_COLLABORATORS_TOOLTIP = "Click to add new collaborators or view existing ones."
+
+_SUMMARY_HEADER_LABELS: dict[str, str] = {
+    "submission_name": "Submission Name",
+    "submitter": "Submitter",
+    "submission_type": "Submission Type",
+    "collaborators": "Collaborators",
+    "study": "Study",
+    "data_commons": "Data Commons",
+    "program": "Program",
+    "data_concierge": "Data Concierge",
+}
+
+
+def normalize_summary_header_value(value: str | None) -> str:
+    """Whitespace-normalize summary header text (Katalon compareAndReport)."""
+    if not value:
+        return ""
+    return re.sub(r"\s+", " ", value).strip()
+
+
 CHOOSE_FILES = "CRDC/DataSubmissions/ChooseFiles-Btn"
 UPLOAD = "CRDC/DataSubmissions/Upload-Btn"
 UPLOADING = "CRDC/DataSubmissions/Validation/Uploading-Text"
@@ -49,6 +78,9 @@ ERR_CLOSE = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/Close-Btn"
 ERR_SEVERITY = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/IssueSeverity-Lbl"
 ERR_MESSAGE = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/IssueMessage-Lbl"
 
+SUMMARY_SUBMISSION_NAME = "CRDC/AILocators/DataSubmissions/Detail/Summary/SubmissionName-Lbl"
+SUMMARY_COLLABORATORS_BTN = "CRDC/AILocators/DataSubmissions/Detail/Summary/Collaborators-Btn"
+SUMMARY_HEADER_ROOT = "CRDC/AILocators/DataSubmissions/Detail/Summary/SummaryHeader-Root"
 _TRUNCATED = 15
 _UPLOAD_MS = 60_000
 
@@ -66,6 +98,124 @@ class DataSubmissionDetailPage(BasePage):
     """Open submission: metadata upload, Validate, Validation Results table."""
 
     VALIDATE_MS = 300_000
+
+    @property
+    def collaborators_button(self) -> Locator:
+        """Collaborators control on the summary header (tooltip hover target)."""
+        return self._loc(SUMMARY_COLLABORATORS_BTN)
+
+    @property
+    def submission_name_tooltip_trigger(self) -> Locator:
+        """Value cell beside Submission Name (hover for full name tooltip)."""
+        return self._summary_label_value_sibling("Submission Name")
+
+    def read_summary_header(self) -> dict[str, str]:
+        """Summary panel fields as submission_name, submitter, submission_type, collaborators, study, data_commons, program, data_concierge."""
+        self._loc(SUMMARY_SUBMISSION_NAME).wait_for(state="visible")
+        submission_name = self._read_submission_name_display()
+        return {
+            "submission_name": submission_name,
+            "submitter": self._summary_value_by_label_or_aria("Submitter"),
+            "submission_type": self._summary_value_by_label("Submission Type"),
+            "collaborators": (self.collaborators_button.inner_text() or "").strip(),
+            "study": self._summary_value_by_label("Study"),
+            "data_commons": self._summary_value_by_label("Data Commons"),
+            "program": self._summary_value_by_label("Program"),
+            "data_concierge": self._summary_value_by_label_or_aria("Data Concierge"),
+        }
+
+    def verify_summary_header_fields(
+        self,
+        expected: Mapping[str, str],
+        *,
+        actual: dict[str, str] | None = None,
+    ) -> None:
+        """Assert summary header values after whitespace normalization (Katalon compareAndReport)."""
+        if actual is None:
+            actual = self.read_summary_header()
+        log.info("Verifying data submission summary header (%d fields)", len(expected))
+        failures: list[str] = []
+        for key, expected_raw in expected.items():
+            label = _SUMMARY_HEADER_LABELS.get(key, key)
+            exp = normalize_summary_header_value(expected_raw)
+            act = normalize_summary_header_value(actual.get(key, ""))
+            status = "Pass" if exp == act else "Fail"
+            log.info(
+                "Summary header %s | expected: %s | actual: %s | %s",
+                label,
+                exp or "(empty)",
+                act or "(empty)",
+                status,
+            )
+            if exp != act:
+                failures.append(f"{label}: expected {exp!r}, got {act!r}")
+        if failures:
+            raise AssertionError("Summary header mismatch:\n" + "\n".join(failures))
+
+    def _read_submission_name_display(self) -> str:
+        """Full submission name: sibling value cell aria-label (Katalon getHeaderValueByLabelOrAria), then label fallbacks."""
+        from_sibling = self._summary_value_by_label_or_aria("Submission Name")
+        if from_sibling:
+            return from_sibling
+        label = self._loc(SUMMARY_SUBMISSION_NAME)
+        aria = label.get_attribute("aria-label")
+        if aria:
+            return aria.strip()
+        return (label.inner_text() or "").strip()
+
+    def _summary_header_xpath_root(self) -> str:
+        """Detail summary strip (avoids list filters that also mention Submitter)."""
+        return self.locators.get(SUMMARY_HEADER_ROOT)
+
+    def _summary_label_value_sibling(self, label: str) -> Locator:
+        """Value cell immediately after a summary label (Hub truncated-text-label rows)."""
+        lit = self._xpath_literal(label)
+        root = self._summary_header_xpath_root()
+        exact = self.page.locator(
+            f"{root}//*[@data-testid='truncated-text-label'][normalize-space(.)={lit}]"
+            "/following-sibling::*[1]"
+        )
+        if exact.count() > 0:
+            return exact.first
+        loose = self.page.locator(
+            f"{root}//*[@data-testid='truncated-text-label'][contains(normalize-space(.), {lit})]"
+            "/following-sibling::*[1]"
+        )
+        if loose.count() > 0:
+            return loose.first
+        return self.page.locator(
+            f"{root}//*[contains(normalize-space(.), {lit})]/following-sibling::*[1]"
+        ).first
+
+    def _summary_value_by_label(self, label: str) -> str:
+        sibling = self._summary_label_value_sibling(label)
+        cells = sibling.locator(
+            "[data-testid='property-value'], [data-testid='submission-name-display']"
+        )
+        if cells.count() > 0:
+            return (cells.first.inner_text() or "").strip()
+        return (sibling.inner_text() or "").strip()
+
+    def _summary_value_by_label_or_aria(self, label: str) -> str:
+        sibling = self._summary_label_value_sibling(label)
+        wrapper = sibling.locator("[data-testid='truncated-text-wrapper']")
+        if wrapper.count() > 0:
+            aria = wrapper.first.get_attribute("aria-label")
+            if aria:
+                return aria.strip()
+        text = self._summary_value_by_label(label)
+        if text:
+            return text
+        return (sibling.inner_text() or "").strip()
+
+    @staticmethod
+    def _xpath_literal(text: str) -> str:
+        if "'" not in text:
+            return f"'{text}'"
+        if '"' not in text:
+            return f'"{text}"'
+        parts = text.split("'")
+        return "concat(" + ", \"'\", ".join(f"'{p}'" for p in parts) + ")"
 
     def upload_folder(self, tc_name: str, root: Path | None = None) -> None:
         """Choose every top-level TSV in MetadataData/<tcName>, Upload, and wait until Uploading is gone (skips expected-ValidationResults)."""

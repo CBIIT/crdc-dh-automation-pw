@@ -22,7 +22,7 @@ from crdc_pw.pages.submission_requests_list import SubmissionRequestsListPage
 from crdc_pw.utils.submission_request_excel import get_sheet_row
 from crdc_pw.utils.ui_helpers import (
     assert_button_enabled,
-    verify_tooltip_on_hover,
+    verify_tooltip_on_hover_page,
     wait_for_button_stable,
 )
 
@@ -32,7 +32,6 @@ log = logging.getLogger("crdc_pw.submission_request_form")
 SR_SAVE_DISABLED_TOOLTIP = (
     "No changes have been made. Please make edits to the form then click save."
 )
-SR_SAVE_DISABLED_TOOLTIP_SUBSTRING = "No changes have been made"
 SR_IMPORT_NO_CHANGES_MESSAGE = (
     "No changes were applied. The imported file matches the current form."
 )
@@ -223,11 +222,10 @@ class SubmissionRequestFormPage(BasePage):
 
     def assert_save_disabled_tooltip(self) -> None:
         """Hover Save wrapper and assert the no-changes disabled tooltip (CRDCDH-3948)."""
-        verify_tooltip_on_hover(
-            self.page,
+        verify_tooltip_on_hover_page(
+            self,
             self._loc(_SAVE_TOOLTIP),
             SR_SAVE_DISABLED_TOOLTIP,
-            SR_SAVE_DISABLED_TOOLTIP_SUBSTRING,
         )
         log.info("Save disabled tooltip verified")
 
