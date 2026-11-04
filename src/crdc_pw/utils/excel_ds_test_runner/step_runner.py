@@ -6,7 +6,8 @@ import logging
 from pathlib import Path
 
 from crdc_pw.hub import Hub
-from crdc_pw.pages.data_submissions import DataSubmissionDetailPage, DataSubmissionsListPage
+from crdc_pw.pages.data_submission_details import DataSubmissionDetailPage
+from crdc_pw.pages.data_submissions_list import DataSubmissionsListPage
 from crdc_pw.utils.excel_ds_test_runner.loader import ExcelLoadError, load_steps
 
 log = logging.getLogger("crdc_pw.utils.excel_ds_test_runner")

@@ -15,7 +15,8 @@ from __future__ import annotations
 import pytest
 
 from crdc_pw.hub import Hub
-from crdc_pw.pages.data_submissions import DataSubmissionDetailPage, DataSubmissionsListPage
+from crdc_pw.pages.data_submission_details import DataSubmissionDetailPage
+from crdc_pw.pages.data_submissions_list import DataSubmissionsListPage
 
 pytestmark = pytest.mark.CRDC_DataValidation
 

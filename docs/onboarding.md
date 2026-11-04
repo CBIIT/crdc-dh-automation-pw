@@ -179,7 +179,7 @@ crdc-dh-automation-pw/
 │   ├── hub.py              # thin session the fixture yields (page, locators, settings, role)
 │   ├── auth.py             # Login.gov OTP / Grant (fixture only; tests do not call this)
 │   ├── config.py           # which yaml file, which role credentials
-│   ├── pages/              # login, header, studies, programs, users, data_submissions, release_notes
+│   ├── pages/              # login, header, studies, programs, users, data_submissions_list, data_submission_details, release_notes
 │   ├── locators/loader.py  # Katalon path → XPath string
 │   └── utils/              # pbac_sheet, validation_results, static_content, otp
 ├── locators/CRDC/          # YAML catalog (was Object Repository/*.rs)
@@ -329,7 +329,8 @@ pytest
 | Timeout on Manage Studies / filters | `pages/studies.py` then YAML under `locators/CRDC/AILocators/Studies/` |
 | Timeout on Release Notes / empty markdown | `pages/release_notes.py` then YAML under `locators/CRDC/AILocators/ReleaseNotes/` and Footer |
 | PBAC Pass/Fail in Excel | `utils/pbac_sheet.py` and `OutputFiles/PBAC_Defaults_Results.xlsx` |
-| Timeout on Data Submissions create / Validate / VR table | `pages/data_submissions.py` then YAML under `locators/CRDC/DataSubmissions/` |
+| Timeout on Data Submissions create / list filter | `pages/data_submissions_list.py` then YAML under `locators/CRDC/AILocators/DataSubmissions/List/` |
+| Timeout on upload / Validate / VR table / error-details dialog | `pages/data_submission_details.py` then YAML under `locators/CRDC/DataSubmissions/` |
 | VR vs expected TSV mismatch | `utils/validation_results.py` and `InputFiles/CRDC/MetadataData/<TC>/expected-ValidationResults/` |
 | “Who even opened the browser?” | `tests/conftest.py` fixture `hub` |
 

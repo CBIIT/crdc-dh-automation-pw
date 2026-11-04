@@ -6,7 +6,7 @@ import re
 
 import pytest
 
-from crdc_pw.pages.data_submissions import (
+from crdc_pw.pages.data_submissions_list import (
     AUTOMATION_SUBMISSION_NAME_LEN,
     _automation_submission_name,
 )
