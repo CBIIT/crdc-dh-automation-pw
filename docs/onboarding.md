@@ -304,9 +304,9 @@ The test never sees the XPath or the Katalon path. If a locator is wrong, the fa
 | `studies.apply_filters(study_name="autoQA", program="AutoTest-Program")` | Same filter values as Katalon |
 | `assert` row count / `"autoQA"` in a cell | Fail if the filtered table is empty or off |
 
-The fixture is how we signed in. Tests do not call `login_otp` again. They call `auth.switch_user(hub, role)` only when the *scenario* changes user (PBAC, SR TC03/TC04). Page objects take `hub` and read the live tab via `@property page`, so you do **not** rebuild them after `switch_user` unless you introduce a new screen type for that leg. See [hub-backed-page-objects.md](hub-backed-page-objects.md).
+The fixture is how we signed in. Tests do not call `login_otp` again. They call `auth.switch_user(hub, role)` only when the *scenario* changes user (PBAC, SR TC03/TC04). Page objects take `hub` and read the live tab via `@property page`, so you do **not** rebuild them after `switch_user` unless you introduce a new screen type for that leg.
 
-**Submission Request three modules:** list screen (`SubmissionRequestsListPage`), questionnaire (`SubmissionRequestFormPage`), and workflow facade (`SubmissionRequest` — inquire/approve/reopen orchestration, not a fourth UI page). Section A–D Excel fill will move onto the form page; the facade stays thin — see [sr-form-section-fill-refactor.md](sr-form-section-fill-refactor.md).
+**Submission Request two modules:** list (`SubmissionRequestsListPage`) and form (`SubmissionRequestFormPage` — questionnaire UI, Excel section fill, and cross-route keywords such as inquire/approve/open-by-study via internal list calls). Construct with `PageClass(hub)` only.
 
 ```
 pytest

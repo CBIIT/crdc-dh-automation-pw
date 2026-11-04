@@ -11,7 +11,6 @@ import pytest
 
 from crdc_pw.hub import Hub
 from crdc_pw.locators.loader import repo_root
-from crdc_pw.pages.submission_request import SubmissionRequest
 from crdc_pw.pages.submission_request_form import (
     SR_IMPORT_VALIDATION_ERRORS_FIXTURE,
     SR_IMPORT_VALIDATION_ERRORS_MESSAGE,
@@ -30,25 +29,24 @@ def test_TC02_CRDCDH_3948_InProgress_SaveRequiresNewContent(hub: Hub) -> None:
 
     sr_list = SubmissionRequestsListPage(hub)
     form = SubmissionRequestFormPage(hub)
-    sr = SubmissionRequest(hub)
 
     # Setup: partial Sections A + B, save, reopen from list
     sr_list.open()
     sr_list.start_new_submission_request()
-    sr.enter_principal_investigator_info(2)
-    sr.enter_primary_contact_info(2)
+    form.enter_principal_investigator_info(2)
+    form.enter_primary_contact_info(2)
     form.click_save()
     form.click_next()
-    sr.enter_program_info("Other", 6)
-    sr.enter_study_info(1)
-    sr.enter_funding_agency_info(1)
+    form.enter_program_info("Other", 6)
+    form.enter_study_info(1)
+    form.enter_funding_agency_info(1)
     hub.page.wait_for_timeout(2000)
     form.click_save()
     form.assert_status("IN PROGRESS")
 
-    study_name = SubmissionRequest.last_entered_study_title
+    study_name = SubmissionRequestFormPage.last_entered_study_title
     assert study_name
-    sr.open_submission_request_form_for_study(study_name)
+    form.open_submission_request_form_for_study(study_name)
     form.assert_status("IN PROGRESS")
 
     # Step 2: no new edits — Save disabled + tooltip
