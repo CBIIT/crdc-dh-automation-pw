@@ -42,6 +42,7 @@ DIALOG = "CRDC/AILocators/DataSubmissions/CreateDialog/Dialog"
 _UUID = re.compile(
     r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
 )
+# Hub stores at most this many characters of the submission name (parallel-safe auto-test names use all 25).
 AUTOMATION_SUBMISSION_NAME_LEN = 25
 
 
@@ -94,11 +95,7 @@ class DataSubmissionsListPage(BasePage):
         data_model: str,
         study: str,
     ) -> str:
-        """Fill the create dialog, then open the new row from the list.
-
-        Same args as Katalon createDataSubmission (New, metadata only, GC, study).
-        Returns 25-char auto-test_yyyyMMdd_HHxxxx name (xxxx = hex). Does not delete the leftover DS.
-        """
+        """Fill the create dialog, filter the list, open the new submission on the upload-activity page, and return its 25-char auto-test name (Katalon createDataSubmission args)."""
         self._loc(CREATE_BTN).click()
 
         if sub_type.lower() == "delete":

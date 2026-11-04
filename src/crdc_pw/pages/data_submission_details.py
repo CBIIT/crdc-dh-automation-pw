@@ -68,7 +68,7 @@ class DataSubmissionDetailPage(BasePage):
     VALIDATE_MS = 300_000
 
     def upload_folder(self, tc_name: str, root: Path | None = None) -> None:
-        """Choose every top-level TSV in MetadataData/<tcName>, Upload, wait until Uploading is gone."""
+        """Choose every top-level TSV in MetadataData/<tcName>, Upload, and wait until Uploading is gone (skips expected-ValidationResults)."""
         files, _nodes = list_tsv_files_and_nodes_for_tc(tc_name, root=root or repo_root())
         if not files:
             return
@@ -123,6 +123,7 @@ class DataSubmissionDetailPage(BasePage):
         )
 
     def apply_vr_filters(self, node: str, severity: str, issue_type: str) -> None:
+        """Set node, severity, and issue type filters and wait for the Validation Results table to settle."""
         display_node = node.replace("datafile", "data file") if node == "datafile" else node
         self._wait_loading_gone()
         self._select_li(self._loc(VR_NODE), display_node)
@@ -134,6 +135,7 @@ class DataSubmissionDetailPage(BasePage):
         self._wait_for_table_settled(self._loc(LOADING_ROW), rows)
 
     def read_vr_rows(self) -> list[tuple[str, str, str]]:
+        """Each Validation Results row as (submitted identifier, issue type, severity), with full text from truncated cells."""
         header_names = [(el.inner_text() or "").strip() for el in self._loc(VR_HEADERS).all()]
         idx_submitted = _header_index(header_names, "Submitted Identifier")
         idx_issue = _header_index(header_names, "Issue Type")
@@ -158,6 +160,7 @@ class DataSubmissionDetailPage(BasePage):
         return out
 
     def verify_validation_results_vs_expected_for_tc(self, tc_name: str, model: str) -> None:
+        """Compare the VR table to expected TSVs for each node, severity, and issue type (Katalon verifyValidationResultsVsExpectedForTC)."""
         self.open_validation_results()
         nodes = list_nodes_from_expected_validation_results_folder(tc_name)
         if not nodes:
@@ -217,6 +220,7 @@ class DataSubmissionDetailPage(BasePage):
             )
 
     def click_see_details_for_submitted_id(self, submitted_identifier: str) -> None:
+        """Open See details on the VR row whose Submitted Identifier matches (case-insensitive)."""
         target = (submitted_identifier or "").strip()
         if not target:
             raise RuntimeError("click_see_details_for_submitted_id: empty submitted identifier")
@@ -243,6 +247,7 @@ class DataSubmissionDetailPage(BasePage):
         log.info("click_see_details_for_submitted_id: opened error details dialog for %s", target)
 
     def read_error_details_dialog_issues(self) -> list[dict[str, str]]:
+        """Each open error-details dialog issue as a dict with keys severity and message."""
         severities = self._loc(ERR_SEVERITY)
         messages = self._loc(ERR_MESSAGE)
         count = min(severities.count(), messages.count())
@@ -258,6 +263,7 @@ class DataSubmissionDetailPage(BasePage):
         return issues
 
     def close_error_details_dialog(self) -> None:
+        """Close the error-details dialog and wait until it is hidden."""
         self._loc(ERR_CLOSE).click()
         self._loc(ERR_DIALOG).wait_for(state="hidden", timeout=5_000)
 
@@ -266,6 +272,7 @@ class DataSubmissionDetailPage(BasePage):
         submitted_identifier: str,
         expected_issues: list[dict[str, str]],
     ) -> None:
+        """See details for one row, assert dialog issues against expected, then close the dialog."""
         self.click_see_details_for_submitted_id(submitted_identifier)
         actual = self.read_error_details_dialog_issues()
         errors = diff_error_details_dialog_issues(expected_issues, actual)
@@ -279,6 +286,7 @@ class DataSubmissionDetailPage(BasePage):
             )
 
     def verify_error_details_for_submitted_id_for_tc(self, tc_name: str, model: str) -> None:
+        """For each expected TSV row with issues, filter VR, open See details, and assert the dialog (Katalon verifyErrorDetailsForSubmittedIdForTC)."""
         self.open_validation_results()
         nodes = list_nodes_from_expected_validation_results_folder(tc_name)
         if not nodes:
