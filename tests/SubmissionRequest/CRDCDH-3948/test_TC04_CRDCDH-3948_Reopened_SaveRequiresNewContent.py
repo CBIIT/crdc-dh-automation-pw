@@ -13,7 +13,6 @@ import pytest
 
 from crdc_pw.auth import switch_user
 from crdc_pw.hub import Hub
-from crdc_pw.pages.submission_request import SubmissionRequest
 from crdc_pw.pages.submission_request_form import (
     SR_IMPORT_NO_CHANGES_MESSAGE,
     SubmissionRequestFormPage,
@@ -31,12 +30,11 @@ def test_TC04_CRDCDH_3948_Reopened_SaveRequiresNewContent(hub: Hub) -> None:
 
     sr_list = SubmissionRequestsListPage(hub)
     form = SubmissionRequestFormPage(hub)
-    sr = SubmissionRequest(hub)
 
     # --- Submitter: full questionnaire and submit ---
     sr_list.open()
     sr_list.start_new_submission_request()
-    sr.fill_submission_request_all_sections(
+    form.fill_submission_request_all_sections(
         2,
         "Other",
         6,
@@ -54,18 +52,18 @@ def test_TC04_CRDCDH_3948_Reopened_SaveRequiresNewContent(hub: Hub) -> None:
         1,
         1,
     )
-    study_name = SubmissionRequest.last_entered_study_title
+    study_name = SubmissionRequestFormPage.last_entered_study_title
     assert study_name
     form.click_submit_button()
 
     # Step 1: Fed Lead approves, then Reopen from list (does not open the questionnaire).
     switch_user(hub, "Fedlead")
-    sr.approve_submission_request(study_name)
-    sr.reopen_approved_submission_request(study_name)
+    form.approve_submission_request(study_name)
+    form.reopen_approved_submission_request(study_name)
 
     # Step 2: Submitter opens form from list — verify status bar REOPENED.
     switch_user(hub, "Submitter")
-    sr.open_submission_request_form_for_study(study_name)
+    form.open_submission_request_form_for_study(study_name)
     form.assert_status("REOPENED")
 
     # Step 3: No new edits — Save disabled and tooltip.
