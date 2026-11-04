@@ -25,6 +25,24 @@ CANONICAL_VR_SEQUENCE = (
     "verify_validation_results",
 )
 
+CANONICAL_VR_SEQUENCE_WITH_ERROR_DETAILS = (
+    "open_data_submissions",
+    "create_data_submission",
+    "upload_metadata_folder",
+    "click_validate",
+    "verify_error_details",
+    "verify_validation_results",
+)
+
+
+def _expected_step_sequence(path: Path, normalized: list[str]) -> tuple[str, ...]:
+    """686-Partial stays 5-step; 699/ICDC/CTDC Excel cases use error-details step."""
+    if "686-Partial" in path.as_posix():
+        return CANONICAL_VR_SEQUENCE
+    if "verify_error_details" in normalized:
+        return CANONICAL_VR_SEQUENCE_WITH_ERROR_DETAILS
+    return CANONICAL_VR_SEQUENCE
+
 
 def _norm_action(action: str) -> str:
     return action.strip().lower().replace(" ", "_").replace("-", "_")
@@ -50,14 +68,17 @@ def _validate_case_workbook(path: Path) -> None:
         pytest.fail(f"{path}: Steps sheet has no action rows")
 
     normalized = [_norm_action(s.action) for s in steps]
-    if normalized != list(CANONICAL_VR_SEQUENCE):
+    expected_sequence = _expected_step_sequence(path, normalized)
+    if normalized != list(expected_sequence):
         pytest.fail(
-            f"{path}: expected VR step sequence {CANONICAL_VR_SEQUENCE}, got {tuple(normalized)}"
+            f"{path}: expected VR step sequence {expected_sequence}, got {tuple(normalized)}"
         )
 
     upload_folder: str | None = None
     verify_case_id: str | None = None
     verify_model: str | None = None
+    error_details_case_id: str | None = None
+    error_details_model: str | None = None
     create_commons: str | None = None
 
     for step in steps:
@@ -85,6 +106,11 @@ def _validate_case_workbook(path: Path) -> None:
             if not params:
                 pytest.fail(f"{loc}: Params must be the MetadataData folder name (e.g. TC08)")
             upload_folder = params
+        elif action == "verify_error_details":
+            if not params or not model:
+                pytest.fail(f"{loc}: Params = case folder id, Model = commons (GC, ICDC, CTDC)")
+            error_details_case_id = params
+            error_details_model = model
         elif action == "verify_validation_results":
             if not params or not model:
                 pytest.fail(f"{loc}: Params = case folder id, Model = commons (GC, ICDC, CTDC)")
@@ -97,6 +123,11 @@ def _validate_case_workbook(path: Path) -> None:
             f"{path}: upload_metadata_folder Params {upload_folder!r} "
             f"must match verify_validation_results Params {verify_case_id!r}"
         )
+    if error_details_case_id is not None:
+        if error_details_case_id != verify_case_id or error_details_model != verify_model:
+            pytest.fail(
+                f"{path}: verify_error_details Params/Model must match verify_validation_results"
+            )
     expected_suffix = f"MetadataData/{verify_case_id}".replace("\\", "/")
     if not input_root.replace("\\", "/").endswith(expected_suffix):
         pytest.fail(
@@ -237,6 +268,9 @@ def test_run_testcase_excel_dispatches_steps(tmp_path: Path) -> None:
         def click_validate(self) -> None:
             calls.append(("validate",))
 
+        def verify_error_details_for_submitted_id_for_tc(self, tc: str, *, model: str) -> None:
+            calls.append(("error_details", tc, model))
+
         def verify_validation_results_vs_expected_for_tc(self, tc: str, *, model: str) -> None:
             calls.append(("verify", tc, model))
 
@@ -263,6 +297,68 @@ def test_run_testcase_excel_dispatches_steps(tmp_path: Path) -> None:
     assert ("upload", "TC08") in calls
     assert ("validate",) in calls
     assert calls[-1] == ("verify", "TC08", "GC")
+
+
+@pytest.mark.unit
+def test_run_testcase_excel_dispatches_error_details_step(tmp_path: Path) -> None:
+    path = tmp_path / "TC99_error_details.xlsx"
+    _write_minimal_excel_case(
+        path,
+        role="Submitter",
+        input_root="InputFiles/CRDC/MetadataData/TC04",
+        steps=[
+            ("open_data_submissions", "", ""),
+            (
+                "create_data_submission",
+                "New|metadata only|GC|autoQA - AutomationQA_Study",
+                "",
+            ),
+            ("upload_metadata_folder", "TC04", ""),
+            ("click_validate", "", ""),
+            ("verify_error_details", "TC04", "GC"),
+            ("verify_validation_results", "TC04", "GC"),
+        ],
+    )
+    calls: list[tuple[str, ...]] = []
+
+    class StubList:
+        def open(self) -> None:
+            calls.append(("open",))
+
+        def create_data_submission(self, a: str, b: str, c: str, d: str) -> None:
+            calls.append(("create", a, b, c, d))
+
+    class StubDetail:
+        def upload_folder(self, folder: str) -> None:
+            calls.append(("upload", folder))
+
+        def click_validate(self) -> None:
+            calls.append(("validate",))
+
+        def verify_error_details_for_submitted_id_for_tc(self, tc: str, *, model: str) -> None:
+            calls.append(("error_details", tc, model))
+
+        def verify_validation_results_vs_expected_for_tc(self, tc: str, *, model: str) -> None:
+            calls.append(("verify", tc, model))
+
+    class StubHub:
+        page = object()
+        locators = object()
+
+    import crdc_pw.utils.excel_ds_test_runner.step_runner as sr
+
+    orig_list = sr.DataSubmissionsListPage
+    orig_detail = sr.DataSubmissionDetailPage
+    sr.DataSubmissionsListPage = lambda *a, **k: StubList()  # type: ignore[misc, assignment]
+    sr.DataSubmissionDetailPage = lambda *a, **k: StubDetail()  # type: ignore[misc, assignment]
+    try:
+        run_testcase_excel(StubHub(), path)  # type: ignore[arg-type]
+    finally:
+        sr.DataSubmissionsListPage = orig_list
+        sr.DataSubmissionDetailPage = orig_detail
+
+    assert ("error_details", "TC04", "GC") in calls
+    assert calls.index(("error_details", "TC04", "GC")) < calls.index(("verify", "TC04", "GC"))
 
 
 @pytest.mark.unit

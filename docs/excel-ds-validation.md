@@ -45,10 +45,12 @@ Add `--headed` to watch the browser.
 | create_data_submission | New | metadata only | GC | autoQA - AutomationQA_Study | |
 | upload_metadata_folder | `<caseId>` | |
 | click_validate | | |
+| verify_error_details | `<caseId>` | `GC` |
 | verify_validation_results | `<caseId>` | `GC` |
 
 - **create_data_submission:** four fields in **Params**, separated by `|` e.g. `New|metadata only|GC|autoQA - AutomationQA_Study`.
-- **verify_validation_results:** case id in **Params**, commons in **Model** (GC, ICDC, CTDC).
+- **verify_error_details:** (optional) same **Params** / **Model** as `verify_validation_results`. Opens **See details** on Validation Results rows and checks the error-details dialog against `Expected_Issues` (or `Issue_Type`) in the same `expected-ValidationResults/*.tsv` files. **CRDCDH-686-Partial** workbooks omit this step (Katalon table-only).
+- **verify_validation_results:** case id in **Params**, commons in **Model** (GC, ICDC, CTDC). Compares the aggregated Validation Results table to expected TSVs.
 
 **Settings** (tab 2): `role`, `enabled` (Y/N). Workbook run settings—not `config/qa.yaml`.
 
@@ -89,12 +91,12 @@ Each `TC*.xlsx` has **Steps** (Hub actions) and **Settings** (`role`, `enabled`)
          │ Playwright drives CRDC Hub (create, upload, validate)│
          └──────────┬─────────────────────────────┬─────────────┘
                     │                             │
-     upload step    │                             │ verify step
-     reads *.tsv    │                             │ scrapes Validation Results tab
+     upload step    │                             │ verify steps
+     reads *.tsv    │                             │ VR tab + See details + table
                     ▼                             ▼
          ┌──────────────────────┐      ┌───────────────────────┐
          │ MetadataData/<case>/ │      │ validation_results.py │
          │ upload TSVs          │      │                       │
-         │ expected-VR/*.tsv ───┼─────►│ UI vs expected TSVs   │
+         │ expected-VR/*.tsv ───┼─────►│ dialog + table oracles│
          └──────────────────────┘      └───────────────────────┘
 ```
