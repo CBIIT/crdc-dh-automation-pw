@@ -151,3 +151,18 @@ def test_diff_error_details_extra_actual_allowed() -> None:
         {"severity": "Warning", "message": "Other issue"},
     ]
     assert diff_error_details_dialog_issues(expected, actual) == []
+
+
+@pytest.mark.parametrize(
+    "actual",
+    [
+        [],
+        [{"severity": "Warning", "message": "Required property"}],
+        [{"severity": "Error", "message": "Different issue"}],
+    ],
+)
+def test_diff_error_details_missing_or_mismatched_issue_fails(
+    actual: list[dict[str, str]],
+) -> None:
+    expected = [{"severity": "Error", "message": "Required property"}]
+    assert diff_error_details_dialog_issues(expected, actual)
