@@ -1,0 +1,2 @@
+type	Issue_Type	Expected_Severity	Expected_Issues	 study.study_short_name	digital_object_id	pubmed_id	publication_title	authorship	year_of_publication	journal_citation
+publication	Invalid integer value	Error	"[CTDC_publication_v1.22.1.tsv: line 2] Property ""year_of_publication"": ""1999_test"" is not a valid integer type."	autoQA	DOI1	4	Publish	authr	1999_test	journa;cit

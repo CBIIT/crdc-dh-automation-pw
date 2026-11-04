@@ -4,7 +4,7 @@ This framework allows Excel-driven test cases for Data Submission validation. Ea
 
 It is aimed at **QA engineers**: you supply **different datasets** (another **data commons** (GC, ICDC, CTDC, …), another **study**, upload TSVs + expected Validation Results) and the **Steps** sheet; automation handles login (from Settings `role`), navigation, and comparison.
 
-`tests/DataValidation/` — Excel-driven data validation cases only.
+`tests/DataValidation/` — Excel-driven data validation cases only. Layout mirrors Katalon: `tests/DataValidation/<GC|ICDC|CTDC>/<ticket-folder>/TC##_....xlsx` (e.g. `GC/CRDCDH-686-Partial/TC08_...`).
 `tests/DataSubmissions/` — Other DS lifecycle tests.
 
 ---
@@ -14,15 +14,16 @@ It is aimed at **QA engineers**: you supply **different datasets** (another **da
 | Goal | Command |
 |------|---------|
 | Run all Excel test cases | `pytest tests/DataValidation -m CRDC_DataValidation_Excel` |
+| Run all in parallel (shared Submitter) | `pytest tests/DataValidation -m CRDC_DataValidation_Excel -n 4` |
 | Run a specific test case | `pytest tests/DataValidation -m CRDC_DataValidation_Excel -k TC09` |
 
-Add `--headed` to watch the browser.
+Add `--headed` to watch the browser. Create step assigns a **25-character** name `auto-test_yyyyMMdd_HHxxxx` (`xxxx` = random hex for parallel runs; Hub truncates longer names).
 
 ---
 
 ## Add a new test case
 
-1. **Copy** `tests/DataValidation/GC/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx` → `tests/DataValidation/<model>/TC09_CRDCDH-###_<Scenario>.xlsx` (must start with **TC**; include ticket id for traceability, e.g. **CRDCDH-686**).
+1. **Copy** `tests/DataValidation/GC/CRDCDH-686-Partial/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx` → `tests/DataValidation/<model>/<ticket-folder>/TC09_CRDCDH-###_<Scenario>.xlsx` (mirror Katalon `Test Cases/CRDC/DataSubmissions/...`; name must start with **TC**).
 2. **Copy** `InputFiles/CRDC/MetadataData/TC08/` → `MetadataData/TC09/` (or your case id). Replace upload `*.tsv` and files under `expected-ValidationResults/` and update the data as needed.
 3. In the test case, edit **Settings** (2nd tab): `role` = e.g. **Submitter**; `enabled` = **Y** (or **N** while drafting).
 4. Edit **Steps** (1st tab): row 2 = input root e.g. `InputFiles/CRDC/MetadataData/TC09`; update create/upload/verify rows for your **study**, **model**, and folder name (see [Workbook format](#workbook-format)).
@@ -45,10 +46,12 @@ Add `--headed` to watch the browser.
 | create_data_submission | New | metadata only | GC | autoQA - AutomationQA_Study | |
 | upload_metadata_folder | `<caseId>` | |
 | click_validate | | |
+| verify_error_details | `<caseId>` | `GC` |
 | verify_validation_results | `<caseId>` | `GC` |
 
 - **create_data_submission:** four fields in **Params**, separated by `|` e.g. `New|metadata only|GC|autoQA - AutomationQA_Study`.
-- **verify_validation_results:** case id in **Params**, commons in **Model** (GC, ICDC, CTDC).
+- **verify_error_details:** (optional) same **Params** / **Model** as `verify_validation_results`. Opens **See details** on Validation Results rows and checks the error-details dialog against `Expected_Issues` (or `Issue_Type`) in the same `expected-ValidationResults/*.tsv` files. **CRDCDH-686-Partial** workbooks omit this step (Katalon table-only).
+- **verify_validation_results:** case id in **Params**, commons in **Model** (GC, ICDC, CTDC). Compares the aggregated Validation Results table to expected TSVs.
 
 **Settings** (tab 2): `role`, `enabled` (Y/N). Workbook run settings—not `config/qa.yaml`.
 
@@ -89,12 +92,12 @@ Each `TC*.xlsx` has **Steps** (Hub actions) and **Settings** (`role`, `enabled`)
          │ Playwright drives CRDC Hub (create, upload, validate)│
          └──────────┬─────────────────────────────┬─────────────┘
                     │                             │
-     upload step    │                             │ verify step
-     reads *.tsv    │                             │ scrapes Validation Results tab
+     upload step    │                             │ verify steps
+     reads *.tsv    │                             │ VR tab + See details + table
                     ▼                             ▼
          ┌──────────────────────┐      ┌───────────────────────┐
          │ MetadataData/<case>/ │      │ validation_results.py │
          │ upload TSVs          │      │                       │
-         │ expected-VR/*.tsv ───┼─────►│ UI vs expected TSVs   │
+         │ expected-VR/*.tsv ───┼─────►│ dialog + table oracles│
          └──────────────────────┘      └───────────────────────┘
 ```

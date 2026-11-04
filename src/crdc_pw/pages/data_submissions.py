@@ -3,8 +3,9 @@
 Tests construct DataSubmissionsListPage from hub, then:
   open()                       — nav Data Submissions
   create_data_submission(...)  — dialog, then filter list and open the new row
-  upload_folder / click_validate / verify_validation_results_vs_expected_for_tc
-  on DataSubmissionDetailPage. TSV matching stays in utils/validation_results.py.
+  upload_folder / click_validate / verify_error_details_for_submitted_id_for_tc /
+  verify_validation_results_vs_expected_for_tc on DataSubmissionDetailPage.
+  TSV oracles stay in utils/validation_results.py.
 
 YAML paths stay on this page. Tests do not import CRDC/... strings.
 """
@@ -13,6 +14,7 @@ from __future__ import annotations
 
 import logging
 import re
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -23,10 +25,13 @@ from crdc_pw.locators.loader import repo_root
 from crdc_pw.pages.base import BasePage
 from crdc_pw.pages.header import HeaderPage
 from crdc_pw.utils.validation_results import (
+    diff_error_details_dialog_issues,
     diff_validation_results,
+    expected_error_detail_issues_for_row,
     find_expected_validation_results_tsv,
     list_nodes_from_expected_validation_results_folder,
     list_tsv_files_and_nodes_for_tc,
+    load_all_expected_error_detail_rows_from_tsv,
     load_expected_validation_results_tsv,
     load_validation_results_mappings,
     unique_severity_issue_type_pairs_from_expected_tsv,
@@ -71,12 +76,19 @@ VR_ISSUE = "CRDC/DataSubmissions/Validation/ValidationResults_IssueType-Ddn"
 VR_HEADERS = "CRDC/DataSubmissions/Validation/Table-Headers"
 VR_ROW = "CRDC/DataSubmissions/Validation/Table-Row"
 
+ERR_DIALOG = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/Dialog"
+ERR_CLOSE = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/Close-Btn"
+ERR_SEVERITY = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/IssueSeverity-Lbl"
+ERR_MESSAGE = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/IssueMessage-Lbl"
+
 _UUID = re.compile(
     r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
 )
 # Katalon getCellText: values this short are used as-is (no truncated-wrapper lookup)
 _TRUNCATED = 15
 _UPLOAD_MS = 60_000
+# Hub stores at most 25 characters (Katalon auto-test_yyyyMMdd_HHmmss fits exactly).
+AUTOMATION_SUBMISSION_NAME_LEN = 25
 
 
 def parse_submission_id_from_text(text: str | None) -> str | None:
@@ -85,6 +97,19 @@ def parse_submission_id_from_text(text: str | None) -> str | None:
         return None
     match = _UUID.search(text)
     return match.group(0) if match else None
+
+
+def _automation_submission_name() -> str:
+    """Unique auto-test name within Hub 25-char limit (date + HH + 4 hex in time segment)."""
+    date_part = datetime.now().strftime("%Y%m%d")
+    hour = datetime.now().strftime("%H")
+    segment = f"{hour}{uuid.uuid4().hex[:4]}"
+    name = f"auto-test_{date_part}_{segment}"
+    if len(name) != AUTOMATION_SUBMISSION_NAME_LEN:
+        raise RuntimeError(
+            f"automation submission name must be {AUTOMATION_SUBMISSION_NAME_LEN} chars, got {len(name)}: {name!r}"
+        )
+    return name
 
 
 class DataSubmissionsListPage(BasePage):
@@ -112,7 +137,7 @@ class DataSubmissionsListPage(BasePage):
         """Fill the create dialog, then open the new row from the list.
 
         Same args as Katalon createDataSubmission (New, metadata only, GC, study).
-        Returns the auto-test_yyyyMMdd_HHmmss name. Does not delete the leftover DS.
+        Returns 25-char auto-test_yyyyMMdd_HHxxxx name (xxxx = hex). Does not delete the leftover DS.
         """
         self._loc(CREATE_BTN).click()
 
@@ -136,8 +161,7 @@ class DataSubmissionsListPage(BasePage):
         self._loc(STUDY_DDN).click()
         self._click_study_option(study)
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        submission_name = f"auto-test_{timestamp}"
+        submission_name = _automation_submission_name()
         log.info("Creating data submission with name %s", submission_name)
         name_box = self._loc(SUBMISSION_NAME)
         name_box.wait_for(state="visible")
@@ -250,10 +274,35 @@ class DataSubmissionDetailPage(BasePage):
         expect(btn).to_be_enabled(timeout=self.VALIDATE_MS)
 
     def open_validation_results(self) -> None:
-        """Validation Results tab and the aggregated/expanded switch (Katalon click both)."""
+        """Validation Results tab, then aggregated/expanded view with filters visible."""
         self._loc(VR_TAB).click()
-        self._loc(VR_EXPANDED).click()
         self._wait_loading_gone()
+        self._ensure_validation_results_expanded()
+
+    def _vr_node_filter_visible(self) -> bool:
+        """True when Validation Results node-type filter is on screen (expanded aggregated view)."""
+        try:
+            self._loc(VR_NODE).first.wait_for(state="visible", timeout=self.PROBE_MS)
+            return True
+        except PlaywrightTimeoutError:
+            return False
+
+    def _ensure_validation_results_expanded(self) -> None:
+        """Toggle table-state-switch until node filter is visible (switch is not idempotent)."""
+        if self._vr_node_filter_visible():
+            return
+        for attempt in range(2):
+            log.info(
+                "Validation Results filters not visible; toggling aggregated/expanded (attempt %s)",
+                attempt + 1,
+            )
+            self._loc(VR_EXPANDED).click()
+            self._wait_loading_gone()
+            if self._vr_node_filter_visible():
+                return
+        raise RuntimeError(
+            "Validation Results node filter did not become visible after toggling aggregated/expanded"
+        )
 
     def apply_vr_filters(self, node: str, severity: str, issue_type: str) -> None:
         """Node / severity / issue type dropdowns. datafile becomes 'data file'."""
@@ -354,6 +403,134 @@ class DataSubmissionDetailPage(BasePage):
         if errors:
             raise AssertionError(
                 f"verifyValidationResultsVsExpected: {len(errors)} mismatch(es). See log above."
+            )
+
+    def click_see_details_for_submitted_id(self, submitted_identifier: str) -> None:
+        """Click See details on the VR row matching Submitted Identifier (case-insensitive)."""
+        target = (submitted_identifier or "").strip()
+        if not target:
+            raise RuntimeError("click_see_details_for_submitted_id: empty submitted identifier")
+        header_names = [(el.inner_text() or "").strip() for el in self._loc(VR_HEADERS).all()]
+        idx_submitted = _header_index(header_names, "Submitted Identifier")
+        if idx_submitted < 0:
+            raise RuntimeError(
+                f"click_see_details_for_submitted_id: Submitted Identifier column not found. Headers: {header_names}"
+            )
+        rows = self._loc(VR_ROW)
+        matching: Locator | None = None
+        for i in range(rows.count()):
+            cells = rows.nth(i).locator("td")
+            cell_text = self._cell_text(cells, idx_submitted)
+            if cell_text.strip().lower() == target.lower():
+                matching = rows.nth(i)
+                break
+        if matching is None:
+            raise AssertionError(
+                f"click_see_details_for_submitted_id: no row with Submitted Identifier '{submitted_identifier}'"
+            )
+        matching.locator("button").filter(has_text="See details").click()
+        self._loc(ERR_DIALOG).wait_for(state="visible", timeout=10_000)
+        log.info("click_see_details_for_submitted_id: opened error details dialog for %s", target)
+
+    def read_error_details_dialog_issues(self) -> list[dict[str, str]]:
+        """Severity and message pairs from the open error details dialog."""
+        severities = self._loc(ERR_SEVERITY)
+        messages = self._loc(ERR_MESSAGE)
+        count = min(severities.count(), messages.count())
+        issues: list[dict[str, str]] = []
+        for i in range(count):
+            issues.append(
+                {
+                    "severity": (severities.nth(i).inner_text() or "").strip(),
+                    "message": (messages.nth(i).inner_text() or "").strip(),
+                }
+            )
+        log.info("read_error_details_dialog_issues: found %d issue(s)", len(issues))
+        return issues
+
+    def close_error_details_dialog(self) -> None:
+        """Close the error details dialog and wait for it to disappear."""
+        self._loc(ERR_CLOSE).click()
+        self._loc(ERR_DIALOG).wait_for(state="hidden", timeout=5_000)
+
+    def verify_error_details_for_submitted_id(
+        self,
+        submitted_identifier: str,
+        expected_issues: list[dict[str, str]],
+    ) -> None:
+        """See details → assert dialog issues → close."""
+        self.click_see_details_for_submitted_id(submitted_identifier)
+        actual = self.read_error_details_dialog_issues()
+        errors = diff_error_details_dialog_issues(expected_issues, actual)
+        self.close_error_details_dialog()
+        if errors:
+            for err in errors:
+                log.info(err)
+            raise AssertionError(
+                f"verifyErrorDetailsForSubmittedId '{submitted_identifier}': "
+                f"{len(errors)} dialog issue mismatch(es)"
+            )
+
+    def verify_error_details_for_submitted_id_for_tc(self, tc_name: str, model: str) -> None:
+        """Katalon verifyErrorDetailsForSubmittedIdForTC: filters, See details, dialog assert per expected row."""
+        self.open_validation_results()
+        nodes = list_nodes_from_expected_validation_results_folder(tc_name)
+        if not nodes:
+            log.info(
+                "verifyErrorDetailsForSubmittedIdForTC: No expected Validation Results files for TC '%s'; skipping.",
+                tc_name,
+            )
+            return
+        mappings = load_validation_results_mappings(model)
+        errors: list[str] = []
+        for node in nodes:
+            submitted_id_column = mappings.get(node)
+            if not submitted_id_column:
+                log.info(
+                    "verifyErrorDetailsForSubmittedIdForTC: no mapping for node '%s'; skipping.",
+                    node,
+                )
+                continue
+            tsv_path = find_expected_validation_results_tsv(tc_name, node)
+            if tsv_path is None:
+                log.info(
+                    "verifyErrorDetailsForSubmittedIdForTC: no expected TSV for node '%s'; skipping.",
+                    node,
+                )
+                continue
+            detail_rows = load_all_expected_error_detail_rows_from_tsv(tsv_path, submitted_id_column)
+            if not detail_rows:
+                log.info(
+                    "verifyErrorDetailsForSubmittedIdForTC: no rows with issues for node '%s'; skipping.",
+                    node,
+                )
+                continue
+            for submitted_id, severity, issue_type, message in detail_rows:
+                log.info(
+                    "--- verifyErrorDetailsForSubmittedId: node=%s, submittedId=%s, severity=%s, issueType=%s ---",
+                    node,
+                    submitted_id,
+                    severity,
+                    issue_type,
+                )
+                self.apply_vr_filters(node, severity, issue_type)
+                expected_issues = expected_error_detail_issues_for_row(severity, message)
+                try:
+                    self.verify_error_details_for_submitted_id(submitted_id, expected_issues)
+                except AssertionError as exc:
+                    errors.append(str(exc))
+                    log.info("%s", exc)
+                    try:
+                        if self._loc(ERR_DIALOG).is_visible():
+                            self.close_error_details_dialog()
+                    except PlaywrightTimeoutError:
+                        pass
+        # Katalon ends with one AggregatedExpanded toggle before verifyValidationResultsVsExpectedForTC.
+        self._loc(VR_EXPANDED).click()
+        self._wait_loading_gone()
+        if errors:
+            raise AssertionError(
+                f"verifyErrorDetailsForSubmittedIdForTC: {len(errors)} mismatch(es). See log above."
             )
 
     def _select_li(self, dropdown: Locator, text: str) -> None:

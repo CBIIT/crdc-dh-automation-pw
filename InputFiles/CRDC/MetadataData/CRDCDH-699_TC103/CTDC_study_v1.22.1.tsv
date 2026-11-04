@@ -1,0 +1,2 @@
+type	 program.program_short_name	study_accession	study_name	study_short_name	study_id	nci_id	nct_id	study_description	study_version	study_type	dates_of_conduct	study_age_group	study_outcome	study_population	study_biobank	study_justification	study_data_sharing_plan	other_study_outcome	recist_objective_response_rate
+study	AUTPPROGRAM	phs123	AutomationQA_Study	autoQA	Test	nci	nct	stu desc	1.1.0	Basic Science  Research	555_test	Adolescent and Young Adult	std outcome	popu	Mount_Sinai_Microbiome_stool	justi	shareplan	otheroutcome	recistrate
