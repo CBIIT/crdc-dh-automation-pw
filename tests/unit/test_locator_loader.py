@@ -117,11 +117,11 @@ def test_login_and_header_paths_used_by_smoke(locators: LocatorLoader) -> None:
     assert locators.get("CRDC/AILocators/SubmissionRequests/List/Filters/ResetFilters-Btn")
     assert locators.get("CRDC/AILocators/SubmissionRequests/Form/Review/ProgressBar-Review")
     assert locators.get("CRDC/AILocators/SubmissionRequests/Form/Navigation/Inquire-Btn")
-    inquire_comment = locators.get(
-        "CRDC/AILocators/SubmissionRequests/InquireDialog/ReviewComment-TxtBx"
+    inquire_confirm = locators.get(
+        "CRDC/AILocators/SubmissionRequests/InquireDialog/ConfirmInquire-Btn"
     )
-    assert "review-comment" in inquire_comment
-    assert "textbox" in inquire_comment
+    assert "Confirm" in inquire_confirm
+    assert "dialog" in inquire_confirm
 
     # CRDCDH-3952 Section D date tooltips
     assert "section-d-targeted-data-submission-delivery-date" in locators.get(

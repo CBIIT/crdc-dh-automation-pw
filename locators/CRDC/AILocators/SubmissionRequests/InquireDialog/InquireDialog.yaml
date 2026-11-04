@@ -1,4 +1,6 @@
 # CRDC/AILocators/SubmissionRequests/InquireDialog
+# CRDCDH-4007: confirm-only "Return request to user" modal (no comment field in flow).
 
-ConfirmInquire-Btn: "//button[.='Confirm to move to Inquired']"
+ConfirmInquire-Btn: "//*[@role='dialog']//button[normalize-space(.)='Confirm']"
+# Legacy Katalon path; not used by Playwright inquire after CRDCDH-4007.
 ReviewComment-TxtBx: "//*[@data-testid='review-comment']/div[@role='textbox']"

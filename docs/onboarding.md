@@ -306,7 +306,7 @@ The test never sees the XPath or the Katalon path. If a locator is wrong, the fa
 
 The fixture is how we signed in. Tests do not call `login_otp` again. They call `auth.switch_user(hub, role)` only when the *scenario* changes user (PBAC, SR TC03/TC04). Page objects take `hub` and read the live tab via `@property page`, so you do **not** rebuild them after `switch_user` unless you introduce a new screen type for that leg.
 
-**Submission Request two modules:** list (`SubmissionRequestsListPage`) and form (`SubmissionRequestFormPage` — questionnaire UI, Excel section fill, and cross-route keywords such as inquire/approve/open-by-study via internal list calls). Construct with `PageClass(hub)` only.
+**Submission Request two modules:** list (`SubmissionRequestsListPage`) and form (`SubmissionRequestFormPage` — questionnaire UI, Excel section fill, and cross-route keywords such as `inquire_submission_request` (CRDCDH-4007 confirm-only return-to-user, no comment), approve, and open-by-study via internal list calls). Construct with `PageClass(hub)` only.
 
 ```
 pytest
@@ -484,6 +484,7 @@ Always activate the venv first (`source .venv/bin/activate`).
 | **One Excel case** (e.g. TC08) | `pytest tests/DataValidation -m CRDC_DataValidation_Excel -k TC08` |
 | CRDCDH-4006 Release Notes | `pytest -m CRDC_Auxiliary -k 4006` |
 | CRDCDH-3948 SR TC01–TC04 | `pytest -m CRDC_SubmissionRequests -k 3948` |
+| CRDCDH-3948 TC03 only (4007 return-to-user modal) | `pytest -m CRDC_SubmissionRequests -k TC03_3948` — needs FE **CRDCDH-4010** on the Hub env |
 | CRDCDH-3952 Section D date tooltips | `pytest -m CRDC_SubmissionRequests -k 3952` |
 | TC18 file only | `pytest tests/AuxiliaryTests/test_TC18_LoginAllRolesAndSwitchUser.py` |
 | Against QA2 | `CRDC_PROFILE=qa2 pytest -m CRDC_Auxiliary` |

@@ -1,7 +1,9 @@
 """Katalon: Test Cases/CRDC/SubmissionRequest/CRDCDH-3948/TC03_CRDCDH-3948_InRevision_SaveRequiresNewContent
 
-CRDCDH-3948 TC03 — Submission Request status: In Revision (after Fed Lead Inquire).
-Submitter submit → Fed Lead inquire → Submitter reopens form; Save rules; save keeps IN REVISION.
+CRDCDH-3948 TC03 — Submission Request status: In Revision (after Fed Lead return-to-user).
+Submitter submit → Fed Lead return request to user (CRDCDH-4007) → Submitter reopens form;
+Save rules; save keeps IN REVISION. Fed Lead step also asserts 4007 confirm modal copy.
+May fail on Hub envs without FE CRDCDH-4010 (old inquire comment dialog).
 Fixture starts signed in as Submitter; page objects are Hub-backed (survive switch_user).
 """
 
@@ -56,7 +58,7 @@ def test_TC03_CRDCDH_3948_InRevision_SaveRequiresNewContent(hub: Hub) -> None:
     assert study_name
     form.click_submit_button()
 
-    # Step 1: Fed Lead inquires on that study — SR moves to In Revision.
+    # Step 1: Fed Lead returns request to user — SR moves to In Revision (CRDCDH-4007 modal).
     switch_user(hub, "Fedlead")
     form.inquire_submission_request(study_name)
 

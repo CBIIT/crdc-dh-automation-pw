@@ -42,6 +42,8 @@ fixture hub  →  test (scenario + asserts)  →  page object  →  YAML locator
 
 `CRDC_PROFILE=qa|qa2|stage` selects the yaml (default `qa`).
 
+**SR Fed Lead return:** `SubmissionRequestFormPage.inquire_submission_request` is CRDCDH-4007 confirm-only (“Return request to user” modal + AC copy); no review comment.
+
 ## Porting a Katalon case
 
 - Keep the **TC name** in the pytest function / module (`test_TC08_ManageStudiesListAndFilter`).

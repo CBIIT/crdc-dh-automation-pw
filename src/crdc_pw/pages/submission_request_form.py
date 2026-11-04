@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from playwright.sync_api import Locator
+from playwright.sync_api import Locator, expect
 
 from crdc_pw.locators.loader import repo_root
 from crdc_pw.pages.base import BasePage
@@ -59,7 +59,13 @@ SR_SECTION_D_EXPECTED_PUB_TOOLTIP = (
     "The date that submitters expect any paper using this data will be published."
 )
 
-_DEFAULT_INQUIRE_COMMENT = "Automated test inquire - CRDC submission request."
+# CRDCDH-4007 — Return request to user (confirm-only modal)
+SR_RETURN_REQUEST_BTN_LABEL = "Return request to user"
+SR_RETURN_REQUEST_MODAL_TITLE = "Return request to user"
+SR_RETURN_REQUEST_MODAL_BODY = (
+    "Are you sure you want to move this submission request to Inquired and return it to the user?"
+)
+
 _DEFAULT_APPROVAL_COMMENT = "Automated test approval - CRDC submission request."
 
 _STATUS_LBL = "CRDC/AILocators/SubmissionRequests/StatusBar/Status-Lbl"
@@ -81,10 +87,8 @@ _SECTION_D_TARGETED_DELIVERY = (
     "CRDC/AILocators/SubmissionRequests/Form/SectionD/TargetedDeliveryDate-TxtBx"
 )
 _PROGRESS_REVIEW = "CRDC/AILocators/SubmissionRequests/Form/Review/ProgressBar-Review"
-_INQUIRE_BTN = "CRDC/AILocators/SubmissionRequests/Form/Navigation/Inquire-Btn"
 _APPROVE_BTN = "CRDC/AILocators/SubmissionRequests/Form/Navigation/Approve-Btn"
-_INQUIRE_COMMENT = "CRDC/AILocators/SubmissionRequests/InquireDialog/ReviewComment-TxtBx"
-_INQUIRE_CONFIRM = "CRDC/AILocators/SubmissionRequests/InquireDialog/ConfirmInquire-Btn"
+_REVIEW_COMMENT_TESTID = "[data-testid='review-comment']"
 _APPROVE_COMMENT = "CRDC/AILocators/SubmissionRequests/ApproveDialog/ReviewComment-TxtBx"
 _APPROVE_CONFIRM = "CRDC/AILocators/SubmissionRequests/ApproveDialog/ConfirmApprove-Btn"
 
@@ -284,7 +288,7 @@ class SubmissionRequestFormPage(BasePage):
         confirm_path: str,
         comment: str,
     ) -> None:
-        """Open Inquire or Approve, enter review comment, and confirm the dialog."""
+        """Open Approve (or Reject), enter review comment, and confirm the dialog."""
         btn = self._loc(action_path).first
         btn.scroll_into_view_if_needed()
         btn.click()
@@ -299,6 +303,26 @@ class SubmissionRequestFormPage(BasePage):
         self.page.wait_for_timeout(2000)
         log.info("Review decision confirmed")
 
+    def _confirm_return_request_modal(self) -> None:
+        """CRDCDH-4007: Return request to user — confirm-only modal, no review comment."""
+        return_btn = self.page.get_by_role("button", name=SR_RETURN_REQUEST_BTN_LABEL)
+        return_btn.scroll_into_view_if_needed()
+        expect(return_btn).to_be_visible(timeout=self.DEFAULT_MS)
+        return_btn.click()
+
+        dialog = self.page.get_by_role("dialog").filter(
+            has=self.page.get_by_text(SR_RETURN_REQUEST_MODAL_TITLE, exact=True)
+        )
+        expect(dialog).to_be_visible(timeout=self.DEFAULT_MS)
+        expect(dialog).to_contain_text(SR_RETURN_REQUEST_MODAL_BODY)
+        expect(dialog.locator(_REVIEW_COMMENT_TESTID)).to_have_count(0)
+
+        confirm = dialog.get_by_role("button", name="Confirm")
+        expect(confirm).to_be_visible(timeout=self.DEFAULT_MS)
+        confirm.click()
+        self.page.wait_for_timeout(2000)
+        log.info("Return request to user confirmed (CRDCDH-4007)")
+
     def click_review_progress_bar(self) -> None:
         """Open the Review section from the progress bar (Fed Lead on Review screen)."""
         bar = self._loc(_PROGRESS_REVIEW).first
@@ -307,11 +331,9 @@ class SubmissionRequestFormPage(BasePage):
         self.page.wait_for_timeout(2000)
         log.info("Opened Review section via progress bar")
 
-    def inquire_with_comment(self, comment: str = _DEFAULT_INQUIRE_COMMENT) -> None:
-        """Fed Lead: Inquire with comment (form must be on Review with Inquire visible)."""
-        self._confirm_review_decision(
-            _INQUIRE_BTN, _INQUIRE_COMMENT, _INQUIRE_CONFIRM, comment
-        )
+    def return_request_to_user(self) -> None:
+        """Fed Lead: Return request to user on Review (CRDCDH-4007 confirm modal)."""
+        self._confirm_return_request_modal()
 
     def approve_with_comment(self, comment: str = _DEFAULT_APPROVAL_COMMENT) -> None:
         """Fed Lead: Approve with comment (form must be on Review with Approve visible)."""
@@ -680,14 +702,10 @@ class SubmissionRequestFormPage(BasePage):
         """List filter + Resume/View to open the form for study_name."""
         self._list_page().open_submission_request_form_for_study(study_name, list_status)
 
-    def inquire_submission_request(
-        self, study_name: str, inquire_comment: str | None = None
-    ) -> None:
-        """Fed Lead: filter list, Review row, Review section, Inquire with comment."""
+    def inquire_submission_request(self, study_name: str) -> None:
+        """Fed Lead: list → Review → Return request to user (CRDCDH-4007, no comment)."""
         self._open_submission_request_review(study_name)
-        self.inquire_with_comment(
-            inquire_comment or _DEFAULT_INQUIRE_COMMENT
-        )
+        self.return_request_to_user()
 
     def approve_submission_request(
         self, study_name: str, approval_comment: str | None = None
