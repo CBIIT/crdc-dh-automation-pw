@@ -1,0 +1,6 @@
+type	Issue_Type	Expected_Severity	Expected_Issues	 study.study_id	 sample.sample_id	pdx_id	model_id	implantation_type	implantation_site	mouse_strain	sample_type_for_implantation	tumor_not_mus_or_ebv_origin
+pdx				phs769076	CDS2014_DNA	auto_pdxkey_1	2	Orthotopic|Trocar|Injection	left cerebrum	mousestrn	implant	Not Reported
+pdx	Missing required property	Error	Required property "implantation_type" is empty.	phs769076	CDS2016_DNA	auto_pdxkey_2	2		Adnexa of uterus	mousestrn	implant	Yes
+pdx				phs769076	CDS2008_DNA	auto_pdxkey_3	4	Orthotopic	ankle joint	tre	imp1	No
+pdx				phs769076	CDS2009_DNA	auto_pdxkey_4	1	Intravenous	adrenal cortex	trt	imp2	Unknown
+pdx				phs769076	CDS2011_DNA	auto_pdxkey_5	3	Unknown	inferior surface of tongue	kio	imp3	Yes

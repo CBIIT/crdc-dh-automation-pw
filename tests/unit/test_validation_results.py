@@ -14,14 +14,18 @@ from __future__ import annotations
 import pytest
 
 from crdc_pw.utils.validation_results import (
+    diff_error_details_dialog_issues,
     diff_validation_results,
+    expected_error_detail_issues_for_row,
     find_expected_validation_results_tsv,
     list_nodes_from_expected_validation_results_folder,
     list_tsv_files_and_nodes_for_tc,
+    load_all_expected_error_detail_rows_from_tsv,
     load_expected_validation_results_tsv,
     load_validation_results_mappings,
     node_from_expected_validation_results_filename,
     node_from_filename,
+    unquote_csv_style,
     unique_severity_issue_type_pairs_from_expected_tsv,
 )
 
@@ -105,3 +109,60 @@ def test_diff_issue_mismatch_fails() -> None:
     actual = [("id-1", "Missing required property", "Error")]
     errors = diff_validation_results(expected, actual, "Invalid integer value")
     assert any("Issue Type" in err for err in errors)
+
+
+def test_unquote_csv_style() -> None:
+    """Excel-wrapped quotes become plain message text."""
+    assert unquote_csv_style('"hello ""world"""') == 'hello "world"'
+
+
+def test_tc04_error_detail_rows_from_study_expected_tsv() -> None:
+    """TC04 study expected TSV supplies long Expected_Issues for error-details dialog."""
+    path = find_expected_validation_results_tsv("TC04", "study")
+    assert path is not None
+    rows = load_all_expected_error_detail_rows_from_tsv(path, "study_id")
+    assert len(rows) >= 1
+    submitted_id, severity, issue_type, message = rows[0]
+    assert submitted_id == "phs769076"
+    assert severity == "Error"
+    assert issue_type == "Missing required property"
+    assert "study_description" in message
+    issues = expected_error_detail_issues_for_row(severity, message)
+    assert diff_error_details_dialog_issues(
+        issues, [{"severity": "Error", "message": message}]
+    ) == []
+
+
+def test_error_detail_message_falls_back_to_issue_type() -> None:
+    """When Expected_Issues is empty, dialog message equals Issue_Type."""
+    path = find_expected_validation_results_tsv("TC08", "diagnosis")
+    assert path is not None
+    rows = load_all_expected_error_detail_rows_from_tsv(path, "study_diagnosis_id")
+    assert rows
+    _sid, _sev, issue_type, message = rows[0]
+    assert message == issue_type
+
+
+def test_diff_error_details_extra_actual_allowed() -> None:
+    """Dialog may list more issues than expected; all expected must still match."""
+    expected = [{"severity": "Error", "message": "Required property"}]
+    actual = [
+        {"severity": "Error", "message": "Required property study_description is empty."},
+        {"severity": "Warning", "message": "Other issue"},
+    ]
+    assert diff_error_details_dialog_issues(expected, actual) == []
+
+
+@pytest.mark.parametrize(
+    "actual",
+    [
+        [],
+        [{"severity": "Warning", "message": "Required property"}],
+        [{"severity": "Error", "message": "Different issue"}],
+    ],
+)
+def test_diff_error_details_missing_or_mismatched_issue_fails(
+    actual: list[dict[str, str]],
+) -> None:
+    expected = [{"severity": "Error", "message": "Required property"}]
+    assert diff_error_details_dialog_issues(expected, actual)

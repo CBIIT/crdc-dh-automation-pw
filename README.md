@@ -48,7 +48,7 @@ Live Hub tests use the same suite names as Katalon (`CRDC_Auxiliary`, `CRDC_PBAC
 pytest -m CRDC_Auxiliary
 pytest -m CRDC_Auxiliary --headed
 pytest -m CRDC_Smoke
-pytest -m CRDC_PBAC
+pytest -m CRDC_PBAC   # TC01 then SuiteSetup EnableAll (serial; no -n)
 pytest -m CRDC_SubmissionRequests -k 3948
 ```
 
@@ -78,6 +78,7 @@ src/crdc_pw/     # loader, config, auth, hub, pages, utils
 tests/unit/      # no browser
 tests/AuxiliaryTests/  # live Hub cases (Katalon area folders, without a CRDC/ prefix)
 tests/Pbac/      # TC01 PBAC defaults
+tests/SuiteSetup/  # EnableAllPermissions (CRDC_PBAC restore, Master)
 auth/            # storage_state JSON (gitignored)
 ci/              # GitHub Actions helper that writes the gitignored yaml from secrets
 ```

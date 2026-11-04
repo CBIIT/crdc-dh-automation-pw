@@ -6,6 +6,8 @@ Tests construct ManageUsersPage or UserProfilePage from hub, then:
   reset_permissions(role)  — toggle Role away and back, Save (Katalon reset)
   expand_permission_panels()
   read_permission_rows()   — (label, status) for every PBAC checkbox
+  check_all_enabled_permission_checkboxes() — positive EnableAll (Katalon checkAllEnabled…)
+  enable_all_permissions(role) — on ManageUsersPage only (Katalon editPbacPermissions positive)
 
 Locator constants are Katalon object-repository paths (YAML), not raw XPath.
 """
@@ -111,6 +113,28 @@ class PermissionForm(BasePage):
         )
         log.info("Selected role: %s", role_display)
 
+    def check_all_enabled_permission_checkboxes(self) -> None:
+        """Check every enabled PBAC checkbox that is not already checked (Katalon positive scenario)."""
+        snackbar = self._loc(SNACKBAR)
+        self._wait_for_snackbar_gone(snackbar)
+        boxes = self._loc(CHECKBOX)
+        boxes.first.wait_for(state="attached")
+        for i in range(boxes.count()):
+            box = boxes.nth(i)
+            if not box.is_enabled() or box.is_checked():
+                continue
+            self._check_permission_box(box, snackbar)
+
+    def _check_permission_box(self, box: Locator, snackbar: Locator) -> None:
+        try:
+            box.check()
+            log.info("Checked permission checkbox")
+        except Error as exc:
+            log.info("Checkbox check failed (likely Notistack); waiting and retrying once: %s", exc)
+            self._wait_for_snackbar_gone(snackbar)
+            box.check()
+            log.info("Checked permission checkbox after retry")
+
 
 class ManageUsersPage(PermissionForm):
     def open(self) -> None:
@@ -204,6 +228,21 @@ class ManageUsersPage(PermissionForm):
         self._loc(CONTAINER).wait_for(state="visible")
         self._loc(GENERIC_ROW).or_(self._loc(HTML_ROW)).first.wait_for(state="attached")
         self._wait_for_table_settled(self._loc(LOADING_ROW))
+
+    def enable_all_permissions(self, role: str) -> None:
+        """Katalon editPbacPermissions(role, 'positive') without Excel — reset then check all enabled."""
+        if role not in ROLE_DISPLAY:
+            raise ValueError(f"Invalid role passed to enable_all_permissions: {role}")
+        log.info("Enable all permissions for role: %s", role)
+        self.find_and_edit(role)
+        self.reset_permissions(role)
+        self.find_and_edit(role)
+        self.expand_permission_panels()
+        self.check_all_enabled_permission_checkboxes()
+        self._loc(SAVE).click()
+        log.info("Clicked Save after enabling permissions for %s", role)
+        self._wait_for_snackbar_gone(self._loc(SNACKBAR))
+        log.info("Enable all permissions finished for %s", role)
 
 
 class UserProfilePage(PermissionForm):

@@ -1,0 +1,6 @@
+type	Issue_Type	Expected_Severity	Expected_Issues	file.file_id	aliquot_id	analytical_fractions	instrument_make	proteomic_instrument_model	proteomic_design_description	proteomic_info_id
+proteomic				dg.4DFC/920d3c2a-f840-50cd-8639-2bc94f6eac5c	CDS-PROTEOMIC-544845	Phosphoproteome	nascentes_morimur_finisque_ab_origine_pendet	cacatum_non_est_pictum	salus_in_arduis	1
+proteomic				dg.4DFC/4f1d604c-a308-5344-9842-d2a9f9ee5bd7	CDS-PROTEOMIC-724579	Metabolome	imperium_in_imperio	sapiens_qui_prospicit	scientia_et_labor	2
+proteomic				dg.4DFC/8c1b43ef-8b4d-52f9-8dc2-e6fafcf90ab7	CDS-PROTEOMIC-259422	Phosphoproteome	damnant_quod_non_intellegunt	e_causa_ignota	saltus_in_demonstrando	3
+proteomic				dg.4DFC/64f56c79-0bbb-5c5a-bf92-c55c92ce5d04	CDS-PROTEOMIC-991262	Lipidome	scientia_et_labor	labor_ipse_voluptas	scientiae_cedit_mare	4
+proteomic	Value not permitted	Error	Value not permitted	dg.4DFC/01b53f3d-dd79-5975-a19b-d6c8692890ed	CDS-PROTEOMIC-738693	Proteome1	imperium_in_imperio	salus_in_arduis	scientia,_aere_perennius	5
