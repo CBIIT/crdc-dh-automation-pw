@@ -33,6 +33,10 @@ fixture hub  →  test (scenario + asserts)  →  page object  →  YAML locator
 | `tests/Pbac/` | TC01 PBAC Fedlead defaults |
 | `tests/SuiteSetup/` | EnableAllPermissions — `CRDC_PBAC` restore after TC01 (Master; run PBAC serial) |
 | `tests/DataSubmissions/` | GC metadata VR (TC08 invalid integer) |
+| `src/crdc_pw/pages/data_submissions_list.py` | DS list/create (`DataSubmissionsListPage`) |
+| `src/crdc_pw/pages/data_submission_details.py` | DS upload/validate/VR/error dialog (`DataSubmissionDetailPage`) |
+| `src/crdc_pw/pages/submission_requests_list.py` | SR list/filters (`SubmissionRequestsListPage`) |
+| `src/crdc_pw/pages/submission_request_form.py` | SR create/edit form (`SubmissionRequestFormPage`) |
 | `tests/unit/` | No browser (`-m unit`) |
 | `src/crdc_pw/pages/` | Screen objects |
 | `src/crdc_pw/auth.py` | Login.gov OTP / Grant (fixture) |
@@ -52,6 +56,12 @@ fixture hub  →  test (scenario + asserts)  →  page object  →  YAML locator
 - Login / `closeBrowser` / viewport stay in the fixture. The pytest file is the Groovy **after** `loginToCrdcOtp`.
 - Do **not** port ValidationReport unless asked. Do **not** commit `config/qa.yaml`, passwords, TOTP seeds, or `auth/**`.
 - Match existing import style: `from crdc_pw.hub import Hub`, `from crdc_pw.pages.studies import ...`.
+- **Data Submissions and Submission Request** use **two page modules** (list vs detail/form), like Katalon list then drill-in. When porting a Katalon keyword or step, put it on the page that owns that Hub screen—do not add a barrel `data_submissions.py`.
+  - **DS list** (`data_submissions_list.py`): nav to Data Submissions, list filters, Create dialog, open a row by name (through the upload-activity link wait).
+  - **DS detail** (`data_submission_details.py`): choose files, Upload, Validate, Validation Results tab/filters/table, error-details dialog, and reused `verify_*_for_tc` that compare to TSV oracles (helpers stay in `utils/validation_results.py`).
+  - **SR list** (`submission_requests_list.py`): SR list, filters, open/create navigation to a request.
+  - **SR form** (`submission_request_form.py`): sections, fields, save/submit, and form-specific reads on an open request.
+  - Tests construct **both** objects from `hub` when the case crosses list → detail (see hybrid rule DS example).
 
 ## Asserts (Playwright-native)
 

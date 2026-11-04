@@ -212,6 +212,100 @@ def load_expected_validation_results_tsv(
     return out
 
 
+def unquote_csv_style(value: str | None) -> str:
+    """Reverse Excel CSV quoting on Expected_Issues cells (Katalon unquoteCsvStyle)."""
+    if value is None:
+        return ""
+    text = value.strip()
+    if len(text) >= 2 and text.startswith('"') and text.endswith('"'):
+        text = text[1:-1].replace('""', '"')
+    return text
+
+
+def load_all_expected_error_detail_rows_from_tsv(
+    tsv_path: Path,
+    submitted_identifier_column: str,
+) -> list[tuple[str, str, str, str]]:
+    """All issue rows: (submitted_id, severity, issue_type, message).
+
+    Message uses Expected_Issues when present, else Issue_Type. Skips rows with
+    empty severity or issue type.
+    """
+    out: list[tuple[str, str, str, str]] = []
+    if not tsv_path.is_file():
+        return out
+    lines = _read_tsv_lines(tsv_path)
+    if len(lines) < 2:
+        return out
+    headers = [h.strip() for h in lines[0].split("\t")]
+    idx_id = idx_issue = idx_sev = idx_expected_issues = -1
+    for i, header in enumerate(headers):
+        if header.lower() == submitted_identifier_column.lower():
+            idx_id = i
+        if header == "Issue_Type":
+            idx_issue = i
+        if header == "Expected_Severity":
+            idx_sev = i
+        if header == "Expected_Issues":
+            idx_expected_issues = i
+    if idx_id < 0 or idx_issue < 0 or idx_sev < 0:
+        return out
+    if idx_expected_issues < 0:
+        idx_expected_issues = idx_issue
+    for line in lines[1:]:
+        cells = line.split("\t")
+        row_issue = cells[idx_issue].strip() if idx_issue < len(cells) else ""
+        row_sev = cells[idx_sev].strip() if idx_sev < len(cells) else ""
+        if not row_sev or not row_issue:
+            continue
+        submitted_id = cells[idx_id].strip() if idx_id < len(cells) else ""
+        message = (
+            unquote_csv_style(cells[idx_expected_issues])
+            if idx_expected_issues < len(cells)
+            else ""
+        )
+        if not message:
+            message = row_issue
+        out.append((submitted_id, row_sev, row_issue, message))
+    return out
+
+
+def expected_error_detail_issues_for_row(
+    severity: str,
+    message: str,
+) -> list[dict[str, str]]:
+    """One expected TSV row as dialog issue list (single issue)."""
+    return [{"severity": severity.strip(), "message": message.strip()}]
+
+
+def diff_error_details_dialog_issues(
+    expected_issues: list[dict[str, str]],
+    actual_issues: list[dict[str, str]],
+) -> list[str]:
+    """Katalon verifyErrorDetailsDialogIssues: each expected must appear in actual.
+
+    Severity match is case-insensitive. Message: actual contains expected.
+    Extra actual issues are allowed.
+    """
+    errors: list[str] = []
+    for i, exp in enumerate(expected_issues):
+        exp_sev = (exp.get("severity") or "").strip()
+        exp_msg = (exp.get("message") or "").strip()
+        found = False
+        for act in actual_issues:
+            act_sev = (act.get("severity") or "").strip()
+            act_msg = (act.get("message") or "").strip()
+            if act_sev.lower() == exp_sev.lower() and exp_msg in act_msg:
+                found = True
+                break
+        if not found:
+            preview = exp_msg if len(exp_msg) <= 50 else exp_msg[:50] + "..."
+            errors.append(
+                f"Expected issue {i + 1} in dialog not found: {exp_sev}: {preview}"
+            )
+    return errors
+
+
 def diff_validation_results(
     expected_rows: list[tuple[str, str, str]],
     actual_rows: list[tuple[str, str, str]],

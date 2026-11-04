@@ -1,0 +1,6 @@
+type	 study.study_id	 consent_group.consent_group_id	study_participant_id	participant_id	race	sex	ethnicity	dbGaP_subject_id
+participant	phs769076	auto_consent_1	auto_sp_1	2	Asian|American Indian or Alaska Native	Male	Not Hispanic or Latino|Hispanic or Latino	dbgap_subID
+participant	phs769076	auto_consent_2	auto_sp_2	3	Asian|White	Male	Not Hispanic or Latino|Not reported	test1
+participant	phs769076	auto_consent_3	auto_sp_3	3	Asian|Native Hawaiian or other Pacific Islander	Male	Not Hispanic or Latino	test2
+participant	phs769076	auto_consent_4	auto_key4	4	Asian	Female	Not reported	st3
+participant	phs769076	auto_consent_5	auto_key5	5	White	Female	Hispanic or Latino	test4
