@@ -29,3 +29,4 @@ traces/
 .DS_Store
 reports/
 OutputFiles/
+uv.lock
