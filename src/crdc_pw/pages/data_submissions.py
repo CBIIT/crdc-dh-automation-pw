@@ -504,6 +504,7 @@ class DataSubmissionDetailPage(BasePage):
                     self.verify_error_details_for_submitted_id(submitted_id, expected_issues)
                 except AssertionError as exc:
                     errors.append(str(exc))
+                    log.info("%s", exc)
                     try:
                         if self._loc(ERR_DIALOG).is_visible():
                             self.close_error_details_dialog()
