@@ -32,9 +32,9 @@ The framework can:
 - Sign in through Login.gov with TOTP (one-time password)
 - Reuse a saved browser session so the next run does not pay OTP every time
 - Sign in as **Admin, Fedlead, Dcp, Submitter, User, and Master** and land on Hub (TC18)
-- Run **TC08** Manage Studies, **TC09** Manage Programs, **TC01** PBAC Fedlead defaults, **CRDCDH-4006** Release Notes, and **TC08** GC invalid-integer Data Submission (metadata VR)
+- Run **TC08** Manage Studies, **TC09** Manage Programs, **TC01** PBAC Fedlead defaults, **CRDCDH-4006** Release Notes, **TC08** GC invalid-integer Data Submission (metadata VR), and **CRDCDH-3948** Submission Request TC01–TC04 (SRF Save / import-export / list reopen / Fed Lead inquire & reopen)
 
-That is the floor everything else builds on. Submission Requests, remaining Data Submissions, emails, Mongo, and GraphQL are **not** here yet.
+That is the floor everything else builds on. Other Submission Request suites, emails, Mongo, and GraphQL are **not** here yet.
 
 ### End goal (after the port)
 
@@ -118,7 +118,7 @@ flowchart TB
 | **auth** | `src/crdc_pw/auth.py` | Login.gov OTP / Grant, file-locked `storage_state`. Fixture only. Tests do not call this unless the *scenario* switches user |
 | **hub** | `src/crdc_pw/hub.py` | Thin bag the fixture hands the test: this tab, this role, locators, settings. Not the Hub website |
 | **pages** | `src/crdc_pw/pages/` | One Hub screen each (`StudiesListPage`, `HeaderPage`, …). Clicks and reads. `BasePage` holds locator resolve, Hub timeouts, and shared table / dropdown / snackbar helpers |
-| **tests** | `tests/AuxiliaryTests/`, `tests/Pbac/`, `tests/DataSubmissions/` | Scenario + pass/fail. Same Katalon suite names (`CRDC_Auxiliary`, `CRDC_PBAC`, `CRDC_Smoke`, `CRDC_DataValidation`) |
+| **tests** | `tests/AuxiliaryTests/`, `tests/Pbac/`, `tests/DataSubmissions/`, `tests/DataValidation/` | Scenario + pass/fail. Same Katalon suite names (`CRDC_Auxiliary`, `CRDC_PBAC`, `CRDC_Smoke`, `CRDC_DataValidation`) |
 | **utils** | `src/crdc_pw/utils/` | Optional oracles (Excel, TOTP, GitHub raw). Not a screen |
 
 How one live test runs:
@@ -169,7 +169,11 @@ crdc-dh-automation-pw/
 │   ├── conftest.py         # builds `hub`: browser + login  ← start here if login fails
 │   ├── AuxiliaryTests/     # TC08 studies, TC09, TC18, CRDCDH-4006
 │   ├── Pbac/               # TC01 Fedlead defaults
-│   ├── DataSubmissions/    # GC metadata VR (TC08 invalid integer)
+│   ├── DataSubmissions/    # DS flow / GC metadata VR (e.g. TC08 invalid integer)
+│   ├── DataValidation/     # Excel workbook cases (Steps sheet); optional when flag on
+│   ├── SubmissionRequest/
+│   │   ├── CRDCDH-3948/    # TC01–TC04 SRF Save / import / Fed Lead (mirrors Katalon folder)
+│   │   └── CRDCDH-3952/    # TC01 Section D date tooltips (may fail until CRDCDH-3978 on QA)
 │   └── unit/               # no browser (locator, config, sheet, notes helpers)
 ├── src/crdc_pw/
 │   ├── hub.py              # thin session the fixture yields (page, locators, settings, role)
@@ -201,7 +205,7 @@ crdc-dh-automation-pw/
 | Test Suite `CRDC_Auxiliary.ts` | `pytest -m CRDC_Auxiliary` |
 | Test Suite `CRDC_PBAC.ts` | `pytest -m CRDC_PBAC` |
 | Test Suite `CRDC_DataValidation.ts` | `pytest -m CRDC_DataValidation` |
-| `Test Cases/CRDC/DataSubmissions/GC/CRDCDH-686-Partial/TC08_...` | `tests/DataSubmissions/GC/test_TC08_CRDC-VerifyInvalidIntegerValue.py` |
+| `Test Cases/CRDC/DataSubmissions/GC/CRDCDH-686-Partial/TC08_...` | Python: `tests/DataSubmissions/GC/test_TC08_CRDC-VerifyInvalidIntegerValue.py`; Excel: `tests/DataValidation/GC/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx` |
 
 ### Fixture, page, test (no keyword layer)
 
@@ -212,7 +216,7 @@ Katalon had **no separate page layer**. `Login.groovy` was both the journey (`lo
 | Question it answers | Who is signed in, on which tab? | What can you do *on this screen*? | How does Hub compare to a file / GitHub / TOTP? | What is the scenario, and did it pass? |
 | Example | Login.gov OTP, saved cookies, `hub.role` | `open()`, `apply_filters()`, `markdown_text()` | `write_expected` / `compare_actual`, `published_notes_snippet` | `expect(studies.container).to_be_visible()` |
 | Uses | `auth.py` + `LoginPage` / `HeaderPage` | Locator properties → YAML → Playwright (15s `BasePage.DEFAULT_MS`) | Excel, HTTP GET, `pyotp` | Page objects + optional utils + `expect` / `assert` |
-| Test calls it? | Asks for `hub` (already signed in). Uses `auth.switch_user(hub, role)` only when the *scenario* changes user | Yes — `StudiesListPage(hub.page, hub.locators)` | Yes, when the case needs an oracle (TC01, later 3979) | This *is* the test |
+| Test calls it? | Asks for `hub` (already signed in). Uses `auth.switch_user(hub, role)` only when the *scenario* changes user | Yes — `StudiesListPage(hub)` | Yes, when the case needs an oracle (TC01, later 3979) | This *is* the test |
 
 Adding a new list case (TC12) does not touch `Hub` or `conftest.py`. You write a page object and a pytest file.
 
@@ -239,7 +243,7 @@ Command: `pytest -m CRDC_Auxiliary -k TC08`.
 
 ```python
 def test_TC08_ManageStudiesListAndFilter(hub: Hub) -> None:
-    studies = StudiesListPage(hub.page, hub.locators)
+    studies = StudiesListPage(hub)
     studies.open()
     expect(studies.container).to_be_visible()
     expect(studies.add_study).to_be_visible()
@@ -294,13 +298,15 @@ The test never sees the XPath or the Katalon path. If a locator is wrong, the fa
 
 | Line | What it is doing |
 |---|---|
-| `StudiesListPage(hub.page, hub.locators)` | Bind the Manage Studies screen to this tab |
+| `StudiesListPage(hub)` | Bind the Manage Studies screen to this tab |
 | `studies.open()` | User menu → Manage Studies, wait for the list |
 | `expect(studies.container)` / `studies.add_study` | List chrome is up |
 | `studies.apply_filters(study_name="autoQA", program="AutoTest-Program")` | Same filter values as Katalon |
 | `assert` row count / `"autoQA"` in a cell | Fail if the filtered table is empty or off |
 
-The fixture is how we signed in. Tests do not call `login_otp` again. They call `auth.switch_user(hub, role)` only when the *scenario* changes user (PBAC).
+The fixture is how we signed in. Tests do not call `login_otp` again. They call `auth.switch_user(hub, role)` only when the *scenario* changes user (PBAC, SR TC03/TC04). Page objects take `hub` and read the live tab via `@property page`, so you do **not** rebuild them after `switch_user` unless you introduce a new screen type for that leg.
+
+**Submission Request two modules:** list (`SubmissionRequestsListPage`) and form (`SubmissionRequestFormPage` — questionnaire UI, Excel section fill, and cross-route keywords such as inquire/approve/open-by-study via internal list calls). Construct with `PageClass(hub)` only.
 
 ```
 pytest
@@ -329,7 +335,7 @@ pytest
 
 ### Other live cases (same pattern)
 
-**TC09** is the Programs twin (`tests/AuxiliaryTests/test_TC09_ManageProgramsListAndFilter.py`): `ProgramsListPage(hub.page, hub.locators).open()`, then filters `AutoTest` / `autoQA`, then at least one row contains `auto`.
+**TC09** is the Programs twin (`tests/AuxiliaryTests/test_TC09_ManageProgramsListAndFilter.py`): `ProgramsListPage(hub).open()`, then filters `AutoTest` / `autoQA`, then at least one row contains `auto`.
 
 **TC18** only asserts that each role landed on Hub (header username, URL is Data Commons, not Login.gov). It parametrizes `hub` across the six roles; there is no list page after login.
 
@@ -339,7 +345,7 @@ pytest
 
 ```python
 def test_TC01_CRDC_PbacDefaultPermissions_Fedlead(hub: Hub) -> None:
-    users = ManageUsersPage(hub.page, hub.locators)
+    users = ManageUsersPage(hub)
     users.open()
     users.find_and_edit("Fedlead")
     users.reset_permissions("Fedlead")
@@ -349,7 +355,7 @@ def test_TC01_CRDC_PbacDefaultPermissions_Fedlead(hub: Hub) -> None:
     assert compare_actual("Fedlead", users.read_permission_rows())
 
     switch_user(hub, "Fedlead")
-    profile = UserProfilePage(hub.page, hub.locators)
+    profile = UserProfilePage(hub)
     profile.open()
     profile.expand_permission_panels()
     write_expected("Fedlead-self")
@@ -359,6 +365,8 @@ def test_TC01_CRDC_PbacDefaultPermissions_Fedlead(hub: Hub) -> None:
 `navigate`, `closeBrowser`, viewport, and the first OTP stay in the fixture. Scenario clicks stay in the pytest file as page-object calls — not as raw XPaths.
 
 **TC08 invalid integer** (`tests/DataSubmissions/GC/test_TC08_CRDC-VerifyInvalidIntegerValue.py`) is Submitter, not Admin. Marker `CRDC_DataValidation` so `pytest -m CRDC_Auxiliary -k TC08` still means Manage Studies only. Same steps as Katalon after login: create a New GC metadata-only DS, `upload_folder("TC08")`, `click_validate()`, then `verify_validation_results_vs_expected_for_tc("TC08", model="GC")`. Expected TSV matching is `utils/validation_results.py`. It leaves the `auto-test_*` submission (Katalon does too).
+
+**Excel Data Validation** cases (commons-style `Steps` sheet, `TC*.xlsx` under `tests/DataValidation/`): collected when `excel_ds_validation.enabled` is true (default in profile examples). See [excel-ds-validation.md](excel-ds-validation.md). Run all: `pytest tests/DataValidation -m CRDC_DataValidation_Excel`; one case: add `-k TC08`. Python TC08 under `tests/DataSubmissions/GC/` stays collected in parallel.
 
 ---
 
@@ -472,7 +480,11 @@ Always activate the venv first (`source .venv/bin/activate`).
 | TC01 PBAC Fedlead defaults | `pytest -m CRDC_PBAC -k TC01` |
 | Katalon Data Validation suite | `pytest -m CRDC_DataValidation` |
 | TC08 invalid integer (GC metadata VR) | `pytest -m CRDC_DataValidation -k "VerifyInvalidInteger"` |
+| **All Excel DS validation cases** | `pytest tests/DataValidation -m CRDC_DataValidation_Excel` |
+| **One Excel case** (e.g. TC08) | `pytest tests/DataValidation -m CRDC_DataValidation_Excel -k TC08` |
 | CRDCDH-4006 Release Notes | `pytest -m CRDC_Auxiliary -k 4006` |
+| CRDCDH-3948 SR TC01–TC04 | `pytest -m CRDC_SubmissionRequests -k 3948` |
+| CRDCDH-3952 Section D date tooltips | `pytest -m CRDC_SubmissionRequests -k 3952` |
 | TC18 file only | `pytest tests/AuxiliaryTests/test_TC18_LoginAllRolesAndSwitchUser.py` |
 | Against QA2 | `CRDC_PROFILE=qa2 pytest -m CRDC_Auxiliary` |
 

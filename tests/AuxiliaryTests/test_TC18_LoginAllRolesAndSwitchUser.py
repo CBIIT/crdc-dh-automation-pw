@@ -28,7 +28,7 @@ pytestmark = pytest.mark.CRDC_Auxiliary
 @pytest.mark.parametrize("hub", list(ROLES), indirect=True, ids=list(ROLES))
 def test_TC18_LoginAllRolesAndSwitchUser(hub: Hub) -> None:
     """One pytest case per role. Missing yaml values skip that role only."""
-    header = HeaderPage(hub.page, hub.locators)
+    header = HeaderPage(hub)
 
     # 1. Signed-in name in the desktop header (empty means login did not finish)
     username = header.username(timeout_ms=5000)

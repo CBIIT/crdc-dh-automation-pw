@@ -25,7 +25,7 @@ pytestmark = [pytest.mark.CRDC_Auxiliary, pytest.mark.CRDC_Smoke]
 
 
 def test_TC09_ManageProgramsListAndFilter(hub: Hub) -> None:
-    programs = ProgramsListPage(hub.page, hub.locators)
+    programs = ProgramsListPage(hub)
 
     # 1. User menu → Manage Programs
     programs.open()

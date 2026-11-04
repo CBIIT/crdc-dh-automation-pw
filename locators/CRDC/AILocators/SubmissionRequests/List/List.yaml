@@ -2,3 +2,5 @@
 
 Container: "//h1[.='Submission Requests']/.."
 Resume-Btn: "//button[.='Resume']"
+View-Btn: "//button[normalize-space()='View']"
+Reopen-Btn: "//*[@data-testid='reopen-application-button']"

@@ -12,16 +12,17 @@ import time
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
+from crdc_pw.hub import Hub
 from crdc_pw.locators.loader import LocatorLoader
 
 _POLL_MS = 150
 
 
 class BasePage:
-    """Every screen page inherits this so _loc('CRDC/...') resolves YAML → Playwright locator.
+    """Hub-backed screen page: _loc('CRDC/...') always uses the live tab on hub.
 
-    Tests should not call _loc. Expose named locator properties on the page instead
-    (studies.container, notes.markdown).
+    Tests construct pages with PageClass(hub) after login. LoginPage is the exception
+    (auth bootstrap uses page + locators directly).
 
     DEFAULT_MS is the Hub action/expect timeout (wired on the browser context).
     PROBE_MS is for optional chrome (banner, is the username there yet).
@@ -32,9 +33,16 @@ class BasePage:
     PROBE_MS = 2_000
     RELEASE_NOTES_MS = 30_000
 
-    def __init__(self, page: Page, locators: LocatorLoader) -> None:
-        self.page = page
-        self.locators = locators
+    def __init__(self, hub: Hub) -> None:
+        self._hub = hub
+
+    @property
+    def page(self) -> Page:
+        return self._hub.page
+
+    @property
+    def locators(self) -> LocatorLoader:
+        return self._hub.locators
 
     def _loc(self, path: str, **placeholders: str) -> Locator:
         """Playwright locator for a YAML XPath. Pages only; tests use page properties."""

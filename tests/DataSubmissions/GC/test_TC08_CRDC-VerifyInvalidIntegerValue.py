@@ -22,13 +22,13 @@ pytestmark = pytest.mark.CRDC_DataValidation
 
 @pytest.mark.parametrize("hub", ["Submitter"], indirect=True)
 def test_TC08_CRDC_VerifyInvalidIntegerValue(hub: Hub) -> None:
-    ds = DataSubmissionsListPage(hub.page, hub.locators)
+    ds = DataSubmissionsListPage(hub)
 
     # 1. Create a New GC metadata-only data submission
     ds.open()
     ds.create_data_submission("New", "metadata only", "GC", "autoQA - AutomationQA_Study")
 
-    detail = DataSubmissionDetailPage(hub.page, hub.locators)
+    detail = DataSubmissionDetailPage(hub)
     # 2. Upload InputFiles/CRDC/MetadataData/TC08/*.tsv
     detail.upload_folder("TC08")
     # 3. Validate

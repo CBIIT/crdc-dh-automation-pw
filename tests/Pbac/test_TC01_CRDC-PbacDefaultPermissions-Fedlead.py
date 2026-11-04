@@ -27,7 +27,7 @@ pytestmark = pytest.mark.CRDC_PBAC
 
 
 def test_TC01_CRDC_PbacDefaultPermissions_Fedlead(hub: Hub) -> None:
-    users = ManageUsersPage(hub.page, hub.locators)
+    users = ManageUsersPage(hub)
 
     # 1. User menu → Manage Users
     users.open()
@@ -49,7 +49,7 @@ def test_TC01_CRDC_PbacDefaultPermissions_Fedlead(hub: Hub) -> None:
 
     # 4. Profile: Fedlead viewing self — compare to sheet column Fedlead-self (no search/reset)
     log.info("Logged in as: %r and verifying permissions for: Fedlead-self", hub.role)
-    profile = UserProfilePage(hub.page, hub.locators)
+    profile = UserProfilePage(hub)
     profile.open()
     profile.expand_permission_panels()
     write_expected("Fedlead-self")

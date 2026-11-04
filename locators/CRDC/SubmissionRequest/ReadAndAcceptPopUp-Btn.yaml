@@ -1,0 +1,3 @@
+# CRDC/SubmissionRequest (Katalon legacy path)
+
+ReadAndAcceptPopUp-Btn: '//*[@id="error-dialog-delete-button"]'

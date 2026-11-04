@@ -25,7 +25,7 @@ pytestmark = [pytest.mark.CRDC_Auxiliary, pytest.mark.CRDC_Smoke]
 
 
 def test_TC08_ManageStudiesListAndFilter(hub: Hub) -> None:
-    studies = StudiesListPage(hub.page, hub.locators)
+    studies = StudiesListPage(hub)
 
     # 1. User menu → Manage Studies
     studies.open()

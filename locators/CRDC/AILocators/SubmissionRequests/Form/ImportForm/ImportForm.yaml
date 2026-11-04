@@ -1,0 +1,3 @@
+# CRDC/AILocators/SubmissionRequests/Form/ImportForm
+
+ImportForm-Btn: "//*[@data-testid='import-application-excel-button']"

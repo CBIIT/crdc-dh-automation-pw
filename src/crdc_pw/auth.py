@@ -38,6 +38,17 @@ from crdc_pw.utils.otp import totp_now
 log = logging.getLogger("crdc_pw.auth")
 
 OTP_MAX_ATTEMPTS = 6  # Katalon used 6; TOTP changes every 30s
+
+
+def _auth_hub(page: Page, locators: LocatorLoader, settings: Settings) -> Hub:
+    """Minimal Hub for auth/bootstrap before the test fixture assigns role."""
+    return Hub(
+        page=page,
+        locators=locators,
+        settings=settings,
+        role="",
+        create_context=None,
+    )
 VIEWPORT: ViewportSize = {"width": 1920, "height": 1080}
 _LOCK_TIMEOUT_S = 300
 _validated: set[str] = set()
@@ -53,7 +64,7 @@ class LoginSession:
         self.locators = locators
         self.settings = settings
         self.login_page = LoginPage(page, locators)
-        self.header = HeaderPage(page, locators)
+        self.header = HeaderPage(_auth_hub(page, locators, settings))
 
     def navigate(self) -> None:
         """Open Hub base_url and dismiss the system-use banner if it is already up."""
@@ -242,7 +253,7 @@ def land_on_hub(page: Page, locators: LocatorLoader, settings: Settings) -> None
     waiting 15s for a header that will not appear. Does not OTP itself.
     """
     login = LoginPage(page, locators)
-    header = HeaderPage(page, locators)
+    header = HeaderPage(_auth_hub(page, locators, settings))
     login.goto(settings.base_url)
     continue_btn = login._loc(SYSTEM_USE_CONTINUE).first
     username = header.username_btn
@@ -366,7 +377,9 @@ def _storage_is_valid(
     page = context.new_page()
     try:
         land_on_hub(page, locators, settings)
-        username = HeaderPage(page, locators).username(timeout_ms=BasePage.PROBE_MS)
+        username = HeaderPage(_auth_hub(page, locators, settings)).username(
+            timeout_ms=BasePage.PROBE_MS
+        )
         return username_matches_role(username, role)
     except PlaywrightTimeoutError:
         return False
