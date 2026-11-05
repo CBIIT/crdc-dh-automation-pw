@@ -18,7 +18,7 @@ import pytest
 from crdc_pw.auth import switch_user
 from crdc_pw.hub import Hub
 from crdc_pw.pages.users import ManageUsersPage, UserProfilePage
-from crdc_pw.utils.pbac_defaults import verify_role_defaults_as_admin
+from crdc_pw.utils.pbac_helpers import verify_role_defaults_as_admin
 
 log = logging.getLogger("crdc_pw.tc05_pbac")
 

@@ -1,9 +1,9 @@
-"""PBAC default-permission oracles shared by TC01–TC05.
+"""PBAC suite orchestration (Katalon utilities/Pbac.groovy).
 
-Mirrors Katalon Keywords/utilities/Pbac.groovy verifyPbacPermissionDefaults:
-Admin phase (Manage Users reset + Excel compare) and self phase (Profile + sheet
-column) for roles that expose PBAC panels on Profile. Submitter/User self checks
-live in UserProfilePage.assert_profile_permissions_not_visible instead of here.
+Home for multi-step PBAC flows that span pages: default permission compares
+(TC01–TC05 today), and later edit positive/negative and functional permission
+maps. DOM actions stay on ManageUsersPage / UserProfilePage (and SR/DS pages);
+Excel oracles stay in pbac_sheet.py.
 """
 
 from __future__ import annotations
@@ -14,15 +14,14 @@ from crdc_pw.hub import Hub
 from crdc_pw.pages.users import ManageUsersPage, UserProfilePage
 from crdc_pw.utils.pbac_sheet import compare_actual, output_path, write_expected
 
-log = logging.getLogger("crdc_pw.pbac_defaults")
+log = logging.getLogger("crdc_pw.pbac_helpers")
 
 
 def verify_role_defaults_as_admin(hub: Hub, users: ManageUsersPage, role: str) -> None:
     """Phase 1: Admin resets automation user to role defaults and compares UI to Excel.
 
-    Expects hub.role Admin and a ManageUsersPage bound to that session. Uses the
-    column named ``role`` in InputFiles/CRDC/PBACPermissions.xlsx (e.g. Fedlead, Dcp).
-    Writes row-level Pass/Fail to OutputFiles/PBAC_Defaults_Results.xlsx via pbac_sheet.
+    Mirrors verifyPbacPermissionDefaults admin branch. Expects hub.role Admin.
+    Uses the column named ``role`` in InputFiles/CRDC/PBACPermissions.xlsx.
     """
     users.open()
     log.info("Logged in as: %r and verifying permissions for: %r", hub.role, role)
@@ -42,7 +41,7 @@ def verify_self_defaults_on_profile(hub: Hub, sheet_column: str) -> None:
     """Phase 2: signed-in role opens Profile and compares checkboxes to Excel *-self column.
 
     Used for Fedlead-self, Dcp-self, and Admin-self where PBAC panels are visible.
-    Does not switch users; call switch_user before this when the case logs in as another role.
+    Submitter-self / User-self use UserProfilePage.assert_profile_permissions_not_visible.
     """
     log.info("Logged in as: %r and verifying permissions for: %r", hub.role, sheet_column)
     profile = UserProfilePage(hub)

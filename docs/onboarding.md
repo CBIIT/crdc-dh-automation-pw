@@ -168,7 +168,7 @@ crdc-dh-automation-pw/
 ├── tests/                  # pytest files (Katalon Test Case / Script)
 │   ├── conftest.py         # builds `hub`: browser + login  ← start here if login fails
 │   ├── AuxiliaryTests/     # TC08 studies, TC09, TC18, CRDCDH-4006
-│   ├── Pbac/               # TC01–TC05 default permissions (helpers in src/crdc_pw/utils/pbac_defaults.py)
+│   ├── Pbac/               # TC01–TC05 default permissions (orchestration in src/crdc_pw/utils/pbac_helpers.py)
 │   ├── SuiteSetup/         # EnableAllPermissions (CRDC_PBAC restore, Master)
 │   ├── DataSubmissions/    # DS flow (e.g. CRDCDH-697 summary headers); metadata VR is Excel under DataValidation/
 │   ├── DataValidation/     # Excel VR: GC|ICDC|CTDC/<ticket>/TC*.xlsx (mirrors Katalon DataSubmissions tree)
@@ -345,7 +345,7 @@ pytest
 
 **CRDCDH-4006** (`tests/AuxiliaryTests/test_TC_CRDCDH-4006_ReleaseNotesPage.py`, story CRDCDH-3974): footer → `/release-notes`, markdown visible, error alert hidden, CMS parity vs static-content branch, no YAML frontmatter in UI.
 
-**PBAC defaults TC01–TC05** (`tests/Pbac/test_TC0*_CRDC-PbacDefaultPermissions-*.py`): Admin phase uses `crdc_pw.utils.pbac_defaults.verify_role_defaults_as_admin` + `PBACPermissions.xlsx`. Self phase: **Fedlead, Dcp, Admin** compare `{Role}-self` on Profile; **Submitter, User** assert PBAC panels are **not** visible on Profile (Katalon `verifyPbacPermissionDefaults` Submitter-self / User-self branch). Fixture starts as Admin; TC02/04/05 call `switch_user`. TC03 stays Admin for Admin-self. Standalone `pytest -m CRDC_PBAC -k TC01` leaves roles at sheet defaults; full `pytest -m CRDC_PBAC` runs **EnableAllPermissions** last — see [enable-all-permissions.md](enable-all-permissions.md).
+**PBAC defaults TC01–TC05** (`tests/Pbac/test_TC0*_CRDC-PbacDefaultPermissions-*.py`): Admin phase uses `crdc_pw.utils.pbac_helpers.verify_role_defaults_as_admin` + `PBACPermissions.xlsx`. Self phase: **Fedlead, Dcp, Admin** compare `{Role}-self` on Profile; **Submitter, User** assert PBAC panels are **not** visible on Profile (Katalon `verifyPbacPermissionDefaults` Submitter-self / User-self branch). Fixture starts as Admin; TC02/04/05 call `switch_user`. TC03 stays Admin for Admin-self. Standalone `pytest -m CRDC_PBAC -k TC01` leaves roles at sheet defaults; full `pytest -m CRDC_PBAC` runs **EnableAllPermissions** last — see [enable-all-permissions.md](enable-all-permissions.md).
 
 `navigate`, `closeBrowser`, viewport, and the first OTP stay in the fixture. Scenario clicks stay in the pytest file as page-object calls — not as raw XPaths.
 
