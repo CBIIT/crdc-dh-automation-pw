@@ -284,8 +284,6 @@ class UserProfilePage(PermissionForm):
     @staticmethod
     def _pbac_panel_present(panel: Locator, timeout_ms: int) -> bool:
         """Return True if a Permissions/Notifications panel becomes visible within probe_ms."""
-        if panel.count() == 0:
-            return False
         try:
             panel.first.wait_for(state="visible", timeout=timeout_ms)
             return panel.first.is_visible()
