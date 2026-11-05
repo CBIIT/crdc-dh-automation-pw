@@ -45,6 +45,16 @@ def test_fedlead_column_loads_from_committed_xlsx() -> None:
 
 
 @pytest.mark.unit
+def test_dcp_and_admin_columns_load_from_committed_xlsx() -> None:
+    """Dcp and Admin default columns exist for TC02/TC03."""
+    dcp = load_expected_rows("Dcp")
+    admin = load_expected_rows("Admin")
+    assert len(dcp) >= 40
+    assert len(admin) >= 40
+    assert dcp[0][0] == admin[0][0] == "submission_request:view"
+
+
+@pytest.mark.unit
 def test_compare_matching_rows_all_pass(tmp_path: Path) -> None:
     """UI labels and statuses copied from the Fedlead column must all Pass."""
     root = _temp_input_tree(tmp_path)

@@ -35,6 +35,23 @@ pytest_plugins = ["crdc_pw.utils.excel_ds_test_runner.test_collector"]
 _FAILURE_PNG = pytest.StashKey[bytes]()
 
 
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Run EnableAllPermissions after TC01–TC05 when both are collected (Katalon CRDC_PBAC).
+
+    Default file order already places tests/SuiteSetup/ after tests/Pbac/; this hook
+    guarantees Master restore stays last if collection order changes.
+    """
+    rest: list[pytest.Item] = []
+    enable_all: list[pytest.Item] = []
+    for item in items:
+        if "EnableAllPermissions" in item.nodeid:
+            enable_all.append(item)
+        else:
+            rest.append(item)
+    if enable_all:
+        items[:] = rest + enable_all
+
+
 @pytest.hookimpl(tryfirst=True)
 def pytest_configure(config: pytest.Config) -> None:
     """Katalon-style: a new HTML report per run unless --html is already set.

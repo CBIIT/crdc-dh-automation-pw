@@ -6,7 +6,7 @@ for pbac automation users (Admin, Dcp, Fedlead, Submitter, User). Not an Excel o
 Flow:
   1. Master → Manage Users
   2. For each role: reset to defaults, check all enabled boxes, Save
-  3. Full `pytest -m CRDC_PBAC` runs TC01 (Admin) then this test; `-k TC01` skips restore.
+  3. Full `pytest -m CRDC_PBAC` runs TC01–TC05 then this test (conftest order); `-k TC01` skips restore.
   Requires MasterEmail / MasterPassword / MasterSecret in profile yaml. Run serial (no xdist).
 """
 
