@@ -77,7 +77,7 @@ locators/CRDC/   # YAML object repository (Katalon paths preserved)
 src/crdc_pw/     # loader, config, auth, hub, pages, utils
 tests/unit/      # no browser
 tests/AuxiliaryTests/  # live Hub cases (Katalon area folders, without a CRDC/ prefix)
-tests/Pbac/      # TC01 PBAC defaults
+tests/Pbac/      # TC01–TC05 PBAC default permissions
 tests/SuiteSetup/  # EnableAllPermissions (CRDC_PBAC restore, Master)
 auth/            # storage_state JSON (gitignored)
 ci/              # GitHub Actions helper that writes the gitignored yaml from secrets

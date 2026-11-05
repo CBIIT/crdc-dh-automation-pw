@@ -53,7 +53,7 @@ Replace the Katalon Hub suites with this repo so QA and CI run Playwright instea
 
 Planned order after this scaffold:
 
-1. Remaining **PBAC defaults** (TC02–05) plus isolated PBAC tickets — TC01 is already here
+1. **PBAC defaults** TC01–TC05 ported; checked/unchecked functional (TC06+) and story tests remain
 2. **Shared UI helpers on BasePage** — tables, MUI dropdowns, snackbars (done; unblocks every list page)
 3. **Submission Requests**
 4. **Data Submissions** (upload, validate, results tables)
@@ -168,7 +168,7 @@ crdc-dh-automation-pw/
 ├── tests/                  # pytest files (Katalon Test Case / Script)
 │   ├── conftest.py         # builds `hub`: browser + login  ← start here if login fails
 │   ├── AuxiliaryTests/     # TC08 studies, TC09, TC18, CRDCDH-4006
-│   ├── Pbac/               # TC01 Fedlead defaults
+│   ├── Pbac/               # TC01–TC05 default permissions (orchestration in src/crdc_pw/utils/pbac_helpers.py)
 │   ├── SuiteSetup/         # EnableAllPermissions (CRDC_PBAC restore, Master)
 │   ├── DataSubmissions/    # DS flow (e.g. CRDCDH-697 summary headers); metadata VR is Excel under DataValidation/
 │   ├── DataValidation/     # Excel VR: GC|ICDC|CTDC/<ticket>/TC*.xlsx (mirrors Katalon DataSubmissions tree)
@@ -202,9 +202,9 @@ crdc-dh-automation-pw/
 | Data File `CRDC/Pbac/Permissions` | `InputFiles/CRDC/PBACPermissions.xlsx` + `utils/pbac_sheet.py` |
 | Object Repository `CRDC/Login/...` | `locators/CRDC/**/*.yaml` + `LocatorLoader` |
 | `Profiles/CRDC_QA.glbl` / `GlobalVariable` | `config/qa.yaml` |
-| Test Suite `CRDC_Smoke.ts` | `pytest -m CRDC_Smoke` |
+| Test Suite `CRDC_Smoke.ts` | `pytest -m CRDC_Smoke` — full port backlog: [smoke-suite-port-plan.md](smoke-suite-port-plan.md) |
 | Test Suite `CRDC_Auxiliary.ts` | `pytest -m CRDC_Auxiliary` |
-| Test Suite `CRDC_PBAC.ts` | `pytest -m CRDC_PBAC` (TC01 then EnableAll; run serial, no `-n`) |
+| Test Suite `CRDC_PBAC.ts` | `pytest -m CRDC_PBAC` — TC01–TC05 defaults then **EnableAllPermissions** last (conftest order); serial, no `-n` |
 | `Test Cases/CRDC/SuiteSetup/EnableAllPermissions` | `tests/SuiteSetup/test_EnableAllPermissions.py` |
 | Test Suite `CRDC_DataValidation.ts` | `pytest -m CRDC_DataValidation` |
 | `Test Cases/CRDC/DataSubmissions/GC/CRDCDH-686-Partial/TC08_...` | Excel: `tests/DataValidation/GC/CRDCDH-686-Partial/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx` |
@@ -345,26 +345,7 @@ pytest
 
 **CRDCDH-4006** (`tests/AuxiliaryTests/test_TC_CRDCDH-4006_ReleaseNotesPage.py`, story CRDCDH-3974): footer → `/release-notes`, markdown visible, error alert hidden, CMS parity vs static-content branch, no YAML frontmatter in UI.
 
-**TC01** (`tests/Pbac/test_TC01_CRDC-PbacDefaultPermissions-Fedlead.py`) is the **middle** of Katalon TC01 (not `loginToCrdcOtp` / `closeBrowser`). Fixture already signed in as Admin. The page reads checkboxes; `utils/pbac_sheet.py` owns the Excel compare — no `verify_*` on the page. Standalone `pytest -m CRDC_PBAC -k TC01` leaves Fedlead at **sheet defaults**; full `pytest -m CRDC_PBAC` also runs **EnableAllPermissions** (Master) and restores optional permissions for all five automation users — see [enable-all-permissions.md](enable-all-permissions.md).
-
-```python
-def test_TC01_CRDC_PbacDefaultPermissions_Fedlead(hub: Hub) -> None:
-    users = ManageUsersPage(hub)
-    users.open()
-    users.find_and_edit("Fedlead")
-    users.reset_permissions("Fedlead")
-    users.find_and_edit("Fedlead")
-    users.expand_permission_panels()
-    write_expected("Fedlead")
-    assert compare_actual("Fedlead", users.read_permission_rows())
-
-    switch_user(hub, "Fedlead")
-    profile = UserProfilePage(hub)
-    profile.open()
-    profile.expand_permission_panels()
-    write_expected("Fedlead-self")
-    assert compare_actual("Fedlead-self", profile.read_permission_rows())
-```
+**PBAC defaults TC01–TC05** (`tests/Pbac/test_TC0*_CRDC-PbacDefaultPermissions-*.py`): Admin phase uses `crdc_pw.utils.pbac_helpers.verify_role_defaults_as_admin` + `PBACPermissions.xlsx`. Self phase: **Fedlead, Dcp, Admin** compare `{Role}-self` on Profile; **Submitter, User** assert PBAC panels are **not** visible on Profile (Katalon `verifyPbacPermissionDefaults` Submitter-self / User-self branch). Fixture starts as Admin; TC02/04/05 call `switch_user`. TC03 stays Admin for Admin-self. Standalone `pytest -m CRDC_PBAC -k TC01` leaves roles at sheet defaults; full `pytest -m CRDC_PBAC` runs **EnableAllPermissions** last — see [enable-all-permissions.md](enable-all-permissions.md).
 
 `navigate`, `closeBrowser`, viewport, and the first OTP stay in the fixture. Scenario clicks stay in the pytest file as page-object calls — not as raw XPaths.
 
@@ -481,7 +462,8 @@ Always activate the venv first (`source .venv/bin/activate`).
 | TC18 one role | `pytest -m CRDC_Auxiliary -k Admin` |
 | TC08 Manage Studies list only | `pytest -m CRDC_Auxiliary -k TC08` |
 | TC09 Manage Programs list only | `pytest -m CRDC_Auxiliary -k TC09` |
-| TC01 PBAC Fedlead defaults (no EnableAll restore) | `pytest -m CRDC_PBAC -k TC01` |
+| PBAC defaults TC01–TC05 (no EnableAll restore) | `pytest tests/Pbac -m CRDC_PBAC` |
+| TC01 PBAC Fedlead only | `pytest -m CRDC_PBAC -k TC01` |
 | EnableAllPermissions only (Master) | `pytest tests/SuiteSetup/test_EnableAllPermissions.py` |
 | Katalon Data Validation suite | `pytest -m CRDC_DataValidation` |
 | TC08 invalid integer (GC metadata VR, Excel) | `pytest tests/DataValidation -m CRDC_DataValidation_Excel -k TC08` |
