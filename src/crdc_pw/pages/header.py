@@ -19,6 +19,7 @@ _MANAGE_PROGRAMS = "CRDC/AILocators/Global/Header/Desktop/ManagePrograms-Link"
 _MANAGE_USERS = "CRDC/AILocators/Global/Header/Desktop/ManageUsers-Link"
 _USER_PROFILE = "CRDC/AILocators/Global/Header/Desktop/UserProfile-Link"
 _DATA_SUBMISSIONS = "CRDC/AILocators/Global/Header/Desktop/DataSubmissions-Tab"
+_DATA_EXPLORER = "CRDC/AILocators/Global/Header/Desktop/DataExplorer-Tab"
 _SUBMISSION_REQUESTS = "CRDC/AILocators/Global/Header/Desktop/SubmissionRequests-Tab"
 
 
@@ -87,6 +88,13 @@ class HeaderPage(BasePage):
     def open_data_submissions(self) -> None:
         """Nav bar Data Submissions. Katalon clickTab DataSubmissions-Tab."""
         tab = self._loc(_DATA_SUBMISSIONS)
+        tab.wait_for(state="visible")
+        tab.click()
+
+    def open_data_explorer(self) -> None:
+        """User menu → Data Explorer. Katalon clickTab DataExplorer-Tab (under user dropdown)."""
+        self.open_user_menu()
+        tab = self._loc(_DATA_EXPLORER)
         tab.wait_for(state="visible")
         tab.click()
 

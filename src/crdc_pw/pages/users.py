@@ -28,7 +28,6 @@ CONTAINER = "CRDC/AILocators/Users/List/Container"
 USER_FILTER = "CRDC/AILocators/Users/List/UserFilter-TxtBx"
 GENERIC_ROW = "CRDC/AILocators/GenericTable/TableRow"
 HTML_ROW = "CRDC/ManageUsers/ManageUsersTable-Row"
-LOADING_ROW = "CRDC/AILocators/GenericTable/LoadingRow"
 NEXT_PAGE = "CRDC/AILocators/GenericTable/Pagination/NextPage-Btn"
 PERMISSIONS_PANEL = "CRDC/ManageUsers/PermissionsPanel-Ddn"
 NOTIFICATIONS_PANEL = "CRDC/ManageUsers/NotificationsPanel-Ddn"
@@ -202,7 +201,7 @@ class ManageUsersPage(PermissionForm):
         rows = self._table_rows()
         before = self._table_fingerprint(rows)
         box.fill(needle)
-        self._wait_for_table_settled(self._loc(LOADING_ROW), rows, previous=before)
+        self.wait_for_generic_table_settled(rows, previous=before)
 
     def _click_edit_on_current_page(self, needle: str) -> bool:
         needle_l = needle.strip().lower()
@@ -227,7 +226,7 @@ class ManageUsersPage(PermissionForm):
     def _wait_for_table(self) -> None:
         self._loc(CONTAINER).wait_for(state="visible")
         self._loc(GENERIC_ROW).or_(self._loc(HTML_ROW)).first.wait_for(state="attached")
-        self._wait_for_table_settled(self._loc(LOADING_ROW))
+        self.wait_for_generic_table_settled()
 
     def apply_positive_permission_edit(self, role: str) -> None:
         """Katalon editPbacPermissions(role, 'positive') UI only — reset, check all enabled, Save."""

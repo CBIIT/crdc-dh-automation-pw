@@ -15,10 +15,12 @@ from typing import Literal, Protocol
 
 import pytest
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import expect
 
 from crdc_pw.hub import Hub
 from crdc_pw.locators.loader import repo_root
 from crdc_pw.pages.data_submission_details import CHOOSE_FILES, DataSubmissionDetailPage
+from crdc_pw.pages.data_explorer_list import DataExplorerListPage
 from crdc_pw.pages.data_submissions_list import DataSubmissionsListPage
 from crdc_pw.pages.header import HeaderPage
 from crdc_pw.pages.submission_request_form import SubmissionRequestFormPage
@@ -40,10 +42,16 @@ _DS_TABLE_ROW = "CRDC/DataSubmissions/DataSubmListTable-Row"
 _UNSAVED_SAVE = "CRDC/AILocators/SubmissionRequests/UnsavedChangesDialog/Save-Btn"
 _SR_REVIEW_BTN_LEGACY = "CRDC/SubmissionRequest/Review-Btn"
 _DS_ACTIONS_SUBMIT = "CRDC/AILocators/DataSubmissions/Detail/Actions/Submit-Btn"
-_DS_SUBMIT_DIALOG_CONFIRM = "CRDC/AILocators/DataSubmissions/SubmitDialog/Confirm-Btn"
+_DS_SUBMIT_DIALOG = "CRDC/AILocators/DataSubmissions/SubmitDialog/Dialog"
+# Primary action in the UI is labeled "Yes"; repo YAML uses Confirm-Btn / submit-dialog-confirm-button.
+# Katalon also references CRDC/DataSubmissions/SubmitYes-Btn for the same flow.
+_DS_SUBMIT_DIALOG_YES = "CRDC/AILocators/DataSubmissions/SubmitDialog/Confirm-Btn"
 _DS_CROSS_VALIDATE = "CRDC/AILocators/DataSubmissions/Detail/ValidationControls/CrossValidate-Btn"
 _DS_ACTIONS_RELEASE = "CRDC/AILocators/DataSubmissions/Detail/Actions/Release-Btn"
-_DS_ACTIONS_RELEASE_CONFIRM = "CRDC/AILocators/DataSubmissions/Detail/Actions/ConfirmRelease-Btn"
+# Katalon data_submission:confirm uses SubmitYes-Btn (//button[.='Yes']) after Release — not ConfirmRelease-Btn (different label).
+_DS_ACTIONS_RELEASE_CONFIRMATION_YES = (
+    "CRDC/AILocators/DataSubmissions/Detail/Actions/ReleaseConfirmationYes-Btn"
+)
 _DS_ACTIONS_COMPLETE = "CRDC/AILocators/DataSubmissions/Detail/Actions/Complete-Btn"
 _DS_ACTIONS_REJECT = "CRDC/AILocators/DataSubmissions/Detail/Actions/Reject-Btn"
 _DS_ACTIONS_WITHDRAW = "CRDC/AILocators/DataSubmissions/Detail/Actions/Withdraw-Btn"
@@ -156,6 +164,17 @@ def _wait_ds_loading_gone(hub: Hub) -> None:
     DataSubmissionDetailPage(hub).wait_loading_spinner_gone()
 
 
+def _open_data_submissions_list_settled(hub: Hub) -> None:
+    """Nav → Data Submissions, then CircularProgress gone + generic table loading row settled.
+
+    Matches the race fix for ``data_submission:view``: Katalon only waits on Loading-Icon, but the
+    list can still show a transient permission placeholder until the table loading row clears.
+    """
+    HeaderPage(hub).open_data_submissions()
+    _wait_ds_loading_gone(hub)
+    DataSubmissionsListPage(hub).wait_for_list_table_settled()
+
+
 def _open_submission_requests_list_settled(hub: Hub) -> None:
     """Nav → Submission Requests list and wait for generic-table loading row to finish.
 
@@ -216,25 +235,65 @@ def _prepare_unique_program_tsv() -> Path:
 
 def _upload_metadata_file_on_detail(hub: Hub, absolute_path: Path) -> None:
     page = hub.page
+    path = absolute_path.resolve()
+    log.info("DS PBAC: uploading metadata file %s", path)
     choose = page.locator(hub.locators.get("CRDC/DataSubmissions/ChooseFiles-Btn"))
     choose.wait_for(state="attached")
-    choose.set_input_files(str(absolute_path.resolve()))
+    choose.set_input_files(str(path))
     page.locator(hub.locators.get("CRDC/DataSubmissions/Upload-Btn")).click()
+    log.info("DS PBAC: waiting for Uploading indicator to clear")
     uploading = page.locator(hub.locators.get("CRDC/DataSubmissions/Uploading-Txt")).first
     try:
         uploading.wait_for(state="visible", timeout=2_000)
     except Exception:
         pass
     uploading.wait_for(state="hidden", timeout=120_000)
+    log.info("DS PBAC: upload finished; waiting for Validate to enable")
     validate_btn = page.locator(hub.locators.get("CRDC/DataSubmissions/Validate-Btn"))
     validate_btn.wait_for(state="visible")
     # Katalon waits until Validate enables after ingest
     deadline = datetime.now().timestamp() + 120
     while datetime.now().timestamp() < deadline:
         if validate_btn.is_enabled():
+            log.info("DS PBAC: Validate is enabled after upload")
             return
         page.wait_for_timeout(300)
     raise AssertionError("Validate did not become enabled after metadata upload")
+
+
+def _click_ds_submit_dialog_yes(hub: Hub) -> None:
+    """Submit → wait for dialog, click Yes (Confirm-Btn), wait for dialog to close.
+
+    Do not wait for the Yes control to become ``hidden`` after click: the dialog often
+    unmounts the button immediately, which can detach the node and fail Playwright's
+    hidden wait even when submit succeeded.
+    """
+    page = hub.page
+    dialog = page.locator(hub.locators.get(_DS_SUBMIT_DIALOG))
+    yes_btn = page.locator(hub.locators.get(_DS_SUBMIT_DIALOG_YES)).first
+    log.info("DS PBAC: waiting for submit dialog (data-testid=submit-dialog)")
+    dialog.wait_for(state="visible", timeout=30_000)
+    expect(yes_btn).to_be_visible(timeout=30_000)
+    expect(yes_btn).to_be_enabled(timeout=30_000)
+    log.info("DS PBAC: clicking submit dialog Yes (Confirm-Btn)")
+    yes_btn.click()
+    log.info("DS PBAC: waiting for submit dialog to close")
+    dialog.wait_for(state="hidden", timeout=30_000)
+
+
+def _click_ds_release_confirmation_yes(hub: Hub) -> None:
+    """Katalon Pbac data_submission:confirm: click Release then ``SubmitYes-Btn`` (//button[.='Yes']).
+
+    The repo's ``ConfirmRelease-Btn`` targets text ``Confirm Release``, not the Yes/No pair.
+    ``ReleaseConfirmationYes-Btn`` matches the primary ``Yes`` on the release confirmation dialog.
+    """
+    page = hub.page
+    yes_btn = page.locator(hub.locators.get(_DS_ACTIONS_RELEASE_CONFIRMATION_YES)).first
+    log.info("DS PBAC (confirm): waiting for Release confirmation Yes button")
+    expect(yes_btn).to_be_visible(timeout=30_000)
+    expect(yes_btn).to_be_enabled(timeout=30_000)
+    log.info("DS PBAC (confirm): clicking Yes (Katalon SubmitYes-Btn parity)")
+    yes_btn.click()
 
 
 def _functional_submission_request_view(hub: Hub, _role: str, _scenario: str) -> bool:
@@ -453,8 +512,7 @@ def _functional_data_submission_view(hub: Hub, _role: str, _scenario: str) -> bo
     log.info("Verifying DS View...")
     try:
         _pbac_click_home(hub)
-        HeaderPage(hub).open_data_submissions()
-        _wait_ds_loading_gone(hub)
+        _open_data_submissions_list_settled(hub)
         rows_ds = _ds_list_table_rows(hub)
         if rows_ds.count() == 1 and "do not have the appropriate permissions" in (
             rows_ds.first.inner_text() or ""
@@ -464,9 +522,7 @@ def _functional_data_submission_view(hub: Hub, _role: str, _scenario: str) -> bo
         log.info("Number of rows in Data Submission list found: %s", n_ds)
 
         _pbac_click_home(hub)
-        HeaderPage(hub).open_user_menu()
-        hub.page.locator(hub.locators.get("CRDC/AILocators/Global/Header/Desktop/DataExplorer-Tab")).click()
-        _wait_ds_loading_gone(hub)
+        DataExplorerListPage(hub).open_settled()
         rows_de = _ds_list_table_rows(hub)
         if rows_de.count() == 1 and "do not have the appropriate permissions" in (
             rows_de.first.inner_text() or ""
@@ -487,7 +543,7 @@ def _functional_data_submission_create(hub: Hub, _role: str, _scenario: str) -> 
     log.info("Verifying DS Create...")
     try:
         _pbac_click_home(hub)
-        HeaderPage(hub).open_data_submissions()
+        _open_data_submissions_list_settled(hub)
         create = hub.page.locator(
             hub.locators.get("CRDC/AILocators/DataSubmissions/List/Table/CreateDataSubmission-Btn")
         )
@@ -506,7 +562,7 @@ def _functional_data_submission_cancel(hub: Hub, _role: str, _scenario: str) -> 
     log.info("Verifying DS Cancel...")
     try:
         _pbac_click_home(hub)
-        HeaderPage(hub).open_data_submissions()
+        _open_data_submissions_list_settled(hub)
         create = hub.page.locator(
             hub.locators.get("CRDC/AILocators/DataSubmissions/List/Table/CreateDataSubmission-Btn")
         )
@@ -533,7 +589,7 @@ def _functional_data_submission_review(hub: Hub, _role: str, _scenario: str) -> 
     log.info("Verifying DS Review...")
     try:
         _pbac_click_home(hub)
-        HeaderPage(hub).open_data_submissions()
+        _open_data_submissions_list_settled(hub)
         create = hub.page.locator(
             hub.locators.get("CRDC/AILocators/DataSubmissions/List/Table/CreateDataSubmission-Btn")
         )
@@ -548,18 +604,23 @@ def _functional_data_submission_review(hub: Hub, _role: str, _scenario: str) -> 
         )
         hub.page.locator(hub.locators.get("CRDC/DataSubmissions/DataSubmissionName-Link")).first.click()
         detail = DataSubmissionDetailPage(hub)
+        log.info("DS PBAC (review): waiting for detail loading spinner")
         detail.wait_loading_spinner_gone()
         temp = _prepare_unique_program_tsv()
         try:
             _upload_metadata_file_on_detail(hub, temp)
         finally:
             temp.unlink(missing_ok=True)
+        log.info("DS PBAC (review): starting validation")
         detail.click_validate()
+        log.info("DS PBAC (review): validation finished")
         page = hub.page
         submit = page.locator(hub.locators.get(_DS_ACTIONS_SUBMIT)).first
+        log.info("DS PBAC (review): waiting for Submit action")
         submit.wait_for(state="visible", timeout=30_000)
         submit.click()
-        page.locator(hub.locators.get(_DS_SUBMIT_DIALOG_CONFIRM)).first.click()
+        _click_ds_submit_dialog_yes(hub)
+        detail.wait_loading_spinner_gone()
         release = page.locator(hub.locators.get(_DS_ACTIONS_RELEASE)).first
         reject = page.locator(hub.locators.get(_DS_ACTIONS_REJECT)).first
         withdraw = page.locator(hub.locators.get(_DS_ACTIONS_WITHDRAW)).first
@@ -573,7 +634,7 @@ def _functional_data_submission_admin_submit(hub: Hub, _role: str, _scenario: st
     log.info("Verifying DS Admin Submit...")
     try:
         _pbac_click_home(hub)
-        HeaderPage(hub).open_data_submissions()
+        _open_data_submissions_list_settled(hub)
         create = hub.page.locator(
             hub.locators.get("CRDC/AILocators/DataSubmissions/List/Table/CreateDataSubmission-Btn")
         )
@@ -610,7 +671,7 @@ def _functional_data_submission_confirm(hub: Hub, user_role: str, scenario: str)
     log.info("Verifying DS Confirm...")
     try:
         _pbac_click_home(hub)
-        HeaderPage(hub).open_data_submissions()
+        _open_data_submissions_list_settled(hub)
         create = hub.page.locator(
             hub.locators.get("CRDC/AILocators/DataSubmissions/List/Table/CreateDataSubmission-Btn")
         )
@@ -625,27 +686,34 @@ def _functional_data_submission_confirm(hub: Hub, user_role: str, scenario: str)
         )
         hub.page.locator(hub.locators.get("CRDC/DataSubmissions/DataSubmissionName-Link")).first.click()
         detail = DataSubmissionDetailPage(hub)
+        log.info("DS PBAC (confirm): waiting for detail loading spinner")
         detail.wait_loading_spinner_gone()
         temp = _prepare_unique_program_tsv()
         try:
             _upload_metadata_file_on_detail(hub, temp)
         finally:
             temp.unlink(missing_ok=True)
+        log.info("DS PBAC (confirm): starting validation")
         detail.click_validate()
+        log.info("DS PBAC (confirm): validation finished")
         page = hub.page
         submit = page.locator(hub.locators.get(_DS_ACTIONS_SUBMIT)).first
+        log.info("DS PBAC (confirm): waiting for Submit action")
         submit.wait_for(state="visible", timeout=30_000)
         submit.click()
-        page.locator(hub.locators.get(_DS_SUBMIT_DIALOG_CONFIRM)).first.click()
+        _click_ds_submit_dialog_yes(hub)
+        detail.wait_loading_spinner_gone()
         if user_role.lower() == "submitter" and scenario.lower() == "negative":
             cross = page.locator(hub.locators.get(_DS_CROSS_VALIDATE)).first
             release = page.locator(hub.locators.get(_DS_ACTIONS_RELEASE)).first
             complete = page.locator(hub.locators.get(_DS_ACTIONS_COMPLETE)).first
             return cross.is_visible() or release.is_visible() or complete.is_visible()
         page.locator(hub.locators.get(_DS_CROSS_VALIDATE)).first.click()
+        log.info("DS PBAC (confirm): waiting for Release action")
         page.locator(hub.locators.get(_DS_ACTIONS_RELEASE)).first.wait_for(state="visible", timeout=30_000)
         page.locator(hub.locators.get(_DS_ACTIONS_RELEASE)).first.click()
-        page.locator(hub.locators.get(_DS_ACTIONS_RELEASE_CONFIRM)).first.click()
+        _click_ds_release_confirmation_yes(hub)
+        detail.wait_loading_spinner_gone()
         complete = page.locator(hub.locators.get(_DS_ACTIONS_COMPLETE)).first
         reject = page.locator(hub.locators.get(_DS_ACTIONS_REJECT)).first
         return complete.is_visible() and reject.is_visible()

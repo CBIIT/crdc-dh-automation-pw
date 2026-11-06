@@ -71,7 +71,6 @@ VR_SEVERITY = "CRDC/DataSubmissions/Validation/ValidationResults_Severity-Ddn"
 VR_ISSUE = "CRDC/DataSubmissions/Validation/ValidationResults_IssueType-Ddn"
 VR_HEADERS = "CRDC/DataSubmissions/Validation/Table-Headers"
 VR_ROW = "CRDC/DataSubmissions/Validation/Table-Row"
-LOADING_ROW = "CRDC/AILocators/GenericTable/LoadingRow"
 
 ERR_DIALOG = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/Dialog"
 ERR_CLOSE = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/Close-Btn"
@@ -242,6 +241,7 @@ class DataSubmissionDetailPage(BasePage):
         log.info("Waiting for Validation to finish - waiting up to 5 minutes")
         expect(btn).to_be_disabled(timeout=self.DEFAULT_MS)
         expect(btn).to_be_enabled(timeout=self.VALIDATE_MS)
+        log.info("Validation finished; Validate is enabled again")
 
     def open_validation_results(self) -> None:
         """Validation Results tab, then aggregated/expanded view with filters visible."""
@@ -282,7 +282,7 @@ class DataSubmissionDetailPage(BasePage):
         self._select_li(self._loc(VR_ISSUE), issue_type)
         self._wait_loading_gone()
         rows = self._loc(VR_ROW)
-        self._wait_for_table_settled(self._loc(LOADING_ROW), rows)
+        self.wait_for_generic_table_settled(rows)
 
     def read_vr_rows(self) -> list[tuple[str, str, str]]:
         """Each Validation Results row as (submitted identifier, issue type, severity), with full text from truncated cells."""

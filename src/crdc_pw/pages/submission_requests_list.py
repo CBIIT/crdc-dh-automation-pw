@@ -25,7 +25,6 @@ _SUBMITTER_FILTER = "CRDC/AILocators/SubmissionRequests/List/Filters/SubmitterNa
 _REOPEN_BTN = "CRDC/AILocators/SubmissionRequests/List/Reopen-Btn"
 _DELETE_CONFIRM = "CRDC/AILocators/DeleteDialog/Confirm-Btn"
 _DELETE_DIALOG = "CRDC/AILocators/DeleteDialog/Dialog"
-_LOADING_ROW = "CRDC/AILocators/GenericTable/LoadingRow"
 
 
 class SubmissionRequestsListPage(BasePage):
@@ -45,7 +44,7 @@ class SubmissionRequestsListPage(BasePage):
 
     def wait_for_list_table_settled(self) -> None:
         """Wait until the generic-table loading row is gone (avoid reading placeholder / stale rows)."""
-        self._wait_for_table_settled(self._loc(_LOADING_ROW), self._table_rows())
+        self.wait_for_generic_table_settled(self._table_rows())
 
     def _start_button(self) -> Locator:
         """Start a Submission Request on the list — same Katalon repo path as Katalon.
