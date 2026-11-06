@@ -36,6 +36,7 @@ CHECKBOX_LABEL = "CRDC/ManageUsers/PbacOptions-ChkbxLabel"
 ROLE_DDN = "CRDC/ManageUsers/Role-Ddn"
 ROLE_OPTION = "CRDC/ManageUsers/RoleDdn-Option"
 SAVE = "CRDC/ManageUsers/Save-Btn"
+REQUEST_ACCESS = "CRDC/ManageUsers/RequestAccess-Btn"
 SNACKBAR = "CRDC/AILocators/Global/Notistack-Snackbar"
 
 ROLE_DISPLAY = {
@@ -267,6 +268,13 @@ class UserProfilePage(PermissionForm):
         """
         log.info("Navigate: User Profile (no PBAC panels expected)")
         HeaderPage(self._hub).open_profile()
+
+    def is_request_access_button_visible(self) -> bool:
+        """True if Request Access is visible on Profile (PBAC ``access:request``).
+
+        Profile must already be open (e.g. ``HeaderPage.open_profile()``).
+        """
+        return self._loc(REQUEST_ACCESS).first.is_visible()
 
     def assert_profile_permissions_not_visible(self, role_self: str) -> None:
         """Assert Submitter-self / User-self: no PBAC panels on Profile (Katalon TC04/TC05).

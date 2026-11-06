@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Mapping
 
@@ -82,6 +83,21 @@ SUMMARY_COLLABORATORS_BTN = "CRDC/AILocators/DataSubmissions/Detail/Summary/Coll
 SUMMARY_HEADER_ROOT = "CRDC/AILocators/DataSubmissions/Detail/Summary/SummaryHeader-Root"
 _TRUNCATED = 15
 _UPLOAD_MS = 60_000
+# PBAC single-TSV upload (Katalon uploadMetadataUI parity) — longer than upload_folder.
+_PBAC_UPLOAD_HIDDEN_MS = 120_000
+_PBAC_VALIDATE_ENABLE_S = 120
+
+_ACTION_SUBMIT = "CRDC/AILocators/DataSubmissions/Detail/Actions/Submit-Btn"
+_SUBMIT_DIALOG = "CRDC/AILocators/DataSubmissions/SubmitDialog/Dialog"
+_SUBMIT_DIALOG_YES = "CRDC/AILocators/DataSubmissions/SubmitDialog/Confirm-Btn"
+_CROSS_VALIDATE = "CRDC/AILocators/DataSubmissions/Detail/ValidationControls/CrossValidate-Btn"
+_ACTION_RELEASE = "CRDC/AILocators/DataSubmissions/Detail/Actions/Release-Btn"
+_RELEASE_CONFIRMATION_YES = "CRDC/AILocators/DataSubmissions/Detail/Actions/ReleaseConfirmationYes-Btn"
+_ACTION_COMPLETE = "CRDC/AILocators/DataSubmissions/Detail/Actions/Complete-Btn"
+_ACTION_REJECT = "CRDC/AILocators/DataSubmissions/Detail/Actions/Reject-Btn"
+_ACTION_WITHDRAW = "CRDC/AILocators/DataSubmissions/Detail/Actions/Withdraw-Btn"
+_ACTION_ADMIN_SUBMIT = "CRDC/AILocators/DataSubmissions/Detail/Actions/AdminSubmit-Btn"
+_ACTION_CANCEL = "CRDC/AILocators/DataSubmissions/Detail/Actions/Cancel-Btn"
 
 
 def _header_index(names: list[str], wanted: str) -> int:
@@ -242,6 +258,105 @@ class DataSubmissionDetailPage(BasePage):
         expect(btn).to_be_disabled(timeout=self.DEFAULT_MS)
         expect(btn).to_be_enabled(timeout=self.VALIDATE_MS)
         log.info("Validation finished; Validate is enabled again")
+
+    def upload_metadata_file(self, absolute_path: Path) -> None:
+        """Choose one TSV, Upload, wait for ingest, then wait until Validate enables (PBAC / Katalon uploadMetadataUI).
+
+        Uses longer timeouts than upload_folder for large ingest on QA.
+        """
+        path = absolute_path.resolve()
+        log.info("DS PBAC: uploading metadata file %s", path)
+        choose = self._loc(CHOOSE_FILES)
+        choose.wait_for(state="attached")
+        choose.set_input_files(str(path))
+        self._loc(UPLOAD).click()
+        log.info("DS PBAC: waiting for Uploading indicator to clear")
+        uploading = self._loc(UPLOADING).first
+        try:
+            uploading.wait_for(state="visible", timeout=2_000)
+        except PlaywrightTimeoutError:
+            pass
+        uploading.wait_for(state="hidden", timeout=_PBAC_UPLOAD_HIDDEN_MS)
+        log.info("DS PBAC: upload finished; waiting for Validate to enable")
+        validate_btn = self._loc(VALIDATE)
+        validate_btn.wait_for(state="visible")
+        deadline = datetime.now().timestamp() + _PBAC_VALIDATE_ENABLE_S
+        while datetime.now().timestamp() < deadline:
+            if validate_btn.is_enabled():
+                log.info("DS PBAC: Validate is enabled after upload")
+                return
+            self.page.wait_for_timeout(300)
+        raise AssertionError("Validate did not become enabled after metadata upload")
+
+    def click_submit_for_review(self) -> None:
+        """Submit → confirm dialog Yes → wait for dialog to close (do not wait on detached Yes button)."""
+        submit = self._loc(_ACTION_SUBMIT).first
+        log.info("DS PBAC: waiting for Submit action")
+        submit.wait_for(state="visible", timeout=30_000)
+        submit.click()
+        dialog = self._loc(_SUBMIT_DIALOG)
+        yes_btn = self._loc(_SUBMIT_DIALOG_YES).first
+        log.info("DS PBAC: waiting for submit dialog (data-testid=submit-dialog)")
+        dialog.wait_for(state="visible", timeout=30_000)
+        expect(yes_btn).to_be_visible(timeout=30_000)
+        expect(yes_btn).to_be_enabled(timeout=30_000)
+        log.info("DS PBAC: clicking submit dialog Yes (Confirm-Btn)")
+        yes_btn.click()
+        log.info("DS PBAC: waiting for submit dialog to close")
+        dialog.wait_for(state="hidden", timeout=30_000)
+
+    def click_release_confirmation_yes(self) -> None:
+        """After Release, click the primary Yes on the confirmation dialog (Katalon SubmitYes-Btn parity)."""
+        yes_btn = self._loc(_RELEASE_CONFIRMATION_YES).first
+        log.info("DS PBAC (confirm): waiting for Release confirmation Yes button")
+        expect(yes_btn).to_be_visible(timeout=30_000)
+        expect(yes_btn).to_be_enabled(timeout=30_000)
+        log.info("DS PBAC (confirm): clicking Yes (Katalon SubmitYes-Btn parity)")
+        yes_btn.click()
+
+    def click_cross_validate(self) -> None:
+        """Cross-validate control before Release (data_submission:confirm positive path)."""
+        self._loc(_CROSS_VALIDATE).first.click()
+
+    def click_release(self) -> None:
+        """Release action after cross-validation."""
+        btn = self._loc(_ACTION_RELEASE).first
+        log.info("DS PBAC (confirm): waiting for Release action")
+        btn.wait_for(state="visible", timeout=30_000)
+        btn.click()
+
+    def is_admin_submit_enabled(self, *, timeout_ms: int = 30_000) -> bool:
+        """True if Admin Submit is visible and enabled (after validate with invalid metadata)."""
+        admin_submit = self._loc(_ACTION_ADMIN_SUBMIT).first
+        try:
+            admin_submit.wait_for(state="visible", timeout=timeout_ms)
+        except Exception:
+            return False
+        return admin_submit.is_enabled()
+
+    def is_cancel_visible(self) -> bool:
+        """Cancel action on draft detail (PBAC data_submission:cancel)."""
+        return self._loc(_ACTION_CANCEL).first.is_visible()
+
+    def is_release_reject_withdraw_visible(self) -> bool:
+        """Post–submit-for-review chrome (PBAC data_submission:review)."""
+        release = self._loc(_ACTION_RELEASE).first
+        reject = self._loc(_ACTION_REJECT).first
+        withdraw = self._loc(_ACTION_WITHDRAW).first
+        return release.is_visible() and reject.is_visible() and withdraw.is_visible()
+
+    def is_complete_and_reject_visible(self) -> bool:
+        """After release confirmation (PBAC data_submission:confirm positive)."""
+        complete = self._loc(_ACTION_COMPLETE).first
+        reject = self._loc(_ACTION_REJECT).first
+        return complete.is_visible() and reject.is_visible()
+
+    def is_cross_validate_or_release_or_complete_any_visible(self) -> bool:
+        """Negative confirm check: any of cross-validate / release / complete (PBAC submitter negative)."""
+        cross = self._loc(_CROSS_VALIDATE).first
+        release = self._loc(_ACTION_RELEASE).first
+        complete = self._loc(_ACTION_COMPLETE).first
+        return cross.is_visible() or release.is_visible() or complete.is_visible()
 
     def open_validation_results(self) -> None:
         """Validation Results tab, then aggregated/expanded view with filters visible."""

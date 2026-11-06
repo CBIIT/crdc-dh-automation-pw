@@ -39,6 +39,10 @@ class DataExplorerListPage(BasePage):
         self.container.wait_for(state="visible")
         self.wait_for_generic_table_settled(self._loc(_LIST_ROW))
 
+    def table_data_rows(self) -> Locator:
+        """Generic table body rows (PBAC ``data_submission:view``)."""
+        return self._loc(_LIST_ROW)
+
     def open_settled(self) -> None:
         """Open Data Explorer, then CircularProgress gone + generic table settled (PBAC DS view)."""
         HeaderPage(self._hub).open_data_explorer()

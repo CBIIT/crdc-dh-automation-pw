@@ -12,18 +12,28 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from crdc_pw.pages.base import BasePage
 
+_HOME_LOGO = "CRDC/NavBar/Home-Btn"
 _USERNAME = "CRDC/AILocators/Global/Header/Desktop/UserName-Btn"
 _LOGOUT = "CRDC/AILocators/Global/Header/Desktop/Logout-Btn"
 _MANAGE_STUDIES = "CRDC/AILocators/Global/Header/Desktop/ManageStudies-Link"
 _MANAGE_PROGRAMS = "CRDC/AILocators/Global/Header/Desktop/ManagePrograms-Link"
+_MANAGE_INSTITUTIONS = "CRDC/AILocators/Global/Header/Desktop/ManageInstitutions-Link"
 _MANAGE_USERS = "CRDC/AILocators/Global/Header/Desktop/ManageUsers-Link"
+_OPERATION_DASHBOARD = "CRDC/AILocators/Global/Header/Desktop/OperationDashboard-Link"
 _USER_PROFILE = "CRDC/AILocators/Global/Header/Desktop/UserProfile-Link"
 _DATA_SUBMISSIONS = "CRDC/AILocators/Global/Header/Desktop/DataSubmissions-Tab"
 _DATA_EXPLORER = "CRDC/AILocators/Global/Header/Desktop/DataExplorer-Tab"
 _SUBMISSION_REQUESTS = "CRDC/AILocators/Global/Header/Desktop/SubmissionRequests-Tab"
+_API_TOKEN = "CRDC/AILocators/Global/Header/Desktop/APIToken-Btn"
 
 
 class HeaderPage(BasePage):
+    def go_home(self) -> None:
+        """Click the header logo to return home (Katalon SubmissionRequest.clickHome)."""
+        btn = self._loc(_HOME_LOGO)
+        btn.wait_for(state="visible")
+        btn.click()
+
     @property
     def username_btn(self) -> Locator:
         """The clickable signed-in name in the desktop header."""
@@ -103,3 +113,30 @@ class HeaderPage(BasePage):
         tab = self._loc(_SUBMISSION_REQUESTS)
         tab.wait_for(state="visible")
         tab.click()
+
+    def is_api_token_button_visible(self) -> bool:
+        """True if API Token appears in the open user menu (PBAC ``data_submission:create``).
+
+        Call ``open_user_menu()`` first so dropdown entries are visible.
+        """
+        return self._loc(_API_TOKEN).first.is_visible()
+
+    def is_nav_manage_programs_visible(self) -> bool:
+        """User menu open — Manage Programs in dropdown (PBAC ``program:manage``)."""
+        return self._loc(_MANAGE_PROGRAMS).first.is_visible()
+
+    def is_nav_manage_studies_visible(self) -> bool:
+        """User menu open — Manage Studies in dropdown (PBAC ``study:manage``)."""
+        return self._loc(_MANAGE_STUDIES).first.is_visible()
+
+    def is_nav_manage_institutions_visible(self) -> bool:
+        """User menu open — Manage Institutions in dropdown (PBAC ``institution:manage``)."""
+        return self._loc(_MANAGE_INSTITUTIONS).first.is_visible()
+
+    def is_nav_manage_users_visible(self) -> bool:
+        """User menu open — Manage Users in dropdown (PBAC ``user:manage``)."""
+        return self._loc(_MANAGE_USERS).first.is_visible()
+
+    def is_nav_operation_dashboard_visible(self) -> bool:
+        """User menu open — Operation Dashboard in dropdown (PBAC ``dashboard:view``)."""
+        return self._loc(_OPERATION_DASHBOARD).first.is_visible()

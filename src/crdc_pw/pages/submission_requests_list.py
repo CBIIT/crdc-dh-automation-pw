@@ -7,6 +7,7 @@ import re
 from typing import Mapping
 
 from playwright.sync_api import Locator
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from crdc_pw.pages.base import BasePage
 from crdc_pw.pages.header import HeaderPage
@@ -25,6 +26,8 @@ _SUBMITTER_FILTER = "CRDC/AILocators/SubmissionRequests/List/Filters/SubmitterNa
 _REOPEN_BTN = "CRDC/AILocators/SubmissionRequests/List/Reopen-Btn"
 _DELETE_CONFIRM = "CRDC/AILocators/DeleteDialog/Confirm-Btn"
 _DELETE_DIALOG = "CRDC/AILocators/DeleteDialog/Dialog"
+_UNSAVED_SAVE = "CRDC/AILocators/SubmissionRequests/UnsavedChangesDialog/Save-Btn"
+_CANCEL_LIST = "CRDC/SubmissionRequest/Cancel-Btn"
 
 
 class SubmissionRequestsListPage(BasePage):
@@ -45,6 +48,72 @@ class SubmissionRequestsListPage(BasePage):
     def wait_for_list_table_settled(self) -> None:
         """Wait until the generic-table loading row is gone (avoid reading placeholder / stale rows)."""
         self.wait_for_generic_table_settled(self._table_rows())
+
+    def table_data_rows(self) -> Locator:
+        """Data rows in the generic SR list table (PBAC row counts, permission-denied text)."""
+        return self._table_rows()
+
+    def is_start_submission_request_visible(self) -> bool:
+        """True if Start a Submission Request is visible on the list (PBAC submission_request:create)."""
+        return self._loc(_START_BTN).first.is_visible()
+
+    def is_resume_button_visible(self) -> bool:
+        """True if a Resume control is visible (PBAC submit flow after In Progress filter)."""
+        return self.page.get_by_role("button", name=re.compile(r"^Resume$", re.I)).first.is_visible()
+
+    def save_unsaved_changes_dialog_if_present(self) -> None:
+        """After navigating away from a dirty SR form, click Save in the unsaved-changes dialog if it appears."""
+        save_btn = self._loc(_UNSAVED_SAVE)
+        try:
+            save_btn.wait_for(state="visible", timeout=5_000)
+        except PlaywrightTimeoutError:
+            return
+        log.info("Unsaved changes dialog present; clicking Save")
+        save_btn.click()
+        save_btn.wait_for(state="hidden", timeout=10_000)
+
+    def return_to_list_after_partial_save(self) -> None:
+        """Leave the form for the SR list, handle unsaved dialog, then wait for settled table (PBAC submit path)."""
+        HeaderPage(self._hub).open_submission_requests()
+        self.save_unsaved_changes_dialog_if_present()
+        self.container.wait_for(state="visible", timeout=15_000)
+        self.wait_for_list_table_settled()
+
+    def is_review_button_visible_on_list(self) -> bool:
+        """True if some data row shows a visible Review action (PBAC submission_request:review gate)."""
+        rows = self._table_rows()
+        for i in range(rows.count()):
+            row = rows.nth(i)
+            btn = row.get_by_role("button", name=re.compile(r"^Review$", re.I))
+            if btn.count() == 0:
+                btn = row.locator("xpath=.//button[contains(normalize-space(.), 'Review')]")
+            if btn.count() > 0 and btn.first.is_visible():
+                return True
+        return False
+
+    def click_review_on_first_matching_row(self) -> None:
+        """Click Review on the first row where the control is visible (row-scoped, not global Review-Btn)."""
+        rows = self._table_rows()
+        for i in range(rows.count()):
+            row = rows.nth(i)
+            btn = row.get_by_role("button", name=re.compile(r"^Review$", re.I))
+            if btn.count() == 0:
+                btn = row.locator("xpath=.//button[contains(normalize-space(.), 'Review')]")
+            if btn.count() > 0 and btn.first.is_visible():
+                btn.first.scroll_into_view_if_needed()
+                btn.first.click()
+                log.info("Clicked Review on SR list row index %s", i)
+                return
+        raise AssertionError("No row with visible Review button on Submission Requests list")
+
+    def is_cancel_button_visible_on_first_row(self) -> bool:
+        """True if Cancel/Restore is visible on the list (PBAC submission_request:cancel; matches legacy global path)."""
+        return self._loc(_CANCEL_LIST).first.is_visible()
+
+    def is_reopen_button_visible(self) -> bool:
+        """True if a Reopen control exists on the list (PBAC submission_request:reopen)."""
+        reopen = self._loc(_REOPEN_BTN)
+        return reopen.first.is_visible() if reopen.count() else False
 
     def _start_button(self) -> Locator:
         """Start a Submission Request on the list — same Katalon repo path as Katalon.

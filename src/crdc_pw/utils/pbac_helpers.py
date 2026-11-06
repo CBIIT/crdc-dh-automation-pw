@@ -1,25 +1,23 @@
 """PBAC suite orchestration (Katalon utilities/Pbac.groovy).
 
-Home for multi-step PBAC flows that span pages: default permission compares
-(TC01–TC05), positive/negative edits and functional permission checks (TC06+).
-DOM actions stay on page objects; Excel oracles stay in pbac_sheet.py.
+Orchestrates TC01–TC05 defaults and TC06+ functional permission checks: navigation
+order, Excel oracles via ``pbac_sheet``, logging, and ``pytest`` assertions.
+Handlers delegate all DOM to page objects under ``crdc_pw.pages``; do not add new
+``hub.page.locator`` calls here for functional checks.
 """
 
 from __future__ import annotations
 
 import logging
-import re
 from datetime import datetime
 from pathlib import Path
 from typing import Literal, Protocol
 
 import pytest
-from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
-from playwright.sync_api import expect
 
 from crdc_pw.hub import Hub
 from crdc_pw.locators.loader import repo_root
-from crdc_pw.pages.data_submission_details import CHOOSE_FILES, DataSubmissionDetailPage
+from crdc_pw.pages.data_submission_details import DataSubmissionDetailPage
 from crdc_pw.pages.data_explorer_list import DataExplorerListPage
 from crdc_pw.pages.data_submissions_list import DataSubmissionsListPage
 from crdc_pw.pages.header import HeaderPage
@@ -34,29 +32,6 @@ from crdc_pw.utils.pbac_sheet import (
 )
 
 log = logging.getLogger("crdc_pw.pbac_helpers")
-
-# Locator paths (Katalon Object Repository)
-_HOME = "CRDC/NavBar/Home-Btn"
-_DS_LOADING = "CRDC/DataSubmissions/Loading-Icon"
-_DS_TABLE_ROW = "CRDC/DataSubmissions/DataSubmListTable-Row"
-_UNSAVED_SAVE = "CRDC/AILocators/SubmissionRequests/UnsavedChangesDialog/Save-Btn"
-_SR_REVIEW_BTN_LEGACY = "CRDC/SubmissionRequest/Review-Btn"
-_DS_ACTIONS_SUBMIT = "CRDC/AILocators/DataSubmissions/Detail/Actions/Submit-Btn"
-_DS_SUBMIT_DIALOG = "CRDC/AILocators/DataSubmissions/SubmitDialog/Dialog"
-# Primary action in the UI is labeled "Yes"; repo YAML uses Confirm-Btn / submit-dialog-confirm-button.
-# Katalon also references CRDC/DataSubmissions/SubmitYes-Btn for the same flow.
-_DS_SUBMIT_DIALOG_YES = "CRDC/AILocators/DataSubmissions/SubmitDialog/Confirm-Btn"
-_DS_CROSS_VALIDATE = "CRDC/AILocators/DataSubmissions/Detail/ValidationControls/CrossValidate-Btn"
-_DS_ACTIONS_RELEASE = "CRDC/AILocators/DataSubmissions/Detail/Actions/Release-Btn"
-# Katalon data_submission:confirm uses SubmitYes-Btn (//button[.='Yes']) after Release — not ConfirmRelease-Btn (different label).
-_DS_ACTIONS_RELEASE_CONFIRMATION_YES = (
-    "CRDC/AILocators/DataSubmissions/Detail/Actions/ReleaseConfirmationYes-Btn"
-)
-_DS_ACTIONS_COMPLETE = "CRDC/AILocators/DataSubmissions/Detail/Actions/Complete-Btn"
-_DS_ACTIONS_REJECT = "CRDC/AILocators/DataSubmissions/Detail/Actions/Reject-Btn"
-_DS_ACTIONS_WITHDRAW = "CRDC/AILocators/DataSubmissions/Detail/Actions/Withdraw-Btn"
-_DS_ACTIONS_ADMIN_SUBMIT = "CRDC/AILocators/DataSubmissions/Detail/Actions/AdminSubmit-Btn"
-_DS_ACTIONS_CANCEL = "CRDC/AILocators/DataSubmissions/Detail/Actions/Cancel-Btn"
 
 PROGRAM_TSV = Path("InputFiles/CRDC/MetadataData/PBAC/program.tsv")
 PROGRAM_INVALID_TSV = Path("InputFiles/CRDC/MetadataData/PBAC/program_invalid.tsv")
@@ -157,7 +132,7 @@ def verify_permissions_functional(
 
 
 def _pbac_click_home(hub: Hub) -> None:
-    hub.page.locator(hub.locators.get(_HOME)).click()
+    HeaderPage(hub).go_home()
 
 
 def _wait_ds_loading_gone(hub: Hub) -> None:
@@ -187,14 +162,6 @@ def _open_submission_requests_list_settled(hub: Hub) -> None:
 
 def _profile_name(hub: Hub) -> str:
     return HeaderPage(hub).username()
-
-
-def _sr_list_table_rows(hub: Hub):
-    return hub.page.locator(hub.locators.get("CRDC/SubmissionRequest/SubmReqListTable-Row"))
-
-
-def _ds_list_table_rows(hub: Hub):
-    return hub.page.locator(hub.locators.get(_DS_TABLE_ROW))
 
 
 def _ds_or_explorer_list_has_positive_rows(rows) -> bool:
@@ -233,76 +200,13 @@ def _prepare_unique_program_tsv() -> Path:
     return dest
 
 
-def _upload_metadata_file_on_detail(hub: Hub, absolute_path: Path) -> None:
-    page = hub.page
-    path = absolute_path.resolve()
-    log.info("DS PBAC: uploading metadata file %s", path)
-    choose = page.locator(hub.locators.get("CRDC/DataSubmissions/ChooseFiles-Btn"))
-    choose.wait_for(state="attached")
-    choose.set_input_files(str(path))
-    page.locator(hub.locators.get("CRDC/DataSubmissions/Upload-Btn")).click()
-    log.info("DS PBAC: waiting for Uploading indicator to clear")
-    uploading = page.locator(hub.locators.get("CRDC/DataSubmissions/Uploading-Txt")).first
-    try:
-        uploading.wait_for(state="visible", timeout=2_000)
-    except Exception:
-        pass
-    uploading.wait_for(state="hidden", timeout=120_000)
-    log.info("DS PBAC: upload finished; waiting for Validate to enable")
-    validate_btn = page.locator(hub.locators.get("CRDC/DataSubmissions/Validate-Btn"))
-    validate_btn.wait_for(state="visible")
-    # Katalon waits until Validate enables after ingest
-    deadline = datetime.now().timestamp() + 120
-    while datetime.now().timestamp() < deadline:
-        if validate_btn.is_enabled():
-            log.info("DS PBAC: Validate is enabled after upload")
-            return
-        page.wait_for_timeout(300)
-    raise AssertionError("Validate did not become enabled after metadata upload")
-
-
-def _click_ds_submit_dialog_yes(hub: Hub) -> None:
-    """Submit → wait for dialog, click Yes (Confirm-Btn), wait for dialog to close.
-
-    Do not wait for the Yes control to become ``hidden`` after click: the dialog often
-    unmounts the button immediately, which can detach the node and fail Playwright's
-    hidden wait even when submit succeeded.
-    """
-    page = hub.page
-    dialog = page.locator(hub.locators.get(_DS_SUBMIT_DIALOG))
-    yes_btn = page.locator(hub.locators.get(_DS_SUBMIT_DIALOG_YES)).first
-    log.info("DS PBAC: waiting for submit dialog (data-testid=submit-dialog)")
-    dialog.wait_for(state="visible", timeout=30_000)
-    expect(yes_btn).to_be_visible(timeout=30_000)
-    expect(yes_btn).to_be_enabled(timeout=30_000)
-    log.info("DS PBAC: clicking submit dialog Yes (Confirm-Btn)")
-    yes_btn.click()
-    log.info("DS PBAC: waiting for submit dialog to close")
-    dialog.wait_for(state="hidden", timeout=30_000)
-
-
-def _click_ds_release_confirmation_yes(hub: Hub) -> None:
-    """Katalon Pbac data_submission:confirm: click Release then ``SubmitYes-Btn`` (//button[.='Yes']).
-
-    The repo's ``ConfirmRelease-Btn`` targets text ``Confirm Release``, not the Yes/No pair.
-    ``ReleaseConfirmationYes-Btn`` matches the primary ``Yes`` on the release confirmation dialog.
-    """
-    page = hub.page
-    yes_btn = page.locator(hub.locators.get(_DS_ACTIONS_RELEASE_CONFIRMATION_YES)).first
-    log.info("DS PBAC (confirm): waiting for Release confirmation Yes button")
-    expect(yes_btn).to_be_visible(timeout=30_000)
-    expect(yes_btn).to_be_enabled(timeout=30_000)
-    log.info("DS PBAC (confirm): clicking Yes (Katalon SubmitYes-Btn parity)")
-    yes_btn.click()
-
-
 def _functional_submission_request_view(hub: Hub, _role: str, _scenario: str) -> bool:
     log.info("Verifying SR View...")
     try:
         hub.page.wait_for_timeout(1_000)
         _pbac_click_home(hub)
         _open_submission_requests_list_settled(hub)
-        rows = _sr_list_table_rows(hub)
+        rows = SubmissionRequestsListPage(hub).table_data_rows()
         n = rows.count()
         if n == 1:
             text = rows.first.inner_text() or ""
@@ -331,8 +235,7 @@ def _functional_submission_request_create(hub: Hub, _role: str, _scenario: str) 
     try:
         _pbac_click_home(hub)
         _open_submission_requests_list_settled(hub)
-        start = SubmissionRequestsListPage(hub)._start_button()
-        return start.is_visible()
+        return SubmissionRequestsListPage(hub).is_start_submission_request_visible()
     except Exception as exc:
         log.info("Error verifying permission - submission_request:create -> %s", exc)
         return False
@@ -344,8 +247,7 @@ def _functional_submission_request_submit(hub: Hub, _role: str, _scenario: str) 
         _pbac_click_home(hub)
         _open_submission_requests_list_settled(hub)
         sr_list = SubmissionRequestsListPage(hub)
-        start = sr_list._start_button()
-        if not start.is_visible():
+        if not sr_list.is_start_submission_request_visible():
             return False
         form = SubmissionRequestFormPage(hub)
 
@@ -354,21 +256,7 @@ def _functional_submission_request_submit(hub: Hub, _role: str, _scenario: str) 
         # Save is disabled until the form is dirty; fill PI so Save can be clicked.
         form.enter_principal_investigator_info(2)
         form.click_save()
-        HeaderPage(hub).open_submission_requests()
-        # Leaving with incomplete Section A opens the unsaved-changes dialog; Save there to keep the draft.
-        # Locator is scoped to [role='dialog']; do not use .first — plain //button[.='Save'] would match the form Save too.
-        save_btn = hub.page.locator(hub.locators.get(_UNSAVED_SAVE))
-        try:
-            save_btn.wait_for(state="visible", timeout=5_000)
-        except PlaywrightTimeoutError:
-            pass
-        else:
-            log.info("Unsaved changes dialog present; clicking Save")
-            save_btn.click()
-            save_btn.wait_for(state="hidden", timeout=10_000)
-        # }
-        sr_list.container.wait_for(state="visible", timeout=15_000)
-        sr_list.wait_for_list_table_settled()
+        sr_list.return_to_list_after_partial_save()
 
         name = _profile_name(hub)
         sr_list.apply_submission_requests_list_filters(
@@ -379,8 +267,7 @@ def _functional_submission_request_submit(hub: Hub, _role: str, _scenario: str) 
                 "status": "In Progress",
             }
         )
-        resume = hub.page.get_by_role("button", name=re.compile(r"^Resume$", re.I)).first
-        sr_list_resume = resume.is_visible()
+        sr_list_resume = sr_list.is_resume_button_visible()
 
         # SR create/submit flow
         sr_list.start_new_submission_request()
@@ -403,9 +290,7 @@ def _functional_submission_request_submit(hub: Hub, _role: str, _scenario: str) 
             1,
             1,
         )
-        submit = hub.page.locator(hub.locators.get("CRDC/SubmissionRequest/Submit-Btn")).first
-        submit.wait_for(state="visible", timeout=40_000)
-        sr_submit_exists = submit.is_visible()
+        sr_submit_exists = form.is_submit_button_visible()
         return bool(sr_list_resume and sr_submit_exists)
     except Exception as exc:
         log.info("Error verifying permission - submission_request:submit -> %s", exc)
@@ -427,22 +312,12 @@ def _functional_submission_request_review(hub: Hub, _role: str, _scenario: str) 
                 "status": "Submitted, In Review",
             }
         )
-        review_row = hub.page.locator(hub.locators.get(_SR_REVIEW_BTN_LEGACY)).first
-        if not review_row.is_visible():
+        if not sr_list.is_review_button_visible_on_list():
             return False
-        review_row.click()
+        sr_list.click_review_on_first_matching_row()
         form = SubmissionRequestFormPage(hub)
         form.click_review_progress_bar()
-        approve = hub.page.locator(
-            hub.locators.get("CRDC/AILocators/SubmissionRequests/Form/Navigation/Approve-Btn")
-        ).first
-        reject = hub.page.locator(
-            hub.locators.get("CRDC/AILocators/SubmissionRequests/Form/Navigation/Reject-Btn")
-        ).first
-        inquire = hub.page.locator(
-            hub.locators.get("CRDC/AILocators/SubmissionRequests/Form/Navigation/Inquire-Btn")
-        ).first
-        return approve.is_visible() and reject.is_visible() and inquire.is_visible()
+        return form.are_review_decision_buttons_visible()
     except Exception as exc:
         log.info("Error verifying permission - submission_request:review -> %s", exc)
         return False
@@ -463,8 +338,7 @@ def _functional_submission_request_cancel(hub: Hub, _role: str, _scenario: str) 
                 "status": "In Progress",
             }
         )
-        cancel = hub.page.locator(hub.locators.get("CRDC/SubmissionRequest/Cancel-Btn")).first
-        return cancel.is_visible()
+        return sr_list.is_cancel_button_visible_on_first_row()
     except Exception as exc:
         log.info("Error verifying permission - submission_request:cancel -> %s", exc)
         return False
@@ -487,7 +361,7 @@ def _functional_submission_request_reopen(
                 "status": "Approved",
             }
         )
-        rows = _sr_list_table_rows(hub)
+        rows = sr_list.table_data_rows()
         n = rows.count()
         no_perm = (
             n == 1
@@ -499,8 +373,7 @@ def _functional_submission_request_reopen(
                 "Approved submission required for reopen PBAC check; seed QA with at least "
                 "one Approved SR visible to this role."
             )
-        reopen = hub.page.locator(hub.locators.get("CRDC/AILocators/SubmissionRequests/List/Reopen-Btn"))
-        reopen_present = reopen.first.is_visible() if reopen.count() else False
+        reopen_present = sr_list.is_reopen_button_visible()
         log.info("SR Reopen list rows: %s, Reopen control present: %s", n, reopen_present)
         return reopen_present
     except Exception as exc:
@@ -513,7 +386,7 @@ def _functional_data_submission_view(hub: Hub, _role: str, _scenario: str) -> bo
     try:
         _pbac_click_home(hub)
         _open_data_submissions_list_settled(hub)
-        rows_ds = _ds_list_table_rows(hub)
+        rows_ds = DataSubmissionsListPage(hub).table_data_rows()
         if rows_ds.count() == 1 and "do not have the appropriate permissions" in (
             rows_ds.first.inner_text() or ""
         ):
@@ -522,8 +395,9 @@ def _functional_data_submission_view(hub: Hub, _role: str, _scenario: str) -> bo
         log.info("Number of rows in Data Submission list found: %s", n_ds)
 
         _pbac_click_home(hub)
-        DataExplorerListPage(hub).open_settled()
-        rows_de = _ds_list_table_rows(hub)
+        explorer = DataExplorerListPage(hub)
+        explorer.open_settled()
+        rows_de = explorer.table_data_rows()
         if rows_de.count() == 1 and "do not have the appropriate permissions" in (
             rows_de.first.inner_text() or ""
         ):
@@ -544,13 +418,10 @@ def _functional_data_submission_create(hub: Hub, _role: str, _scenario: str) -> 
     try:
         _pbac_click_home(hub)
         _open_data_submissions_list_settled(hub)
-        create = hub.page.locator(
-            hub.locators.get("CRDC/AILocators/DataSubmissions/List/Table/CreateDataSubmission-Btn")
-        )
-        data_submission_create = create.first.is_visible()
-        HeaderPage(hub).open_user_menu()
-        api = hub.page.locator(hub.locators.get("CRDC/AILocators/Global/Header/Desktop/APIToken-Btn"))
-        api_token = api.first.is_visible()
+        data_submission_create = DataSubmissionsListPage(hub).is_create_visible()
+        header = HeaderPage(hub)
+        header.open_user_menu()
+        api_token = header.is_api_token_button_visible()
         _pbac_click_home(hub)
         return data_submission_create and api_token
     except Exception as exc:
@@ -563,23 +434,18 @@ def _functional_data_submission_cancel(hub: Hub, _role: str, _scenario: str) -> 
     try:
         _pbac_click_home(hub)
         _open_data_submissions_list_settled(hub)
-        create = hub.page.locator(
-            hub.locators.get("CRDC/AILocators/DataSubmissions/List/Table/CreateDataSubmission-Btn")
-        )
-        if not create.first.is_visible():
-            return False
         ds_list = DataSubmissionsListPage(hub)
+        if not ds_list.is_create_visible():
+            return False
         ds_list.create_data_submission(
             "New/Update",
             "metadata only",
             "GC",
             AUTOMATION_STUDY_DS,
         )
-        hub.page.locator(hub.locators.get("CRDC/DataSubmissions/DataSubmissionName-Link")).first.click()
-        hub.page.locator(hub.locators.get(CHOOSE_FILES)).wait_for(state="attached")
-        _wait_ds_loading_gone(hub)
-        cancel = hub.page.locator(hub.locators.get(_DS_ACTIONS_CANCEL)).first
-        return cancel.is_visible()
+        detail = DataSubmissionDetailPage(hub)
+        detail.wait_loading_spinner_gone()
+        return detail.is_cancel_visible()
     except Exception as exc:
         log.info("Error verifying permission - data_submission:cancel -> %s", exc)
         return False
@@ -590,41 +456,29 @@ def _functional_data_submission_review(hub: Hub, _role: str, _scenario: str) -> 
     try:
         _pbac_click_home(hub)
         _open_data_submissions_list_settled(hub)
-        create = hub.page.locator(
-            hub.locators.get("CRDC/AILocators/DataSubmissions/List/Table/CreateDataSubmission-Btn")
-        )
-        if not create.first.is_visible():
-            return False
         ds_list = DataSubmissionsListPage(hub)
+        if not ds_list.is_create_visible():
+            return False
         ds_list.create_data_submission(
             "New/Update",
             "metadata only",
             "GC",
             AUTOMATION_STUDY_DS,
         )
-        hub.page.locator(hub.locators.get("CRDC/DataSubmissions/DataSubmissionName-Link")).first.click()
         detail = DataSubmissionDetailPage(hub)
         log.info("DS PBAC (review): waiting for detail loading spinner")
         detail.wait_loading_spinner_gone()
         temp = _prepare_unique_program_tsv()
         try:
-            _upload_metadata_file_on_detail(hub, temp)
+            detail.upload_metadata_file(temp)
         finally:
             temp.unlink(missing_ok=True)
         log.info("DS PBAC (review): starting validation")
         detail.click_validate()
         log.info("DS PBAC (review): validation finished")
-        page = hub.page
-        submit = page.locator(hub.locators.get(_DS_ACTIONS_SUBMIT)).first
-        log.info("DS PBAC (review): waiting for Submit action")
-        submit.wait_for(state="visible", timeout=30_000)
-        submit.click()
-        _click_ds_submit_dialog_yes(hub)
+        detail.click_submit_for_review()
         detail.wait_loading_spinner_gone()
-        release = page.locator(hub.locators.get(_DS_ACTIONS_RELEASE)).first
-        reject = page.locator(hub.locators.get(_DS_ACTIONS_REJECT)).first
-        withdraw = page.locator(hub.locators.get(_DS_ACTIONS_WITHDRAW)).first
-        return release.is_visible() and reject.is_visible() and withdraw.is_visible()
+        return detail.is_release_reject_withdraw_visible()
     except Exception as exc:
         log.info("Error verifying permission - data_submission:review -> %s", exc)
         return False
@@ -635,33 +489,24 @@ def _functional_data_submission_admin_submit(hub: Hub, _role: str, _scenario: st
     try:
         _pbac_click_home(hub)
         _open_data_submissions_list_settled(hub)
-        create = hub.page.locator(
-            hub.locators.get("CRDC/AILocators/DataSubmissions/List/Table/CreateDataSubmission-Btn")
-        )
-        if not create.first.is_visible():
-            return False
         ds_list = DataSubmissionsListPage(hub)
+        if not ds_list.is_create_visible():
+            return False
         ds_list.create_data_submission(
             "New/Update",
             "metadata only",
             "GC",
             AUTOMATION_STUDY_DS,
         )
-        hub.page.locator(hub.locators.get("CRDC/DataSubmissions/DataSubmissionName-Link")).first.click()
         detail = DataSubmissionDetailPage(hub)
         detail.wait_loading_spinner_gone()
         root = repo_root()
         invalid = root / PROGRAM_INVALID_TSV
         if not invalid.is_file():
             raise FileNotFoundError(invalid)
-        _upload_metadata_file_on_detail(hub, invalid)
+        detail.upload_metadata_file(invalid)
         detail.click_validate()
-        admin_submit = hub.page.locator(hub.locators.get(_DS_ACTIONS_ADMIN_SUBMIT)).first
-        try:
-            admin_submit.wait_for(state="visible", timeout=30_000)
-        except Exception:
-            return False
-        return admin_submit.is_enabled()
+        return detail.is_admin_submit_enabled()
     except Exception as exc:
         log.info("Error verifying permission - data_submission:admin_submit -> %s", exc)
         return False
@@ -672,51 +517,35 @@ def _functional_data_submission_confirm(hub: Hub, user_role: str, scenario: str)
     try:
         _pbac_click_home(hub)
         _open_data_submissions_list_settled(hub)
-        create = hub.page.locator(
-            hub.locators.get("CRDC/AILocators/DataSubmissions/List/Table/CreateDataSubmission-Btn")
-        )
-        if not create.first.is_visible():
-            return False
         ds_list = DataSubmissionsListPage(hub)
+        if not ds_list.is_create_visible():
+            return False
         ds_list.create_data_submission(
             "New/Update",
             "metadata only",
             "GC",
             AUTOMATION_STUDY_DS,
         )
-        hub.page.locator(hub.locators.get("CRDC/DataSubmissions/DataSubmissionName-Link")).first.click()
         detail = DataSubmissionDetailPage(hub)
         log.info("DS PBAC (confirm): waiting for detail loading spinner")
         detail.wait_loading_spinner_gone()
         temp = _prepare_unique_program_tsv()
         try:
-            _upload_metadata_file_on_detail(hub, temp)
+            detail.upload_metadata_file(temp)
         finally:
             temp.unlink(missing_ok=True)
         log.info("DS PBAC (confirm): starting validation")
         detail.click_validate()
         log.info("DS PBAC (confirm): validation finished")
-        page = hub.page
-        submit = page.locator(hub.locators.get(_DS_ACTIONS_SUBMIT)).first
-        log.info("DS PBAC (confirm): waiting for Submit action")
-        submit.wait_for(state="visible", timeout=30_000)
-        submit.click()
-        _click_ds_submit_dialog_yes(hub)
+        detail.click_submit_for_review()
         detail.wait_loading_spinner_gone()
         if user_role.lower() == "submitter" and scenario.lower() == "negative":
-            cross = page.locator(hub.locators.get(_DS_CROSS_VALIDATE)).first
-            release = page.locator(hub.locators.get(_DS_ACTIONS_RELEASE)).first
-            complete = page.locator(hub.locators.get(_DS_ACTIONS_COMPLETE)).first
-            return cross.is_visible() or release.is_visible() or complete.is_visible()
-        page.locator(hub.locators.get(_DS_CROSS_VALIDATE)).first.click()
-        log.info("DS PBAC (confirm): waiting for Release action")
-        page.locator(hub.locators.get(_DS_ACTIONS_RELEASE)).first.wait_for(state="visible", timeout=30_000)
-        page.locator(hub.locators.get(_DS_ACTIONS_RELEASE)).first.click()
-        _click_ds_release_confirmation_yes(hub)
+            return detail.is_cross_validate_or_release_or_complete_any_visible()
+        detail.click_cross_validate()
+        detail.click_release()
+        detail.click_release_confirmation_yes()
         detail.wait_loading_spinner_gone()
-        complete = page.locator(hub.locators.get(_DS_ACTIONS_COMPLETE)).first
-        reject = page.locator(hub.locators.get(_DS_ACTIONS_REJECT)).first
-        return complete.is_visible() and reject.is_visible()
+        return detail.is_complete_and_reject_visible()
     except Exception as exc:
         log.info("Error verifying permission - data_submission:confirm -> %s", exc)
         return False
@@ -726,8 +555,9 @@ def _functional_program_manage(hub: Hub, _role: str, _scenario: str) -> bool:
     log.info("Verifying Manage Programs...")
     try:
         _pbac_click_home(hub)
-        HeaderPage(hub).open_user_menu()
-        return hub.page.locator(hub.locators.get("CRDC/NavBar/ManagePrograms-Btn")).first.is_visible()
+        header = HeaderPage(hub)
+        header.open_user_menu()
+        return header.is_nav_manage_programs_visible()
     except Exception as exc:
         log.info("Error verifying permission - program:manage -> %s", exc)
         return False
@@ -737,8 +567,9 @@ def _functional_study_manage(hub: Hub, _role: str, _scenario: str) -> bool:
     log.info("Verifying Manage Studies...")
     try:
         _pbac_click_home(hub)
-        HeaderPage(hub).open_user_menu()
-        return hub.page.locator(hub.locators.get("CRDC/NavBar/ManageStudies-Btn")).first.is_visible()
+        header = HeaderPage(hub)
+        header.open_user_menu()
+        return header.is_nav_manage_studies_visible()
     except Exception as exc:
         log.info("Error verifying permission - study:manage -> %s", exc)
         return False
@@ -748,8 +579,9 @@ def _functional_institution_manage(hub: Hub, _role: str, _scenario: str) -> bool
     log.info("Verifying Manage Institutions...")
     try:
         _pbac_click_home(hub)
-        HeaderPage(hub).open_user_menu()
-        return hub.page.locator(hub.locators.get("CRDC/NavBar/ManageInstitutions-Btn")).first.is_visible()
+        header = HeaderPage(hub)
+        header.open_user_menu()
+        return header.is_nav_manage_institutions_visible()
     except Exception as exc:
         log.info("Error verifying permission - institution:manage -> %s", exc)
         return False
@@ -759,8 +591,9 @@ def _functional_user_manage(hub: Hub, _role: str, _scenario: str) -> bool:
     log.info("Verifying Manage Users...")
     try:
         _pbac_click_home(hub)
-        HeaderPage(hub).open_user_menu()
-        return hub.page.locator(hub.locators.get("CRDC/NavBar/ManageUsers-Btn")).first.is_visible()
+        header = HeaderPage(hub)
+        header.open_user_menu()
+        return header.is_nav_manage_users_visible()
     except Exception as exc:
         log.info("Error verifying permission - user:manage -> %s", exc)
         return False
@@ -770,8 +603,9 @@ def _functional_dashboard_view(hub: Hub, _role: str, _scenario: str) -> bool:
     log.info("Verifying Operation Dashboard...")
     try:
         _pbac_click_home(hub)
-        HeaderPage(hub).open_user_menu()
-        return hub.page.locator(hub.locators.get("CRDC/NavBar/OperationDashboard-Btn")).first.is_visible()
+        header = HeaderPage(hub)
+        header.open_user_menu()
+        return header.is_nav_operation_dashboard_visible()
     except Exception as exc:
         log.info("Error verifying permission - dashboard:view -> %s", exc)
         return False
@@ -781,9 +615,8 @@ def _functional_access_request(hub: Hub, _role: str, _scenario: str) -> bool:
     log.info("Verifying Request Access...")
     try:
         _pbac_click_home(hub)
-        HeaderPage(hub).open_user_menu()
-        hub.page.locator(hub.locators.get("CRDC/AILocators/Global/Header/Desktop/UserProfile-Link")).click()
-        return hub.page.locator(hub.locators.get("CRDC/ManageUsers/RequestAccess-Btn")).first.is_visible()
+        HeaderPage(hub).open_profile()
+        return UserProfilePage(hub).is_request_access_button_visible()
     except Exception as exc:
         log.info("Error verifying permission - access:request -> %s", exc)
         return False

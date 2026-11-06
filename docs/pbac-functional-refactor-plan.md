@@ -2,9 +2,39 @@
 
 ## Why this doc
 
-`src/crdc_pw/utils/pbac_helpers.py` implements TC06+ **functional** permission checks by mirroring Katalon `Pbac.groovy` `permissionToCheck` closures. Many handlers mix **page object** calls with **inline** `hub.page.locator(hub.locators.get("CRDC/..."))` usage. That works but is hard to read and scatters DOM knowledge across utils and pages.
+`src/crdc_pw/utils/pbac_helpers.py` implements TC06+ **functional** permission checks by mirroring Katalon `Pbac.groovy` `permissionToCheck` closures. **Functional** handlers now delegate DOM to page objects; `pbac_helpers` keeps orchestration and Excel oracles.
 
-This document is a **plan only** (no code changes in this step). Implement in one or more follow-up PRs.
+This document tracks **planned** optional follow-ups and **what is done** in-repo.
+
+---
+
+## Completed (in codebase)
+
+### Phase 1
+
+- **`HeaderPage.go_home()`** — `CRDC/NavBar/Home-Btn` (Katalon `SubmissionRequest.clickHome`).
+- **`HeaderPage.open_data_explorer()`** — user menu → Data Explorer (already present; used by `DataExplorerListPage`).
+- **`DataSubmissionsListPage.is_create_visible()`** — PBAC gates for Create on the DS list.
+- **`pbac_helpers`**: `_pbac_click_home` delegates to `go_home`; DS functional handlers use `is_create_visible` instead of inline Create locators.
+
+### Phase 2
+
+- **`DataSubmissionDetailPage.upload_metadata_file(path)`** — single-TSV upload with PBAC timeouts (120s uploading hidden, poll until Validate enables).
+- **Submit / release / confirm**: `click_submit_for_review`, `click_release`, `click_release_confirmation_yes`, `click_cross_validate`, visibility helpers for cancel / review / admin submit / confirm branches.
+- **`pbac_helpers`**: `_functional_data_submission_{cancel,review,admin_submit,confirm}` call the page APIs; removed `_upload_metadata_file_on_detail`, `_click_ds_submit_dialog_yes`, `_click_ds_release_confirmation_yes`, and redundant **`DataSubmissionName-Link`** clicks after `create_data_submission` (list flow already opens detail).
+
+### Phase 3
+
+- **`SubmissionRequestsListPage`**: `table_data_rows`, `is_start_submission_request_visible`, `is_resume_button_visible`, `save_unsaved_changes_dialog_if_present`, `return_to_list_after_partial_save`, `is_review_button_visible_on_list`, `click_review_on_first_matching_row`, `is_cancel_button_visible_on_first_row`, `is_reopen_button_visible`.
+- **`SubmissionRequestFormPage`**: `is_submit_button_visible`, `are_review_decision_buttons_visible` (Approve / Reject / Inquire via existing nav paths + `_REJECT_BTN`).
+- **`pbac_helpers`**: `_functional_submission_request_*` use the above only; removed `_sr_list_table_rows`, `_SR_REVIEW_BTN_LEGACY`, `_UNSAVED_SAVE`; row-scoped **Review** replaces global `Review-Btn`.
+
+### Phase 4
+
+- **`HeaderPage`**: `is_api_token_button_visible`, `is_nav_manage_{programs,studies,institutions,users}_visible`, `is_nav_operation_dashboard_visible` (user menu must be open; same AILocators Desktop paths as `open_manage_*`, not duplicate `CRDC/NavBar/*` keys).
+- **`DataSubmissionsListPage` / `DataExplorerListPage`**: `table_data_rows()` for **`data_submission:view`**.
+- **`UserProfilePage`**: `is_request_access_button_visible` (Profile open); **`access:request`** uses `HeaderPage.open_profile()` without duplicate Profile link clicks.
+- **`pbac_helpers`**: module docstring clarifies orchestration-only; no `hub.page.locator(hub.locators.get(...))` in `_functional_*` handlers.
 
 ---
 
@@ -21,13 +51,13 @@ This document is a **plan only** (no code changes in this step). Implement in on
 ## Current state
 
 - **Orchestration** (`verify_permissions_functional`, `edit_pbac_permissions`, Excel reads) stays in `pbac_helpers` — that is appropriate.
-- **`_functional_*` handlers** repeat patterns that already exist partially on pages:
-  - `HeaderPage`: nav / user menu (some PBAC code still uses raw locators for Data Explorer tab, API token, Profile link).
-  - `DataSubmissionsListPage`: `create_data_submission` already opens the new submission; some handlers **click `DataSubmissionName-Link` again** (redundant with `_open_created_submission` — worth cleaning when refactoring).
-  - `DataSubmissionDetailPage`: validate, upload patterns; PBAC duplicates `_upload_metadata_file_on_detail` inline instead of a page method.
-  - `SubmissionRequestsListPage` / `SubmissionRequestFormPage`: mix of page API and raw locators for Review / Approve / Reject / Inquire / Submit.
+- **`_functional_*` handlers** call page objects only (Phases 1–4). Optional backlog: split handler bodies into `pages/pbac_functional.py` for file size only.
+  - `HeaderPage`: PBAC chrome for API token, NavBar manage/dashboard entries (**Phase 4**).
+  - `DataSubmissionsListPage` / `DataExplorerListPage` / `DataSubmissionDetailPage`: DS functional (**Phases 1–2, 4**).
+  - `SubmissionRequestsListPage` / `SubmissionRequestFormPage`: SR functional (**Phase 3**).
+  - `UserProfilePage`: Request Access on Profile (**Phase 4**).
 
-**Docstring note:** `pbac_helpers` says *"DOM actions stay on … pages"* — the refactor brings the codebase in line with that intent.
+**Docstring note:** `pbac_helpers` module doc states that functional checks delegate DOM to pages.
 
 ---
 
@@ -51,62 +81,62 @@ This document is a **plan only** (no code changes in this step). Implement in on
 
 ### `HeaderPage` (`header.py`)
 
-- `click_home` or `go_home` — wrap `CRDC/NavBar/Home-Btn` (Katalon `SubmissionRequest.clickHome()`).
-- `open_data_explorer` — today PBAC uses `Global/Header/Desktop/DataExplorer-Tab` after `open_user_menu()`; Katalon sometimes uses `CRDC/NavBar/DataExplorer-Tab`. Pick **one** canonical path used by the app in desktop layout; document if QA differs.
-- `is_api_token_entry_visible` — user menu open + `APIToken-Btn` (for `data_submission:create`).
-- `nav_bar_manage_*_visible` — optional thin wrappers if we want symmetry; PBAC currently checks `CRDC/NavBar/ManagePrograms-Btn` etc. Could be `is_manage_programs_visible_in_nav()` returning bool without navigating away.
+- `go_home` — **done** — `CRDC/NavBar/Home-Btn` (Katalon `SubmissionRequest.clickHome()`).
+- `open_data_explorer` — **done** — `Global/Header/Desktop/DataExplorer-Tab` after `open_user_menu()` (see `DataExplorerListPage`); Katalon sometimes uses `CRDC/NavBar/DataExplorer-Tab` — still **one** canonical path in code; document if QA differs.
+- `is_api_token_button_visible` — **done** — user menu open + `APIToken-Btn`.
+- User-menu visibility (PBAC manage / dashboard) — **done** — `is_nav_manage_*_visible`, `is_nav_operation_dashboard_visible` (`CRDC/AILocators/Global/Header/Desktop/Manage*-Link`, `OperationDashboard-Link`).
 
 ### `DataSubmissionsListPage` (`data_submissions_list.py`)
 
-- `is_create_data_submission_visible() -> bool` — replace repeated Create button locator blocks.
-- `open_first_submission_from_list()` — only when list is already filtered to one row; **or** document that callers must use `create_data_submission` return and **not** double-click name link when already on detail.
+- `is_create_visible()` — **done** (same intent as “is Create visible”).
+- `table_data_rows()` — **done** (PBAC `data_submission:view`).
+- `create_data_submission` / `_open_created_submission` — opens detail; PBAC must not click `DataSubmissionName-Link` again (**done** in functional handlers).
 
 ### `DataSubmissionDetailPage` (`data_submission_details.py`)
 
-- `upload_metadata_file(path: Path)` — encapsulate Choose Files → Upload → wait uploading hidden → wait Validate enabled (current `_upload_metadata_file_on_detail` in `pbac_helpers`).
-- Optional composable steps for PBAC DS flows:
-  - `submit_for_review()` — Submit + submit dialog confirm (paths in `AILocators/.../Actions` and `SubmitDialog`).
-  - `cross_validate_then_release_confirm()` — for `data_submission:confirm` positive path.
-  - `is_admin_submit_enabled_after_validate()` — admin_submit check.
+- `upload_metadata_file(path)` — **done** (PBAC 120s semantics).
+- PBAC flow steps — **done**: `click_submit_for_review`, `click_cross_validate`, `click_release`, `click_release_confirmation_yes`, plus visibility helpers (`is_cancel_visible`, `is_release_reject_withdraw_visible`, `is_admin_submit_enabled`, `is_complete_and_reject_visible`, negative-or helper for confirm).
 
 Keep names aligned with Katalon keywords where it helps reviewers (`uploadMetadataUI`, `prepareUniqueMetadataAndUpload` logic can stay in utils or move to `utils/metadata_upload.py` — only if duplication grows).
 
+### `DataExplorerListPage` (`data_explorer_list.py`)
+
+- `table_data_rows()` — **done** (PBAC `data_submission:view`).
+
 ### `SubmissionRequestsListPage` (`submission_requests_list.py`)
 
-- Ensure list helpers cover: filter + **Resume** visibility, **Review** click, **Reopen** visibility (some exist already).
-- Add typed methods that return **bool** for PBAC-style checks if that avoids importing locators into `pbac_helpers`.
+- **Done (PBAC)**: `table_data_rows`, `is_start_submission_request_visible`, `is_resume_button_visible`, unsaved-dialog save + `return_to_list_after_partial_save`, Review visibility + `click_review_on_first_matching_row`, Cancel, Reopen helpers. Filters / `open` / row actions unchanged for CRDCDH-3948 etc.
 
 ### `SubmissionRequestFormPage` (`submission_request_form.py`)
 
-- Review navigation: `open_review_section_with_approve_reject_inquire_visible()` wrapping Review progress + three buttons.
-- Submit button visibility check could be `is_submit_button_visible()`.
+- **Done (PBAC)**: `is_submit_button_visible`, `are_review_decision_buttons_visible` (with `click_review_progress_bar` still used by handlers).
 
 ### `ManageUsersPage` / `UserProfilePage`
 
-- `is_request_access_button_visible()` when Profile is already open — PBAC opens Profile via header then checks `CRDC/ManageUsers/RequestAccess-Btn`.
+- `UserProfilePage.is_request_access_button_visible()` — **done** — Profile open; `CRDC/ManageUsers/RequestAccess-Btn`.
 
 ---
 
 ## Implementation phases (suggested)
 
-### Phase 1 — Low risk, high readability
+### Phase 1 — Low risk, high readability (done)
 
 - Add `HeaderPage.go_home()`, `HeaderPage.open_data_explorer()` (or nav variant), and DS list `is_create_visible()`.
 - Replace corresponding lines in `pbac_helpers` only.
 - Run: `pytest tests/unit -m unit -q`, `pytest tests/Pbac/test_TC06_CRDC-PbacCheckedPermissions-Fedlead.py -m CRDC_PBAC` on QA.
 
-### Phase 2 — DS uploads and detail actions
+### Phase 2 — DS uploads and detail actions (done)
 
 - Move `_upload_metadata_file_on_detail` to `DataSubmissionDetailPage.upload_metadata_file`.
 - Add submit / confirm / cross-validate / release helpers; refactor `_functional_data_submission_review|admin_submit|confirm|cancel`.
 - **Remove redundant** `DataSubmissionName-Link` clicks where `create_data_submission` already landed on detail (verify with trace or stepping).
 
-### Phase 3 — SR functional handlers
+### Phase 3 — SR functional handlers (done)
 
 - Consolidate `_functional_submission_request_*` to use `SubmissionRequestsListPage` / `SubmissionRequestFormPage` only.
 - Add small bool-returning helpers for "Review row visible", "form review actions visible".
 
-### Phase 4 — Docs and cleanup
+### Phase 4 — Docs and cleanup (done)
 
 - Update `docs/onboarding.md` PBAC section if public API names change.
 - Short comment at top of `pbac_helpers`: handlers must delegate DOM to pages.

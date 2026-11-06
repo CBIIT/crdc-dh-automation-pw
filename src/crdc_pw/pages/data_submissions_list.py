@@ -96,6 +96,14 @@ class DataSubmissionsListPage(BasePage):
         self.container.wait_for(state="visible")
         self.wait_for_generic_table_settled(self._loc(LIST_ROW))
 
+    def table_data_rows(self) -> Locator:
+        """Generic table body rows (PBAC ``data_submission:view`` parity with Katalon list row)."""
+        return self._loc(LIST_ROW)
+
+    def is_create_visible(self) -> bool:
+        """True if the list shows Create a Data Submission (PBAC ``data_submission:create`` gate)."""
+        return self._loc(CREATE_BTN).first.is_visible()
+
     def create_data_submission(
         self,
         sub_type: str,
