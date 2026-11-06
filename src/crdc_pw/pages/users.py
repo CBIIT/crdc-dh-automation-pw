@@ -229,19 +229,25 @@ class ManageUsersPage(PermissionForm):
         self._loc(GENERIC_ROW).or_(self._loc(HTML_ROW)).first.wait_for(state="attached")
         self._wait_for_table_settled(self._loc(LOADING_ROW))
 
-    def enable_all_permissions(self, role: str) -> None:
-        """Katalon editPbacPermissions(role, 'positive') without Excel — reset then check all enabled."""
+    def apply_positive_permission_edit(self, role: str) -> None:
+        """Katalon editPbacPermissions(role, 'positive') UI only — reset, check all enabled, Save."""
         if role not in ROLE_DISPLAY:
-            raise ValueError(f"Invalid role passed to enable_all_permissions: {role}")
-        log.info("Enable all permissions for role: %s", role)
+            raise ValueError(f"Invalid role passed to apply_positive_permission_edit: {role}")
+        log.info("Positive permission edit for role: %s", role)
         self.find_and_edit(role)
         self.reset_permissions(role)
         self.find_and_edit(role)
         self.expand_permission_panels()
         self.check_all_enabled_permission_checkboxes()
         self._loc(SAVE).click()
-        log.info("Clicked Save after enabling permissions for %s", role)
+        log.info("Clicked Save after positive permission edit for %s", role)
         self._wait_for_snackbar_gone(self._loc(SNACKBAR))
+        log.info("Positive permission edit finished for %s", role)
+
+    def enable_all_permissions(self, role: str) -> None:
+        """Katalon editPbacPermissions(role, 'positive') without Excel — reset then check all enabled."""
+        log.info("Enable all permissions for role: %s", role)
+        self.apply_positive_permission_edit(role)
         log.info("Enable all permissions finished for %s", role)
 
 

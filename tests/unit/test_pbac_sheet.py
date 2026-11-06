@@ -20,6 +20,7 @@ from crdc_pw.locators.loader import repo_root
 from crdc_pw.utils.pbac_sheet import (
     INPUT_RELATIVE,
     compare_actual,
+    list_internal_names_for_scenario,
     load_expected_rows,
     output_path,
     write_expected,
@@ -83,3 +84,13 @@ def test_compare_mismatched_state_fails(tmp_path: Path) -> None:
     ws = wb["Fedlead"]
     assert ws.cell(2, 6).value == "Fail"
     assert ws.cell(2, 3).value == "unchecked"
+
+
+@pytest.mark.unit
+def test_fedlead_positive_functional_driver_lists_checked_keys(tmp_path: Path) -> None:
+    """After write_expected(Fedlead-positive), list_internal_names mirrors Katalon getPermissionsByStatus."""
+    root = _temp_input_tree(tmp_path)
+    write_expected("Fedlead-positive", root=root)
+    keys = list_internal_names_for_scenario("Fedlead", "positive", root=root)
+    assert len(keys) == 40
+    assert "submission_request:view" in keys

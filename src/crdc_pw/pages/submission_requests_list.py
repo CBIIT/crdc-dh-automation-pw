@@ -25,6 +25,8 @@ _SUBMITTER_FILTER = "CRDC/AILocators/SubmissionRequests/List/Filters/SubmitterNa
 _REOPEN_BTN = "CRDC/AILocators/SubmissionRequests/List/Reopen-Btn"
 _DELETE_CONFIRM = "CRDC/AILocators/DeleteDialog/Confirm-Btn"
 _DELETE_DIALOG = "CRDC/AILocators/DeleteDialog/Dialog"
+_LOADING_ROW = "CRDC/AILocators/GenericTable/LoadingRow"
+
 
 class SubmissionRequestsListPage(BasePage):
     """Submission Requests table: filters and per-row Resume/View/Review/Reopen."""
@@ -35,18 +37,22 @@ class SubmissionRequestsListPage(BasePage):
         return self._loc(_LIST_CONTAINER)
 
     def open(self) -> None:
-        """Nav bar → Submission Requests; wait for list container."""
+        """Nav bar → Submission Requests; wait for list container and settled table."""
         HeaderPage(self._hub).open_submission_requests()
-        self.container.wait_for(state="visible")
+        self.container.wait_for(state="visible", timeout=15_000)
+        self.wait_for_list_table_settled()
         log.info("Submission Requests list open")
 
+    def wait_for_list_table_settled(self) -> None:
+        """Wait until the generic-table loading row is gone (avoid reading placeholder / stale rows)."""
+        self._wait_for_table_settled(self._loc(_LOADING_ROW), self._table_rows())
+
     def _start_button(self) -> Locator:
-        """Prefer visible label; fall back to legacy MUI id xpath."""
-        by_name = self.page.get_by_role(
-            "button", name=re.compile(r"Start\s+a\s+Submission\s+Request", re.I)
-        )
-        if by_name.count() > 0:
-            return by_name.first
+        """Start a Submission Request on the list — same Katalon repo path as Katalon.
+
+        Uses ``CRDC/SubmissionRequest/Start_a_SubmissionRequest-Btn`` (YAML xpath). Callers that
+        need resilience should use ``wait_for(state='visible')`` like ``start_new_submission_request``.
+        """
         return self._loc(_START_BTN).first
 
     def start_new_submission_request(self) -> None:
@@ -67,6 +73,7 @@ class SubmissionRequestsListPage(BasePage):
             reset.click()
             self.page.wait_for_timeout(2000)
             log.info("Reset Submission Requests list filters")
+            self.wait_for_list_table_settled()
 
     def apply_submission_requests_list_filters(
         self, criteria: Mapping[str, str] | None
@@ -92,6 +99,7 @@ class SubmissionRequestsListPage(BasePage):
         if v := (criteria.get("status") or "").strip():
             self._select_status_filter(v)
         self.page.wait_for_timeout(2000)
+        self.wait_for_list_table_settled()
 
     def _select_status_filter(self, status_csv: str) -> None:
         """Multi-select status dropdown; values are comma-separated UI labels."""

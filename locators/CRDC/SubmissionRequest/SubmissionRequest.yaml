@@ -7,7 +7,8 @@ Next-Btn: '//*[@id="submission-form-next-button"]'
 PopUpConfirmToSubmit-Btn: "//*[contains(@id, ':r') and @type='button']"
 Review-Btn: "//button[.='Review']"
 Save-Btn: '//*[@id="submission-form-save-button"]'
-Start_a_SubmissionRequest-Btn: "//*[contains(@id, ':r') and @type='button']"
+# Start a Submission Request on the list page (was loose MUI id). Avoid matching unrelated :r buttons.
+Start_a_SubmissionRequest-Btn: "//button[contains(normalize-space(.), 'Start')][contains(normalize-space(.), 'Submission Request')]"
 Submit-Btn: '//*[@id="submission-form-submit-button"]'
 SubmReqListTable-Row: "//tbody/tr"
 Toggle-Btn: "//*[contains(@id,'${GlobalVariable.CrdcUiElement}') and @type='checkbox']"

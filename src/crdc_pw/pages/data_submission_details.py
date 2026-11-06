@@ -503,6 +503,10 @@ class DataSubmissionDetailPage(BasePage):
         option.first.wait_for(state="visible")
         option.first.click()
 
+    def wait_loading_spinner_gone(self) -> None:
+        """Wait until the Hub circular progress overlay hides (lists and detail)."""
+        self._wait_loading_gone()
+
     def _wait_loading_gone(self) -> None:
         icon = self._loc(LOADING_ICON).first
         try:
