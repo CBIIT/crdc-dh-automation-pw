@@ -394,6 +394,7 @@ def _functional_data_submission_view(hub: Hub, _role: str, _scenario: str) -> bo
         n_ds = rows_ds.count()
         log.info("Number of rows in Data Submission list found: %s", n_ds)
 
+        ds_ok = _ds_or_explorer_list_has_positive_rows(rows_ds)
         _pbac_click_home(hub)
         explorer = DataExplorerListPage(hub)
         explorer.open_settled()
@@ -405,7 +406,6 @@ def _functional_data_submission_view(hub: Hub, _role: str, _scenario: str) -> bo
         n_de = rows_de.count()
         log.info("Number of rows in Data Explorer list found: %s", n_de)
 
-        ds_ok = _ds_or_explorer_list_has_positive_rows(rows_ds)
         de_ok = _ds_or_explorer_list_has_positive_rows(rows_de)
         return ds_ok and de_ok and n_ds > 0 and n_de > 0
     except Exception as exc:
