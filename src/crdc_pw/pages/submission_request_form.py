@@ -82,6 +82,7 @@ _SECTION_D_TARGETED_DELIVERY = (
 _PROGRESS_REVIEW = "CRDC/AILocators/SubmissionRequests/Form/Review/ProgressBar-Review"
 _INQUIRE_BTN = "CRDC/AILocators/SubmissionRequests/Form/Navigation/Inquire-Btn"
 _APPROVE_BTN = "CRDC/AILocators/SubmissionRequests/Form/Navigation/Approve-Btn"
+_REJECT_BTN = "CRDC/AILocators/SubmissionRequests/Form/Navigation/Reject-Btn"
 _INQUIRE_COMMENT = "CRDC/AILocators/SubmissionRequests/InquireDialog/ReviewComment-TxtBx"
 _INQUIRE_CONFIRM = "CRDC/AILocators/SubmissionRequests/InquireDialog/ConfirmInquire-Btn"
 _APPROVE_COMMENT = "CRDC/AILocators/SubmissionRequests/ApproveDialog/ReviewComment-TxtBx"
@@ -304,6 +305,22 @@ class SubmissionRequestFormPage(BasePage):
         bar.click()
         self.page.wait_for_timeout(2000)
         log.info("Opened Review section via progress bar")
+
+    def is_submit_button_visible(self, *, timeout_ms: int = 40_000) -> bool:
+        """True when Submit is visible on the questionnaire (PBAC submission_request:submit)."""
+        btn = self._loc(_SUBMIT_BTN).first
+        try:
+            btn.wait_for(state="visible", timeout=timeout_ms)
+        except Exception:
+            return False
+        return btn.is_visible()
+
+    def are_review_decision_buttons_visible(self) -> bool:
+        """True when Approve, Reject, and Inquire are visible (PBAC submission_request:review)."""
+        approve = self._loc(_APPROVE_BTN).first
+        reject = self._loc(_REJECT_BTN).first
+        inquire = self._loc(_INQUIRE_BTN).first
+        return approve.is_visible() and reject.is_visible() and inquire.is_visible()
 
     def inquire_with_comment(self, comment: str = _DEFAULT_INQUIRE_COMMENT) -> None:
         """Fed Lead: Inquire with comment (form must be on Review with Inquire visible)."""

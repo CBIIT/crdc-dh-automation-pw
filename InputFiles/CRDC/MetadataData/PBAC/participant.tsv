@@ -1,0 +1,201 @@
+type	study.study_id	study_participant_id	participant_id	race	sex	ethnicity	dbGaP_subject_id	crdc_id
+participant	abc13567	GC-CASE-992050	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	Native Hawaiian or other Pacific Islander	Female	Not allowed to collect	scientia_et_labor	scientiae_et_patriae
+participant	abc13567	GC-CASE-987680	haec_olim_meminisse_iuvabit	Native Hawaiian or other Pacific Islander	None of these describe me	Hispanic or Latino	"scientia,_aere_perennius"	faber_est_suae_quisque_fortunae
+participant	abc13567	GC-CASE-985100	damnant_quod_non_intellegunt	Unknown	Female	Hispanic or Latino	scientiae_cedit_mare	barba_crescit_caput_nescit
+participant	abc13567	GC-CASE-981829	a_bene_placito	Native Hawaiian or other Pacific Islander	Male	Not Hispanic or Latino	haec_olim_meminisse_iuvabit	scientiae_cedit_mare
+participant	abc13567	GC-CASE-977273	"scientia,_aere_perennius"	Not Reported	Don't know	Not Hispanic or Latino	Macte_animo_Generose_puer_sic_itur_ad_astra	Obedientia_civium_urbis_felicitas
+participant	abc13567	GC-CASE-974840	saltus_in_demonstrando	Asian	Intersex	Unknown	damnant_quod_non_intellegunt	nanos_gigantum_humeris_insidentes
+participant	abc13567	GC-CASE-965267	faber_est_suae_quisque_fortunae	Asian	None of these describe me	Not allowed to collect	salus_in_arduis	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti
+participant	abc13567	GC-CASE-964709	damnant_quod_non_intellegunt	Unknown	Prefer not to answer	Unknown	scientiae_cedit_mare	faber_est_suae_quisque_fortunae
+participant	abc13567	GC-CASE-962690	scientia_et_sapientia	Black or African American	Female	Not allowed to collect	sapiens_qui_prospicit	haec_olim_meminisse_iuvabit
+participant	abc13567	GC-CASE-958929	scientiae_cedit_mare	Black or African American	X	Not reported	scientia_imperii_decus_et_tutamen	id_quod_plerumque_accidit
+participant	abc13567	GC-CASE-951648	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	Native Hawaiian or other Pacific Islander	None of these describe me	Unknown	salus_in_arduis	haec_olim_meminisse_iuvabit
+participant	abc13567	GC-CASE-949916	e_causa_ignota	White	None of these describe me	Unknown	barba_crescit_caput_nescit	salus_in_arduis
+participant	abc13567	GC-CASE-946929	scientia_et_labor	Not allowed to collect	X	Unknown	salus_in_arduis	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti
+participant	abc13567	GC-CASE-945677	labor_ipse_voluptas	Not allowed to collect	Prefer not to answer	Unknown	scientia_et_labor	damnant_quod_non_intellegunt
+participant	abc13567	GC-CASE-945080	scientia_et_labor	Not Reported	Unknown	Hispanic or Latino	Obedientia_civium_urbis_felicitas	a_bene_placito
+participant	abc13567	GC-CASE-944648	"scientia,_aere_perennius"	Not allowed to collect	Don't know	Unknown	"scientia,_aere_perennius"	"scientia,_aere_perennius"
+participant	abc13567	GC-CASE-942172	a_bene_placito	Not Reported	Don't know	Not reported	Gallia_est_omnis_divisa_in_partes_tres	faber_est_suae_quisque_fortunae
+participant	abc13567	GC-CASE-940851	Gallia_est_omnis_divisa_in_partes_tres	American Indian or Alaska Native	Male	Not allowed to collect	faber_est_suae_quisque_fortunae	Obedientia_civium_urbis_felicitas
+participant	abc13567	GC-CASE-940271	"scientia,_aere_perennius"	Black or African American	Don't know	Not reported	haec_olim_meminisse_iuvabit	nascentes_morimur_finisque_ab_origine_pendet
+participant	abc13567	GC-CASE-938810	Gallia_est_omnis_divisa_in_partes_tres	American Indian or Alaska Native	Unknown	Hispanic or Latino	saltus_in_demonstrando	sapiens_qui_prospicit
+participant	abc13567	GC-CASE-937274	cacatum_non_est_pictum	White	None of these describe me	Hispanic or Latino	saltus_in_demonstrando	damnant_quod_non_intellegunt
+participant	abc13567	GC-CASE-936851	barba_crescit_caput_nescit	Black or African American	Female	Unknown	imperium_in_imperio	haec_olim_meminisse_iuvabit
+participant	abc13567	GC-CASE-930869	"scientia,_aere_perennius"	Not Reported	Female	Hispanic or Latino	damnant_quod_non_intellegunt	scientiae_et_patriae
+participant	abc13567	GC-CASE-930115	salus_in_arduis	Black or African American	Unknown	Unknown	haec_olim_meminisse_iuvabit	sapiens_qui_prospicit
+participant	abc13567	GC-CASE-919371	nanos_gigantum_humeris_insidentes	Not allowed to collect	X	Not Hispanic or Latino	labor_ipse_voluptas	e_causa_ignota
+participant	abc13567	GC-CASE-916156	imperium_in_imperio	Unknown	None of these describe me	Hispanic or Latino	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	Gallia_est_omnis_divisa_in_partes_tres
+participant	abc13567	GC-CASE-910366	imperium_in_imperio	Unknown	Male	Not Hispanic or Latino	barba_crescit_caput_nescit	a_bene_placito
+participant	abc13567	GC-CASE-907583	faber_est_suae_quisque_fortunae	White	Don't know	Not Hispanic or Latino	damnant_quod_non_intellegunt	saltus_in_demonstrando
+participant	abc13567	GC-CASE-903803	damnant_quod_non_intellegunt	American Indian or Alaska Native	X	Not allowed to collect	pace_tua	nascentes_morimur_finisque_ab_origine_pendet
+participant	abc13567	GC-CASE-902482	scientia_et_labor	Not allowed to collect	Female	Not reported	saltus_in_demonstrando	Macte_animo_Generose_puer_sic_itur_ad_astra
+participant	abc13567	GC-CASE-897405	haec_olim_meminisse_iuvabit	Not Reported	Decline to answer	Not Hispanic or Latino	barba_crescit_caput_nescit	faber_est_suae_quisque_fortunae
+participant	abc13567	GC-CASE-894096	e_causa_ignota	White	Female	Unknown	scientia_et_sapientia	Macte_animo_Generose_puer_sic_itur_ad_astra
+participant	abc13567	GC-CASE-891746	nascentes_morimur_finisque_ab_origine_pendet	Native Hawaiian or other Pacific Islander	Male	Not Hispanic or Latino	a_bene_placito	pace_tua
+participant	abc13567	GC-CASE-891498	id_quod_plerumque_accidit	American Indian or Alaska Native	Female	Unknown	scientia_et_sapientia	saltus_in_demonstrando
+participant	abc13567	GC-CASE-886430	nascentes_morimur_finisque_ab_origine_pendet	Not Reported	None of these describe me	Not Hispanic or Latino	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti
+participant	abc13567	GC-CASE-873240	haec_olim_meminisse_iuvabit	Not Reported	Intersex	Not allowed to collect	cacatum_non_est_pictum	nanos_gigantum_humeris_insidentes
+participant	abc13567	GC-CASE-872868	barba_crescit_caput_nescit	White	Intersex	Hispanic or Latino	saltus_in_demonstrando	pace_tua
+participant	abc13567	GC-CASE-867860	"scientia,_aere_perennius"	Native Hawaiian or other Pacific Islander	Male	Not reported	nascentes_morimur_finisque_ab_origine_pendet	nascentes_morimur_finisque_ab_origine_pendet
+participant	abc13567	GC-CASE-857381	sapiens_qui_prospicit	Asian	X	Unknown	cacatum_non_est_pictum	cacatum_non_est_pictum
+participant	abc13567	GC-CASE-855565	damnant_quod_non_intellegunt	Unknown	None of these describe me	Not Hispanic or Latino	salus_in_arduis	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti
+participant	abc13567	GC-CASE-848288	sapiens_qui_prospicit	Asian	Decline to answer	Unknown	damnant_quod_non_intellegunt	id_quod_plerumque_accidit
+participant	abc13567	GC-CASE-842940	a_bene_placito	Unknown	Decline to answer	Not Hispanic or Latino	saltus_in_demonstrando	imperium_in_imperio
+participant	abc13567	GC-CASE-830889	sapiens_qui_prospicit	American Indian or Alaska Native	Decline to answer	Not Hispanic or Latino	id_quod_plerumque_accidit	nanos_gigantum_humeris_insidentes
+participant	abc13567	GC-CASE-829666	scientia_imperii_decus_et_tutamen	Not allowed to collect	Female	Not Hispanic or Latino	Obedientia_civium_urbis_felicitas	haec_olim_meminisse_iuvabit
+participant	abc13567	GC-CASE-827175	saltus_in_demonstrando	Black or African American	Intersex	Not Hispanic or Latino	sapiens_qui_prospicit	imperium_in_imperio
+participant	abc13567	GC-CASE-819839	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	Not Reported	Don't know	Hispanic or Latino	nascentes_morimur_finisque_ab_origine_pendet	nanos_gigantum_humeris_insidentes
+participant	abc13567	GC-CASE-802652	saltus_in_demonstrando	Black or African American	Unknown	Not allowed to collect	labor_ipse_voluptas	barba_crescit_caput_nescit
+participant	abc13567	GC-CASE-801658	sapiens_qui_prospicit	Not allowed to collect	Intersex	Hispanic or Latino	Macte_animo_Generose_puer_sic_itur_ad_astra	sapiens_qui_prospicit
+participant	abc13567	GC-CASE-793948	Macte_animo_Generose_puer_sic_itur_ad_astra	White	Female	Not allowed to collect	nascentes_morimur_finisque_ab_origine_pendet	nanos_gigantum_humeris_insidentes
+participant	abc13567	GC-CASE-785467	salus_in_arduis	Not allowed to collect	Male	Not Hispanic or Latino	cacatum_non_est_pictum	salus_in_arduis
+participant	abc13567	GC-CASE-784887	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	Asian	Male	Hispanic or Latino	imperium_in_imperio	cacatum_non_est_pictum
+participant	abc13567	GC-CASE-780180	damnant_quod_non_intellegunt	Unknown	Female	Not allowed to collect	faber_est_suae_quisque_fortunae	scientia_imperii_decus_et_tutamen
+participant	abc13567	GC-CASE-777460	faber_est_suae_quisque_fortunae	Unknown	Prefer not to answer	Not allowed to collect	faber_est_suae_quisque_fortunae	sapiens_qui_prospicit
+participant	abc13567	GC-CASE-768639	barba_crescit_caput_nescit	Native Hawaiian or other Pacific Islander	X	Not allowed to collect	nascentes_morimur_finisque_ab_origine_pendet	barba_crescit_caput_nescit
+participant	abc13567	GC-CASE-761038	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	Native Hawaiian or other Pacific Islander	Prefer not to answer	Unknown	id_quod_plerumque_accidit	id_quod_plerumque_accidit
+participant	abc13567	GC-CASE-760964	faber_est_suae_quisque_fortunae	White	Intersex	Not reported	scientiae_cedit_mare	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti
+participant	abc13567	GC-CASE-756220	scientia_et_labor	Asian	Intersex	Unknown	scientia_et_sapientia	pace_tua
+participant	abc13567	GC-CASE-750806	Gallia_est_omnis_divisa_in_partes_tres	Native Hawaiian or other Pacific Islander	Decline to answer	Not Hispanic or Latino	nanos_gigantum_humeris_insidentes	nascentes_morimur_finisque_ab_origine_pendet
+participant	abc13567	GC-CASE-750284	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	Asian	Intersex	Not Hispanic or Latino	id_quod_plerumque_accidit	scientia_et_labor
+participant	abc13567	GC-CASE-746324	e_causa_ignota	Unknown	Male	Not reported	a_bene_placito	labor_ipse_voluptas
+participant	abc13567	GC-CASE-745527	haec_olim_meminisse_iuvabit	White	X	Hispanic or Latino	"scientia,_aere_perennius"	faber_est_suae_quisque_fortunae
+participant	abc13567	GC-CASE-742910	scientiae_cedit_mare	Not Reported	Intersex	Not allowed to collect	Obedientia_civium_urbis_felicitas	sapiens_qui_prospicit
+participant	abc13567	GC-CASE-736685	scientiae_et_patriae	Black or African American	Male	Not allowed to collect	pace_tua	Obedientia_civium_urbis_felicitas
+participant	abc13567	GC-CASE-736097	Obedientia_civium_urbis_felicitas	Not Reported	Male	Not reported	nascentes_morimur_finisque_ab_origine_pendet	id_quod_plerumque_accidit
+participant	abc13567	GC-CASE-731487	Gallia_est_omnis_divisa_in_partes_tres	Unknown	Intersex	Hispanic or Latino	Gallia_est_omnis_divisa_in_partes_tres	Gallia_est_omnis_divisa_in_partes_tres
+participant	abc13567	GC-CASE-730868	barba_crescit_caput_nescit	Not allowed to collect	Unknown	Not allowed to collect	e_causa_ignota	id_quod_plerumque_accidit
+participant	abc13567	GC-CASE-728147	scientia_imperii_decus_et_tutamen	Black or African American	X	Hispanic or Latino	scientia_et_sapientia	cacatum_non_est_pictum
+participant	abc13567	GC-CASE-723221	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	Asian	Female	Not allowed to collect	cacatum_non_est_pictum	scientiae_cedit_mare
+participant	abc13567	GC-CASE-719380	saltus_in_demonstrando	American Indian or Alaska Native	None of these describe me	Hispanic or Latino	nanos_gigantum_humeris_insidentes	haec_olim_meminisse_iuvabit
+participant	abc13567	GC-CASE-713246	cacatum_non_est_pictum	Not allowed to collect	Intersex	Hispanic or Latino	haec_olim_meminisse_iuvabit	scientia_imperii_decus_et_tutamen
+participant	abc13567	GC-CASE-707484	scientia_et_labor	Black or African American	Intersex	Hispanic or Latino	Obedientia_civium_urbis_felicitas	nascentes_morimur_finisque_ab_origine_pendet
+participant	abc13567	GC-CASE-697249	saltus_in_demonstrando	Not Reported	Decline to answer	Unknown	Obedientia_civium_urbis_felicitas	scientiae_et_patriae
+participant	abc13567	GC-CASE-693506	nascentes_morimur_finisque_ab_origine_pendet	Black or African American	Prefer not to answer	Not reported	barba_crescit_caput_nescit	Obedientia_civium_urbis_felicitas
+participant	abc13567	GC-CASE-690010	scientia_et_labor	Native Hawaiian or other Pacific Islander	Female	Hispanic or Latino	sapiens_qui_prospicit	Obedientia_civium_urbis_felicitas
+participant	abc13567	GC-CASE-689508	saltus_in_demonstrando	Unknown	Decline to answer	Not allowed to collect	scientia_et_sapientia	labor_ipse_voluptas
+participant	abc13567	GC-CASE-673016	faber_est_suae_quisque_fortunae	Black or African American	Unknown	Not Hispanic or Latino	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	a_bene_placito
+participant	abc13567	GC-CASE-672315	damnant_quod_non_intellegunt	White	Prefer not to answer	Not Hispanic or Latino	a_bene_placito	a_bene_placito
+participant	abc13567	GC-CASE-666585	barba_crescit_caput_nescit	American Indian or Alaska Native	Decline to answer	Unknown	saltus_in_demonstrando	pace_tua
+participant	abc13567	GC-CASE-664505	pace_tua	Asian	Prefer not to answer	Unknown	saltus_in_demonstrando	Gallia_est_omnis_divisa_in_partes_tres
+participant	abc13567	GC-CASE-648835	a_bene_placito	American Indian or Alaska Native	Unknown	Not reported	damnant_quod_non_intellegunt	saltus_in_demonstrando
+participant	abc13567	GC-CASE-642383	scientia_et_sapientia	Not allowed to collect	Intersex	Unknown	id_quod_plerumque_accidit	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti
+participant	abc13567	GC-CASE-634747	pace_tua	American Indian or Alaska Native	Prefer not to answer	Not reported	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	saltus_in_demonstrando
+participant	abc13567	GC-CASE-631893	a_bene_placito	Asian	Prefer not to answer	Unknown	faber_est_suae_quisque_fortunae	scientia_et_sapientia
+participant	abc13567	GC-CASE-628830	nanos_gigantum_humeris_insidentes	Unknown	Prefer not to answer	Not Hispanic or Latino	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	scientia_imperii_decus_et_tutamen
+participant	abc13567	GC-CASE-626603	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	Asian	Don't know	Unknown	Gallia_est_omnis_divisa_in_partes_tres	barba_crescit_caput_nescit
+participant	abc13567	GC-CASE-621883	damnant_quod_non_intellegunt	Unknown	Prefer not to answer	Not Hispanic or Latino	barba_crescit_caput_nescit	imperium_in_imperio
+participant	abc13567	GC-CASE-619757	sapiens_qui_prospicit	Not Reported	Prefer not to answer	Not Hispanic or Latino	faber_est_suae_quisque_fortunae	id_quod_plerumque_accidit
+participant	abc13567	GC-CASE-616362	haec_olim_meminisse_iuvabit	Not allowed to collect	Intersex	Hispanic or Latino	a_bene_placito	Macte_animo_Generose_puer_sic_itur_ad_astra
+participant	abc13567	GC-CASE-615797	a_bene_placito	Native Hawaiian or other Pacific Islander	Unknown	Not allowed to collect	salus_in_arduis	cacatum_non_est_pictum
+participant	abc13567	GC-CASE-611503	id_quod_plerumque_accidit	Not Reported	Decline to answer	Hispanic or Latino	"scientia,_aere_perennius"	faber_est_suae_quisque_fortunae
+participant	abc13567	GC-CASE-609353	scientia_et_labor	Asian	Decline to answer	Not allowed to collect	e_causa_ignota	"scientia,_aere_perennius"
+participant	abc13567	GC-CASE-609107	scientia_et_labor	American Indian or Alaska Native	Intersex	Not allowed to collect	cacatum_non_est_pictum	scientiae_cedit_mare
+participant	abc13567	GC-CASE-603766	faber_est_suae_quisque_fortunae	Native Hawaiian or other Pacific Islander	Unknown	Not allowed to collect	e_causa_ignota	scientia_et_sapientia
+participant	abc13567	GC-CASE-594520	pace_tua	White	Prefer not to answer	Not allowed to collect	barba_crescit_caput_nescit	Macte_animo_Generose_puer_sic_itur_ad_astra
+participant	abc13567	GC-CASE-593239	scientia_et_labor	Native Hawaiian or other Pacific Islander	Prefer not to answer	Unknown	Gallia_est_omnis_divisa_in_partes_tres	id_quod_plerumque_accidit
+participant	abc13567	GC-CASE-592282	Macte_animo_Generose_puer_sic_itur_ad_astra	American Indian or Alaska Native	Unknown	Not reported	id_quod_plerumque_accidit	a_bene_placito
+participant	abc13567	GC-CASE-590657	salus_in_arduis	Asian	Male	Not allowed to collect	e_causa_ignota	scientia_et_labor
+participant	abc13567	GC-CASE-575815	salus_in_arduis	Asian	Don't know	Not reported	e_causa_ignota	saltus_in_demonstrando
+participant	abc13567	GC-CASE-566394	a_bene_placito	Black or African American	Decline to answer	Hispanic or Latino	e_causa_ignota	scientiae_et_patriae
+participant	abc13567	GC-CASE-559288	damnant_quod_non_intellegunt	American Indian or Alaska Native	X	Hispanic or Latino	nascentes_morimur_finisque_ab_origine_pendet	scientia_et_labor
+participant	abc13567	GC-CASE-558335	scientia_imperii_decus_et_tutamen	Unknown	Prefer not to answer	Unknown	Obedientia_civium_urbis_felicitas	nanos_gigantum_humeris_insidentes
+participant	abc13567	GC-CASE-554988	pace_tua	Asian	None of these describe me	Not allowed to collect	Obedientia_civium_urbis_felicitas	imperium_in_imperio
+participant	abc13567	GC-CASE-548718	imperium_in_imperio	Not allowed to collect	None of these describe me	Unknown	nanos_gigantum_humeris_insidentes	scientia_imperii_decus_et_tutamen
+participant	abc13567	GC-CASE-546595	scientia_et_sapientia	Not Reported	Don't know	Hispanic or Latino	nanos_gigantum_humeris_insidentes	haec_olim_meminisse_iuvabit
+participant	abc13567	GC-CASE-543336	nascentes_morimur_finisque_ab_origine_pendet	Black or African American	Decline to answer	Not reported	scientiae_cedit_mare	id_quod_plerumque_accidit
+participant	abc13567	GC-CASE-534670	a_bene_placito	Unknown	Prefer not to answer	Not reported	labor_ipse_voluptas	imperium_in_imperio
+participant	abc13567	GC-CASE-523683	scientiae_et_patriae	Native Hawaiian or other Pacific Islander	Don't know	Not Hispanic or Latino	faber_est_suae_quisque_fortunae	Macte_animo_Generose_puer_sic_itur_ad_astra
+participant	abc13567	GC-CASE-522053	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	Not allowed to collect	Male	Unknown	scientia_et_sapientia	labor_ipse_voluptas
+participant	abc13567	GC-CASE-514149	scientia_et_sapientia	Asian	Don't know	Not Hispanic or Latino	"scientia,_aere_perennius"	scientia_et_sapientia
+participant	abc13567	GC-CASE-499916	scientia_imperii_decus_et_tutamen	Not allowed to collect	Female	Unknown	a_bene_placito	pace_tua
+participant	abc13567	GC-CASE-498098	scientiae_cedit_mare	Unknown	Unknown	Not reported	salus_in_arduis	pace_tua
+participant	abc13567	GC-CASE-493331	cacatum_non_est_pictum	White	X	Unknown	scientia_et_labor	cacatum_non_est_pictum
+participant	abc13567	GC-CASE-489819	e_causa_ignota	Black or African American	X	Not allowed to collect	faber_est_suae_quisque_fortunae	scientia_imperii_decus_et_tutamen
+participant	abc13567	GC-CASE-489518	scientiae_cedit_mare	Asian	Prefer not to answer	Not allowed to collect	id_quod_plerumque_accidit	pace_tua
+participant	abc13567	GC-CASE-473182	scientia_imperii_decus_et_tutamen	Not allowed to collect	Male	Not allowed to collect	imperium_in_imperio	imperium_in_imperio
+participant	abc13567	GC-CASE-471825	labor_ipse_voluptas	Not Reported	X	Hispanic or Latino	cacatum_non_est_pictum	e_causa_ignota
+participant	abc13567	GC-CASE-463222	scientia_et_labor	American Indian or Alaska Native	Intersex	Unknown	salus_in_arduis	damnant_quod_non_intellegunt
+participant	abc13567	GC-CASE-460725	e_causa_ignota	White	X	Unknown	id_quod_plerumque_accidit	labor_ipse_voluptas
+participant	abc13567	GC-CASE-455998	scientiae_et_patriae	White	Intersex	Not allowed to collect	faber_est_suae_quisque_fortunae	haec_olim_meminisse_iuvabit
+participant	abc13567	GC-CASE-451586	salus_in_arduis	Not allowed to collect	Female	Hispanic or Latino	scientia_imperii_decus_et_tutamen	scientia_et_sapientia
+participant	abc13567	GC-CASE-444491	nanos_gigantum_humeris_insidentes	Not allowed to collect	X	Hispanic or Latino	barba_crescit_caput_nescit	labor_ipse_voluptas
+participant	abc13567	GC-CASE-436696	imperium_in_imperio	Not Reported	Don't know	Unknown	damnant_quod_non_intellegunt	haec_olim_meminisse_iuvabit
+participant	abc13567	GC-CASE-436568	scientiae_et_patriae	White	Male	Not Hispanic or Latino	cacatum_non_est_pictum	scientiae_cedit_mare
+participant	abc13567	GC-CASE-435164	Obedientia_civium_urbis_felicitas	Not Reported	X	Not Hispanic or Latino	scientia_et_labor	barba_crescit_caput_nescit
+participant	abc13567	GC-CASE-433197	Obedientia_civium_urbis_felicitas	Asian	Male	Not allowed to collect	cacatum_non_est_pictum	nascentes_morimur_finisque_ab_origine_pendet
+participant	abc13567	GC-CASE-424769	Obedientia_civium_urbis_felicitas	Unknown	Unknown	Not allowed to collect	labor_ipse_voluptas	imperium_in_imperio
+participant	abc13567	GC-CASE-423617	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	White	Decline to answer	Not Hispanic or Latino	nanos_gigantum_humeris_insidentes	scientia_et_sapientia
+participant	abc13567	GC-CASE-422140	scientia_imperii_decus_et_tutamen	Asian	Unknown	Unknown	scientiae_cedit_mare	scientiae_et_patriae
+participant	abc13567	GC-CASE-421737	e_causa_ignota	American Indian or Alaska Native	Female	Not reported	pace_tua	Macte_animo_Generose_puer_sic_itur_ad_astra
+participant	abc13567	GC-CASE-411064	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	Asian	Don't know	Unknown	pace_tua	nanos_gigantum_humeris_insidentes
+participant	abc13567	GC-CASE-407486	nascentes_morimur_finisque_ab_origine_pendet	Unknown	Female	Hispanic or Latino	scientiae_et_patriae	Gallia_est_omnis_divisa_in_partes_tres
+participant	abc13567	GC-CASE-406474	pace_tua	Asian	Unknown	Not Hispanic or Latino	Gallia_est_omnis_divisa_in_partes_tres	scientia_et_labor
+participant	abc13567	GC-CASE-405402	damnant_quod_non_intellegunt	Black or African American	Prefer not to answer	Not reported	pace_tua	scientia_et_labor
+participant	abc13567	GC-CASE-401390	scientia_et_labor	Black or African American	Female	Unknown	barba_crescit_caput_nescit	Macte_animo_Generose_puer_sic_itur_ad_astra
+participant	abc13567	GC-CASE-400835	nanos_gigantum_humeris_insidentes	White	None of these describe me	Hispanic or Latino	saltus_in_demonstrando	damnant_quod_non_intellegunt
+participant	abc13567	GC-CASE-399649	Macte_animo_Generose_puer_sic_itur_ad_astra	Not allowed to collect	Decline to answer	Not allowed to collect	pace_tua	Obedientia_civium_urbis_felicitas
+participant	abc13567	GC-CASE-391600	e_causa_ignota	American Indian or Alaska Native	Decline to answer	Not allowed to collect	id_quod_plerumque_accidit	nanos_gigantum_humeris_insidentes
+participant	abc13567	GC-CASE-390829	pace_tua	White	Don't know	Not Hispanic or Latino	scientia_imperii_decus_et_tutamen	sapiens_qui_prospicit
+participant	abc13567	GC-CASE-388636	nascentes_morimur_finisque_ab_origine_pendet	Not allowed to collect	Male	Not Hispanic or Latino	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	"scientia,_aere_perennius"
+participant	abc13567	GC-CASE-373043	scientia_et_sapientia	Unknown	Female	Not Hispanic or Latino	saltus_in_demonstrando	id_quod_plerumque_accidit
+participant	abc13567	GC-CASE-369176	salus_in_arduis	Unknown	Prefer not to answer	Not reported	Obedientia_civium_urbis_felicitas	imperium_in_imperio
+participant	abc13567	GC-CASE-367941	a_bene_placito	Not Reported	None of these describe me	Not allowed to collect	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	a_bene_placito
+participant	abc13567	GC-CASE-344750	"scientia,_aere_perennius"	Asian	Female	Not reported	salus_in_arduis	e_causa_ignota
+participant	abc13567	GC-CASE-330014	nanos_gigantum_humeris_insidentes	Black or African American	Prefer not to answer	Not reported	scientiae_cedit_mare	scientia_et_labor
+participant	abc13567	GC-CASE-328294	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	Not Reported	Prefer not to answer	Not allowed to collect	damnant_quod_non_intellegunt	nascentes_morimur_finisque_ab_origine_pendet
+participant	abc13567	GC-CASE-326683	faber_est_suae_quisque_fortunae	Not allowed to collect	Decline to answer	Not allowed to collect	e_causa_ignota	nascentes_morimur_finisque_ab_origine_pendet
+participant	abc13567	GC-CASE-324647	pace_tua	Unknown	X	Unknown	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	Gallia_est_omnis_divisa_in_partes_tres
+participant	abc13567	GC-CASE-315590	a_bene_placito	White	Female	Not allowed to collect	damnant_quod_non_intellegunt	Macte_animo_Generose_puer_sic_itur_ad_astra
+participant	abc13567	GC-CASE-308906	damnant_quod_non_intellegunt	American Indian or Alaska Native	Don't know	Not reported	cacatum_non_est_pictum	cacatum_non_est_pictum
+participant	abc13567	GC-CASE-295954	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	Unknown	X	Unknown	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	cacatum_non_est_pictum
+participant	abc13567	GC-CASE-284360	scientiae_cedit_mare	Asian	Prefer not to answer	Not Hispanic or Latino	imperium_in_imperio	scientiae_et_patriae
+participant	abc13567	GC-CASE-271429	labor_ipse_voluptas	Not allowed to collect	X	Not allowed to collect	Macte_animo_Generose_puer_sic_itur_ad_astra	a_bene_placito
+participant	abc13567	GC-CASE-268104	"scientia,_aere_perennius"	American Indian or Alaska Native	Prefer not to answer	Not allowed to collect	faber_est_suae_quisque_fortunae	a_bene_placito
+participant	abc13567	GC-CASE-268097	haec_olim_meminisse_iuvabit	Asian	Prefer not to answer	Hispanic or Latino	id_quod_plerumque_accidit	scientiae_et_patriae
+participant	abc13567	GC-CASE-262097	scientia_imperii_decus_et_tutamen	Black or African American	Unknown	Not reported	faber_est_suae_quisque_fortunae	a_bene_placito
+participant	abc13567	GC-CASE-260709	"scientia,_aere_perennius"	Unknown	Decline to answer	Unknown	pace_tua	faber_est_suae_quisque_fortunae
+participant	abc13567	GC-CASE-251730	sapiens_qui_prospicit	Not Reported	Male	Not Hispanic or Latino	id_quod_plerumque_accidit	cacatum_non_est_pictum
+participant	abc13567	GC-CASE-250697	scientiae_et_patriae	American Indian or Alaska Native	Unknown	Hispanic or Latino	scientia_et_sapientia	labor_ipse_voluptas
+participant	abc13567	GC-CASE-249139	scientiae_cedit_mare	Unknown	X	Hispanic or Latino	"scientia,_aere_perennius"	Obedientia_civium_urbis_felicitas
+participant	abc13567	GC-CASE-248016	scientiae_cedit_mare	Not Reported	Decline to answer	Not allowed to collect	imperium_in_imperio	e_causa_ignota
+participant	abc13567	GC-CASE-247146	imperium_in_imperio	White	X	Not allowed to collect	cacatum_non_est_pictum	Macte_animo_Generose_puer_sic_itur_ad_astra
+participant	abc13567	GC-CASE-242427	id_quod_plerumque_accidit	Not allowed to collect	Intersex	Unknown	faber_est_suae_quisque_fortunae	scientiae_cedit_mare
+participant	abc13567	GC-CASE-237322	Macte_animo_Generose_puer_sic_itur_ad_astra	White	Female	Hispanic or Latino	scientiae_cedit_mare	Macte_animo_Generose_puer_sic_itur_ad_astra
+participant	abc13567	GC-CASE-234104	scientia_imperii_decus_et_tutamen	Not allowed to collect	Intersex	Hispanic or Latino	saltus_in_demonstrando	sapiens_qui_prospicit
+participant	abc13567	GC-CASE-231619	cacatum_non_est_pictum	Not allowed to collect	Female	Not Hispanic or Latino	scientia_et_sapientia	scientiae_cedit_mare
+participant	abc13567	GC-CASE-230009	scientia_et_labor	Black or African American	Prefer not to answer	Not allowed to collect	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	cacatum_non_est_pictum
+participant	abc13567	GC-CASE-230005	saltus_in_demonstrando	Asian	X	Unknown	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	pace_tua
+participant	abc13567	GC-CASE-228175	scientia_et_sapientia	Asian	Don't know	Not reported	labor_ipse_voluptas	barba_crescit_caput_nescit
+participant	abc13567	GC-CASE-211317	scientia_et_labor	White	Intersex	Hispanic or Latino	a_bene_placito	haec_olim_meminisse_iuvabit
+participant	abc13567	GC-CASE-206957	scientiae_et_patriae	White	Intersex	Not allowed to collect	Obedientia_civium_urbis_felicitas	Gallia_est_omnis_divisa_in_partes_tres
+participant	abc13567	GC-CASE-203970	"scientia,_aere_perennius"	Native Hawaiian or other Pacific Islander	X	Not allowed to collect	"scientia,_aere_perennius"	barba_crescit_caput_nescit
+participant	abc13567	GC-CASE-201996	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	Not Reported	Prefer not to answer	Not Hispanic or Latino	damnant_quod_non_intellegunt	cacatum_non_est_pictum
+participant	abc13567	GC-CASE-200528	Macte_animo_Generose_puer_sic_itur_ad_astra	White	None of these describe me	Unknown	nanos_gigantum_humeris_insidentes	haec_olim_meminisse_iuvabit
+participant	abc13567	GC-CASE-193316	damnant_quod_non_intellegunt	Not allowed to collect	X	Unknown	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	Macte_animo_Generose_puer_sic_itur_ad_astra
+participant	abc13567	GC-CASE-183712	cacatum_non_est_pictum	White	Intersex	Unknown	scientiae_cedit_mare	saltus_in_demonstrando
+participant	abc13567	GC-CASE-170664	Obedientia_civium_urbis_felicitas	Asian	X	Not Hispanic or Latino	e_causa_ignota	Gallia_est_omnis_divisa_in_partes_tres
+participant	abc13567	GC-CASE-169624	haec_olim_meminisse_iuvabit	White	Decline to answer	Unknown	imperium_in_imperio	saltus_in_demonstrando
+participant	abc13567	GC-CASE-162099	damnant_quod_non_intellegunt	Black or African American	Prefer not to answer	Hispanic or Latino	labor_ipse_voluptas	salus_in_arduis
+participant	abc13567	GC-CASE-160829	faber_est_suae_quisque_fortunae	Asian	Decline to answer	Hispanic or Latino	imperium_in_imperio	saltus_in_demonstrando
+participant	abc13567	GC-CASE-159817	saltus_in_demonstrando	Not Reported	Don't know	Not reported	"scientia,_aere_perennius"	a_bene_placito
+participant	abc13567	GC-CASE-159523	scientia_imperii_decus_et_tutamen	Asian	Intersex	Not allowed to collect	a_bene_placito	id_quod_plerumque_accidit
+participant	abc13567	GC-CASE-153469	a_bene_placito	Not allowed to collect	Intersex	Not allowed to collect	scientiae_cedit_mare	labor_ipse_voluptas
+participant	abc13567	GC-CASE-149110	scientiae_cedit_mare	Black or African American	Unknown	Hispanic or Latino	scientiae_cedit_mare	imperium_in_imperio
+participant	abc13567	GC-CASE-147510	saltus_in_demonstrando	White	Unknown	Unknown	a_bene_placito	sapiens_qui_prospicit
+participant	abc13567	GC-CASE-145348	salus_in_arduis	Not Reported	Don't know	Not reported	id_quod_plerumque_accidit	scientia_imperii_decus_et_tutamen
+participant	abc13567	GC-CASE-144490	scientia_imperii_decus_et_tutamen	White	Decline to answer	Not reported	faber_est_suae_quisque_fortunae	Obedientia_civium_urbis_felicitas
+participant	abc13567	GC-CASE-144489	cacatum_non_est_pictum	Asian	X	Not allowed to collect	scientia_imperii_decus_et_tutamen	Macte_animo_Generose_puer_sic_itur_ad_astra
+participant	abc13567	GC-CASE-142209	scientia_et_sapientia	Asian	Unknown	Not allowed to collect	scientiae_et_patriae	faber_est_suae_quisque_fortunae
+participant	abc13567	GC-CASE-137996	Gallia_est_omnis_divisa_in_partes_tres	Asian	Prefer not to answer	Not allowed to collect	labor_ipse_voluptas	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti
+participant	abc13567	GC-CASE-132176	Macte_animo_Generose_puer_sic_itur_ad_astra	Asian	Intersex	Not allowed to collect	scientia_et_labor	haec_olim_meminisse_iuvabit
+participant	abc13567	GC-CASE-132043	barba_crescit_caput_nescit	Unknown	Intersex	Unknown	scientia_et_sapientia	barba_crescit_caput_nescit
+participant	abc13567	GC-CASE-127743	sapiens_qui_prospicit	Unknown	X	Hispanic or Latino	scientiae_et_patriae	sapiens_qui_prospicit
+participant	abc13567	GC-CASE-125019	scientia_imperii_decus_et_tutamen	Native Hawaiian or other Pacific Islander	X	Hispanic or Latino	saltus_in_demonstrando	saltus_in_demonstrando
+participant	abc13567	GC-CASE-124047	id_quod_plerumque_accidit	White	Prefer not to answer	Not reported	Gallia_est_omnis_divisa_in_partes_tres	haec_olim_meminisse_iuvabit
+participant	abc13567	GC-CASE-123488	scientiae_cedit_mare	American Indian or Alaska Native	X	Unknown	a_bene_placito	faber_est_suae_quisque_fortunae
+participant	abc13567	GC-CASE-121980	O_Tite_tute_Tati_tibi_tanta_tyranne_tulisti	American Indian or Alaska Native	Intersex	Not reported	scientia_et_sapientia	scientia_et_sapientia
+participant	abc13567	GC-CASE-121516	Macte_animo_Generose_puer_sic_itur_ad_astra	Native Hawaiian or other Pacific Islander	Unknown	Unknown	faber_est_suae_quisque_fortunae	scientia_et_sapientia
+participant	abc13567	GC-CASE-120932	id_quod_plerumque_accidit	Not allowed to collect	Decline to answer	Unknown	nanos_gigantum_humeris_insidentes	e_causa_ignota
+participant	abc13567	GC-CASE-117901	nascentes_morimur_finisque_ab_origine_pendet	Unknown	Male	Unknown	scientiae_et_patriae	barba_crescit_caput_nescit
+participant	abc13567	GC-CASE-108875	pace_tua	Not allowed to collect	X	Unknown	"scientia,_aere_perennius"	a_bene_placito
