@@ -270,11 +270,16 @@ class UserProfilePage(PermissionForm):
         HeaderPage(self._hub).open_profile()
 
     def is_request_access_button_visible(self) -> bool:
-        """True if Request Access is visible on Profile (PBAC ``access:request``).
+        """Wait up to the Hub timeout for Request Access on Profile; return False on timeout.
 
         Profile must already be open (e.g. ``HeaderPage.open_profile()``).
         """
-        return self._loc(REQUEST_ACCESS).first.is_visible()
+        try:
+            self._loc(REQUEST_ACCESS).first.wait_for(state="visible", timeout=self.DEFAULT_MS)
+        except PlaywrightTimeoutError:
+            log.info("Request Access did not become visible within %s ms", self.DEFAULT_MS)
+            return False
+        return True
 
     def assert_profile_permissions_not_visible(self, role_self: str) -> None:
         """Assert Submitter-self / User-self: no PBAC panels on Profile (Katalon TC04/TC05).

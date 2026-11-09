@@ -4,7 +4,7 @@ Playwright Python test framework for **CRDC Data Hub**. This is a behavior-prese
 
 **New to the team?** Start at **[docs/onboarding.md](docs/onboarding.md)** (setup, core pieces — conftest / auth / config / hub / pages — how to run tests, and what the port is aiming for). The map of those files is **Core pieces** in that doc.
 
-Phase 0 is the scaffold plus the first live cases: YAML object repository, profile config, Login.gov OTP, auth `storage_state`, six-role login smoke, TC08/TC09 lists, PBAC TC01–TC05 defaults and TC06–TC10 positives, CRDCDH-4006 Release Notes, and **CRDCDH-3948** Submission Request TC01–TC04 (SRF Save/import/list/Fed Lead flows). PBAC TC07–TC10 have offline validation only; live QA validation is deferred. Other SR suites are later phases. See [`ai/crdc/Playwright-Migration-Plan.md`](../../ai/crdc/Playwright-Migration-Plan.md).
+Phase 0 is the scaffold plus the first live cases: YAML object repository, profile config, Login.gov OTP, auth `storage_state`, six-role login smoke, TC08/TC09 lists, PBAC TC01–TC05 defaults and TC06–TC10 positives, CRDCDH-4006 Release Notes, and **CRDCDH-3948** Submission Request TC01–TC04 (SRF Save/import/list/Fed Lead flows). The maintainer reported all PBAC positive cases passing in individual live runs on 2026-11-09; a combined run remains to be verified. Other SR suites are later phases. See [`ai/crdc/Playwright-Migration-Plan.md`](../../ai/crdc/Playwright-Migration-Plan.md).
 
 ## Requirements
 

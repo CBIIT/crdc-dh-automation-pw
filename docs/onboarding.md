@@ -32,7 +32,7 @@ The framework can:
 - Sign in through Login.gov with TOTP (one-time password)
 - Reuse a saved browser session so the next run does not pay OTP every time
 - Sign in as **Admin, Fedlead, Dcp, Submitter, User, and Master** and land on Hub (TC18)
-- Run **TC08** Manage Studies, **TC09** Manage Programs, PBAC **TC01–TC05** defaults and **TC06–TC10** checked permissions (positive functional), **CRDCDH-4006** Release Notes, **TC08** GC invalid-integer Data Submission (metadata VR), and **CRDCDH-3948** Submission Request TC01–TC04 (SRF Save / import-export / list reopen / Fed Lead inquire & reopen). PBAC TC07–TC10 have offline validation only; live QA validation is deferred.
+- Run **TC08** Manage Studies, **TC09** Manage Programs, PBAC **TC01–TC05** defaults and **TC06–TC10** checked permissions (positive functional), **CRDCDH-4006** Release Notes, **TC08** GC invalid-integer Data Submission (metadata VR), and **CRDCDH-3948** Submission Request TC01–TC04 (SRF Save / import-export / list reopen / Fed Lead inquire & reopen). The maintainer reported all PBAC positive cases passing in individual live runs on 2026-11-09; a combined run remains to be verified.
 
 That is the floor everything else builds on. Other Submission Request suites, emails, Mongo, and GraphQL are **not** here yet.
 
@@ -53,7 +53,7 @@ Replace the Katalon Hub suites with this repo so QA and CI run Playwright instea
 
 Planned order after this scaffold:
 
-1. **PBAC defaults** TC01–TC05 ported; **TC06–TC10** positive functional (Fedlead, Dcp, Admin, Submitter, User) implemented, with live QA validation deferred for TC07–TC10; negative/unchecked functional (TC11–TC15), scope cases, and story tests remain
+1. **PBAC defaults** TC01–TC05 ported; **TC06–TC10** positive functional (Fedlead, Dcp, Admin, Submitter, User) implemented and reported passing individually by the maintainer; negative/unchecked functional (TC11–TC15), scope cases, and story tests remain
 2. **Shared UI helpers on BasePage** — tables, MUI dropdowns, snackbars (done; unblocks every list page)
 3. **Submission Requests**
 4. **Data Submissions** (upload, validate, results tables)
@@ -357,7 +357,11 @@ pytest
 | TC09 | Submitter | 30 | 9 | 21 | `CRDC_PBAC`, `CRDC_Regression`, `CRDC_Smoke` |
 | TC10 | User | 18 | 6 | 12 | `CRDC_PBAC`, `CRDC_Regression` |
 
-Dcp and Admin exercise the existing `data_submission:admin_submit` handler; Submitter and User exercise `access:request`. The workbook selects each role's checks. TC07–TC10 are validated offline through unit tests, collection, and linting; live QA validation is deferred. These checks do not establish live permission behavior.
+Dcp and Admin exercise the existing `data_submission:admin_submit` handler; Submitter and User exercise `access:request`. The workbook selects each role's checks. Offline validation covers unit tests, collection, and linting. On 2026-11-09, the maintainer reported all five positive cases passing in individual live runs after the save/visibility fixes and providing the required User SR data. A combined serial run remains to be verified.
+
+The SR Submit handler's draft-save step follows CRDCDH-3948: after filling PI information, it sets a unique PI address, verifies Save is enabled, saves, and verifies status changes from NEW to IN PROGRESS before returning to the list. This makes a real edit even when the role's PI information is prefilled.
+
+The Request Access check waits up to the standard 15-second Hub timeout for the profile button to become visible, returning False on timeout. This avoids checking visibility before the profile has rendered.
 
 Run selections containing PBAC **serially**, including Smoke and Regression; do not use `-n`. Future live runs need an **Approved** SR visible to each tested role for `submission_request:reopen`, and Submitted/In Review SRs for reviewer roles. Applicable DS checks also need the GC `ATS - AutoTest-Study` study and the files under `InputFiles/CRDC/MetadataData/PBAC/`. Standalone positive runs leave enabled permissions and create SR/DS data through the existing handlers; the full PBAC selection ends with Master running EnableAllPermissions. No live login, permission changes, data creation, or seeding is part of the offline validation.
 
