@@ -4,7 +4,7 @@ Playwright Python test framework for **CRDC Data Hub**. This is a behavior-prese
 
 **New to the team?** Start at **[docs/onboarding.md](docs/onboarding.md)** (setup, core pieces — conftest / auth / config / hub / pages — how to run tests, and what the port is aiming for). The map of those files is **Core pieces** in that doc.
 
-Phase 0 is the scaffold plus the first live cases: YAML object repository, profile config, Login.gov OTP, auth `storage_state`, six-role login smoke, TC08/TC09 lists, TC01 PBAC Fedlead, CRDCDH-4006 Release Notes, and **CRDCDH-3948** Submission Request TC01–TC04 (SRF Save/import/list/Fed Lead flows). Other SR suites are later phases. See [`ai/crdc/Playwright-Migration-Plan.md`](../../ai/crdc/Playwright-Migration-Plan.md).
+Phase 0 is the scaffold plus the first live cases: YAML object repository, profile config, Login.gov OTP, auth `storage_state`, six-role login smoke, TC08/TC09 lists, PBAC TC01–TC05 defaults and TC06–TC10 positives, CRDCDH-4006 Release Notes, and **CRDCDH-3948** Submission Request TC01–TC04 (SRF Save/import/list/Fed Lead flows). The maintainer reported all PBAC positive cases passing in individual live runs on 2026-11-09; a combined run remains to be verified. Other SR suites are later phases. See [`ai/crdc/Playwright-Migration-Plan.md`](../../ai/crdc/Playwright-Migration-Plan.md).
 
 ## Requirements
 
@@ -42,13 +42,13 @@ Unit tests (no browser, no credentials; they use the committed `*.yaml.example` 
 pytest tests/unit -m unit
 ```
 
-Live Hub tests use the same suite names as Katalon (`CRDC_Auxiliary`, `CRDC_PBAC`, `CRDC_Smoke`). `CRDC_Smoke` is only the Katalon smoke subset (TC08 and TC09 today), not every live case. TC18 (six-role login) is Auxiliary, not Smoke.
+Live Hub tests use the same suite names as Katalon (`CRDC_Auxiliary`, `CRDC_PBAC`, `CRDC_Smoke`). `CRDC_Smoke` includes the auxiliary list cases and PBAC TC09 Submitter positive, among other ported smoke cases. TC18 (six-role login) is Auxiliary. PBAC TC07–TC10 also belong to `CRDC_Regression`. Run any selection containing PBAC tests serially, including Smoke and Regression.
 
 ```bash
 pytest -m CRDC_Auxiliary
 pytest -m CRDC_Auxiliary --headed
 pytest -m CRDC_Smoke
-pytest -m CRDC_PBAC   # TC01 then SuiteSetup EnableAll (serial; no -n)
+pytest -m CRDC_PBAC   # TC01–TC05 defaults, TC06–TC10 positives, then EnableAll (serial; no -n)
 pytest -m CRDC_SubmissionRequests -k 3948
 ```
 
@@ -77,7 +77,7 @@ locators/CRDC/   # YAML object repository (Katalon paths preserved)
 src/crdc_pw/     # loader, config, auth, hub, pages, utils
 tests/unit/      # no browser
 tests/AuxiliaryTests/  # live Hub cases (Katalon area folders, without a CRDC/ prefix)
-tests/Pbac/      # TC01–TC05 PBAC default permissions
+tests/Pbac/      # TC01–TC05 PBAC defaults; TC06–TC10 positive functional checks
 tests/SuiteSetup/  # EnableAllPermissions (CRDC_PBAC restore, Master)
 auth/            # storage_state JSON (gitignored)
 ci/              # GitHub Actions helper that writes the gitignored yaml from secrets
@@ -91,7 +91,9 @@ hub.locators.get("CRDC/AILocators/Global/Header/Desktop/UserName-Btn")
 
 ## Auth `storage_state`
 
-After a successful Login.gov login, Playwright saves cookies to `auth/<profile>/<Role>.json`. A file lock next to that json means only one process OTPs a given account at a time. Later tests load the file into a new context and go to Hub; they do not re-check the header on every case. If the cookie died, one retry rewrites the json. Parallel (opt-in, not default): `pytest -m CRDC_Smoke -n 4`.
+After a successful Login.gov login, Playwright saves cookies to `auth/<profile>/<Role>.json`. A file lock next to that json means only one process OTPs a given account at a time. Later tests load the file into a new context and go to Hub; they do not re-check the header on every case. If the cookie died, one retry rewrites the json. Parallel is opt-in and must exclude PBAC: `pytest -m 'CRDC_Smoke and not CRDC_PBAC' -n 4`.
+
+PBAC positives use `PBACPermissions.xlsx` columns `{Role}-positive` and the existing shared functional handlers. Email/notification keys remain skipped. Future live validation needs an Approved SR visible to each tested role, Submitted/In Review SRs for reviewer roles, and the GC `ATS - AutoTest-Study` study plus PBAC metadata files for applicable DS checks. Offline checks establish workbook selection and test collection, not live permission behavior. Negative cases TC11–TC15, scope cases, and story tests remain deferred.
 
 ## CI
 

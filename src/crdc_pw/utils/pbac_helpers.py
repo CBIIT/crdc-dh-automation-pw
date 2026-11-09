@@ -253,9 +253,13 @@ def _functional_submission_request_submit(hub: Hub, _role: str, _scenario: str) 
 
         # SR resume flow
         sr_list.start_new_submission_request()
-        # Save is disabled until the form is dirty; fill PI so Save can be clicked.
+        form.assert_status("NEW")
         form.enter_principal_investigator_info(2)
+        # CRDCDH-3948: prefilled PI values may be unchanged; explicitly edit before Save.
+        form.set_pi_address(f"PBAC draft address {datetime.now():%Y%m%d%H%M%S%f}")
+        form.assert_save_enabled()
         form.click_save()
+        form.assert_status("IN PROGRESS")
         sr_list.return_to_list_after_partial_save()
 
         name = _profile_name(hub)
