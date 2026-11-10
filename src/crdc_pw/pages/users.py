@@ -28,7 +28,6 @@ CONTAINER = "CRDC/AILocators/Users/List/Container"
 USER_FILTER = "CRDC/AILocators/Users/List/UserFilter-TxtBx"
 GENERIC_ROW = "CRDC/AILocators/GenericTable/TableRow"
 HTML_ROW = "CRDC/ManageUsers/ManageUsersTable-Row"
-LOADING_ROW = "CRDC/AILocators/GenericTable/LoadingRow"
 NEXT_PAGE = "CRDC/AILocators/GenericTable/Pagination/NextPage-Btn"
 PERMISSIONS_PANEL = "CRDC/ManageUsers/PermissionsPanel-Ddn"
 NOTIFICATIONS_PANEL = "CRDC/ManageUsers/NotificationsPanel-Ddn"
@@ -37,6 +36,7 @@ CHECKBOX_LABEL = "CRDC/ManageUsers/PbacOptions-ChkbxLabel"
 ROLE_DDN = "CRDC/ManageUsers/Role-Ddn"
 ROLE_OPTION = "CRDC/ManageUsers/RoleDdn-Option"
 SAVE = "CRDC/ManageUsers/Save-Btn"
+REQUEST_ACCESS = "CRDC/ManageUsers/RequestAccess-Btn"
 SNACKBAR = "CRDC/AILocators/Global/Notistack-Snackbar"
 
 ROLE_DISPLAY = {
@@ -202,7 +202,7 @@ class ManageUsersPage(PermissionForm):
         rows = self._table_rows()
         before = self._table_fingerprint(rows)
         box.fill(needle)
-        self._wait_for_table_settled(self._loc(LOADING_ROW), rows, previous=before)
+        self.wait_for_generic_table_settled(rows, previous=before)
 
     def _click_edit_on_current_page(self, needle: str) -> bool:
         needle_l = needle.strip().lower()
@@ -227,28 +227,86 @@ class ManageUsersPage(PermissionForm):
     def _wait_for_table(self) -> None:
         self._loc(CONTAINER).wait_for(state="visible")
         self._loc(GENERIC_ROW).or_(self._loc(HTML_ROW)).first.wait_for(state="attached")
-        self._wait_for_table_settled(self._loc(LOADING_ROW))
+        self.wait_for_generic_table_settled()
 
-    def enable_all_permissions(self, role: str) -> None:
-        """Katalon editPbacPermissions(role, 'positive') without Excel — reset then check all enabled."""
+    def apply_positive_permission_edit(self, role: str) -> None:
+        """Katalon editPbacPermissions(role, 'positive') UI only — reset, check all enabled, Save."""
         if role not in ROLE_DISPLAY:
-            raise ValueError(f"Invalid role passed to enable_all_permissions: {role}")
-        log.info("Enable all permissions for role: %s", role)
+            raise ValueError(f"Invalid role passed to apply_positive_permission_edit: {role}")
+        log.info("Positive permission edit for role: %s", role)
         self.find_and_edit(role)
         self.reset_permissions(role)
         self.find_and_edit(role)
         self.expand_permission_panels()
         self.check_all_enabled_permission_checkboxes()
         self._loc(SAVE).click()
-        log.info("Clicked Save after enabling permissions for %s", role)
+        log.info("Clicked Save after positive permission edit for %s", role)
         self._wait_for_snackbar_gone(self._loc(SNACKBAR))
+        log.info("Positive permission edit finished for %s", role)
+
+    def enable_all_permissions(self, role: str) -> None:
+        """Katalon editPbacPermissions(role, 'positive') without Excel — reset then check all enabled."""
+        log.info("Enable all permissions for role: %s", role)
+        self.apply_positive_permission_edit(role)
         log.info("Enable all permissions finished for %s", role)
 
 
 class UserProfilePage(PermissionForm):
     def open(self) -> None:
-        """User menu → Profile, then wait for the permission form (or the page body)."""
+        """User menu → Profile, then wait for the permission form (Fedlead/Dcp/Admin-self)."""
         log.info("Navigate: User Profile")
         HeaderPage(self._hub).open_profile()
         self._loc(PERMISSIONS_PANEL).wait_for(state="visible")
         log.info("User Profile page loaded")
+
+    def open_profile_menu_only(self) -> None:
+        """Open Profile without waiting for PBAC panels (restricted self roles).
+
+        Prefer UserProfilePage.open when panels must be visible for sheet compare
+        (Fedlead/Dcp/Admin-self). Submitter and User must not see Permissions or
+        Notifications dropdowns on Profile; waiting on PERMISSIONS_PANEL would timeout.
+        """
+        log.info("Navigate: User Profile (no PBAC panels expected)")
+        HeaderPage(self._hub).open_profile()
+
+    def is_request_access_button_visible(self) -> bool:
+        """Wait up to the Hub timeout for Request Access on Profile; return False on timeout.
+
+        Profile must already be open (e.g. ``HeaderPage.open_profile()``).
+        """
+        try:
+            self._loc(REQUEST_ACCESS).first.wait_for(state="visible", timeout=self.DEFAULT_MS)
+        except PlaywrightTimeoutError:
+            log.info("Request Access did not become visible within %s ms", self.DEFAULT_MS)
+            return False
+        return True
+
+    def assert_profile_permissions_not_visible(self, role_self: str) -> None:
+        """Assert Submitter-self / User-self: no PBAC panels on Profile (Katalon TC04/TC05).
+
+        role_self is only used in Pass/Fail log text (e.g. Submitter-self). Excel
+        Submitter-self / User-self columns are not compared when panels are absent.
+        """
+        self.open_profile_menu_only()
+        probe_ms = self.PROBE_MS
+        # Brief settle; Katalon uses optional ~5s presence check, not DEFAULT_MS wait
+        self.page.wait_for_timeout(probe_ms)
+        perm_present = self._pbac_panel_present(self._loc(PERMISSIONS_PANEL), probe_ms)
+        notif_present = self._pbac_panel_present(self._loc(NOTIFICATIONS_PANEL), probe_ms)
+        if perm_present or notif_present:
+            raise AssertionError(
+                f"FAIL -- {role_self} is able to see permissions in profile"
+            )
+        log.info("PASS -- %s is not able to view permissions in profile", role_self)
+
+    @staticmethod
+    def _pbac_panel_present(panel: Locator, timeout_ms: int) -> bool:
+        """Return True if a Permissions/Notifications panel becomes visible within probe_ms."""
+        try:
+            panel.first.wait_for(state="visible", timeout=timeout_ms)
+            return panel.first.is_visible()
+        except (PlaywrightTimeoutError, Error):
+            try:
+                return panel.first.is_visible()
+            except Error:
+                return False

@@ -23,7 +23,6 @@ log = logging.getLogger("crdc_pw.data_submissions_list")
 CREATE_BTN = "CRDC/AILocators/DataSubmissions/List/Table/CreateDataSubmission-Btn"
 FILTERS = "CRDC/AILocators/DataSubmissions/List/Filters/Filters-Container"
 LIST_ROW = "CRDC/AILocators/GenericTable/TableRow"
-LOADING_ROW = "CRDC/AILocators/GenericTable/LoadingRow"
 NAME_FILTER = "CRDC/AILocators/DataSubmissions/List/Filters/SubmissionName-TxtBx"
 NAME_LINK = "CRDC/DataSubmissions/DataSubmissionName-Link"
 
@@ -87,6 +86,23 @@ class DataSubmissionsListPage(BasePage):
         HeaderPage(self._hub).open_data_submissions()
         self.container.wait_for(state="visible")
         log.info("Data Submissions list page loaded")
+
+    def wait_for_list_table_settled(self) -> None:
+        """Wait until the generic-table loading row is gone (same pattern as SubmissionRequests list).
+
+        PBAC and other flows call ``wait_loading_spinner_gone`` then read ``tbody/tr``; the table
+        can still show a transient placeholder row until the loading row disappears.
+        """
+        self.container.wait_for(state="visible")
+        self.wait_for_generic_table_settled(self._loc(LIST_ROW))
+
+    def table_data_rows(self) -> Locator:
+        """Generic table body rows (PBAC ``data_submission:view`` parity with Katalon list row)."""
+        return self._loc(LIST_ROW)
+
+    def is_create_visible(self) -> bool:
+        """True if the list shows Create a Data Submission (PBAC ``data_submission:create`` gate)."""
+        return self._loc(CREATE_BTN).first.is_visible()
 
     def create_data_submission(
         self,
@@ -163,7 +179,7 @@ class DataSubmissionsListPage(BasePage):
         rows = self._loc(LIST_ROW)
         before = self._table_fingerprint(rows)
         box.fill(trimmed)
-        self._wait_for_table_settled(self._loc(LOADING_ROW), rows, previous=before)
+        self.wait_for_generic_table_settled(rows, previous=before)
         count = rows.count()
         if count != 1:
             raise RuntimeError(

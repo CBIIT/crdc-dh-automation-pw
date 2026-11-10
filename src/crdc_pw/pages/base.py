@@ -17,6 +17,9 @@ from crdc_pw.locators.loader import LocatorLoader
 
 _POLL_MS = 150
 
+# Shared by DS list, SR list, Manage Users/Programs/Studies, Data Explorer, VR table, etc.
+_GENERIC_TABLE_LOADING_ROW = "CRDC/AILocators/GenericTable/LoadingRow"
+
 
 class BasePage:
     """Hub-backed screen page: _loc('CRDC/...') always uses the live tab on hub.
@@ -51,6 +54,22 @@ class BasePage:
     def _table_fingerprint(self, rows: Locator) -> str:
         """Joined inner text of every current data row. Empty string if none."""
         return "\n".join(text.strip() for text in rows.all_inner_texts())
+
+    def wait_for_generic_table_settled(
+        self,
+        rows: Locator | None = None,
+        *,
+        previous: str | None = None,
+        loading_path: str = _GENERIC_TABLE_LOADING_ROW,
+    ) -> None:
+        """Wait for the Hub generic-table loading row, then optional row refresh (fingerprint).
+
+        Pass ``rows`` (and optionally ``previous``) when a filter/refetch should complete.
+        Omit ``rows`` to wait only for the loading skeleton (e.g. initial list open).
+
+        Override ``loading_path`` only if a screen uses a non-standard loading indicator.
+        """
+        self._wait_for_table_settled(self._loc(loading_path), rows, previous=previous)
 
     def _wait_for_table_settled(
         self,

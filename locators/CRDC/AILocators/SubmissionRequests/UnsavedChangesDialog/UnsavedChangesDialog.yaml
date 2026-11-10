@@ -1,5 +1,6 @@
 # CRDC/AILocators/SubmissionRequests/UnsavedChangesDialog
+# Scoped to [role='dialog'] so //button[.='Save'] does not match the SR form Save (id submission-form-save-button).
 
-Cancel-Btn: "//button[.='Cancel']"
-Discard-Btn: "//button[.='Discard']"
-Save-Btn: "//button[.='Save']"
+Cancel-Btn: "//*[normalize-space(.)='Cancel' and (self::button or @role='button')]"
+Discard-Btn: "//*[normalize-space(.)='Discard' and (self::button or @role='button')]"
+Save-Btn: "//*[@role='dialog']//button[normalize-space(.)='Save']"
