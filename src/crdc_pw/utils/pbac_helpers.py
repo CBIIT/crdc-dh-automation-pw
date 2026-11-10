@@ -80,19 +80,34 @@ def edit_pbac_permissions(
     role: str,
     scenario: Literal["positive", "negative"],
 ) -> None:
-    """Katalon editPbacPermissions: Admin edits PBAC for role, then writes expected sheet."""
-    if scenario == "negative":
-        raise NotImplementedError(
-            "edit_pbac_permissions negative scenario is reserved for TC11+ (uncheck path)."
+    """Katalon editPbacPermissions: Admin or Master edits PBAC for role, then writes expected sheet.
+
+    Positive checks every enabled box. Negative unchecks twice (second pass for DCP SR View).
+    """
+    if hub.role not in ("Admin", "Master"):
+        raise AssertionError(
+            f"edit_pbac_permissions requires Admin or Master; hub.role is {hub.role!r}"
         )
-    if hub.role != "Admin":
-        raise AssertionError(f"edit_pbac_permissions requires Admin; hub.role is {hub.role!r}")
     users = ManageUsersPage(hub)
     users.open()
-    users.apply_positive_permission_edit(role)
+    if scenario == "positive":
+        users.apply_positive_permission_edit(role)
+    elif scenario == "negative":
+        users.apply_negative_permission_edit(role)
+    else:
+        raise ValueError(f"Unknown PBAC scenario {scenario!r}; use 'positive' or 'negative'")
     key = f"{role}-{scenario}"
     write_expected(key)
-    log.info("Wrote expected PBAC sheet %r after positive edit", key)
+    log.info("Wrote expected PBAC sheet %r after %s edit", key, scenario)
+
+
+def _functional_scenario_passed(scenario: str, result: bool) -> bool:
+    """Katalon polarity: positive PASS when accessible; negative PASS when not accessible."""
+    if scenario == "positive":
+        return bool(result)
+    if scenario == "negative":
+        return not result
+    raise ValueError(f"Unknown PBAC scenario {scenario!r}; use 'positive' or 'negative'")
 
 
 def verify_permissions_functional(
@@ -101,10 +116,6 @@ def verify_permissions_functional(
     scenario: Literal["positive", "negative"],
 ) -> None:
     """Katalon verifyPermissionsFunctional: iterate output sheet keys, handler or skip."""
-    if scenario == "negative":
-        raise NotImplementedError(
-            "verify_permissions_functional for negative scenario is reserved for TC11+."
-        )
     keys = list_internal_names_for_scenario(user_role, scenario)
     log.info(
         "Permissions to verify for %r role for %r scenario: %s",
@@ -124,8 +135,13 @@ def verify_permissions_functional(
             result = handler(hub, user_role, scenario)
         except Exception as exc:
             pytest.fail(f"[ERROR] Exception during permission {perm!r}: {exc}")
-        assert result, f"[FAIL] Unexpected result for permission {perm!r} in positive scenario."
-        log.info("[PASS] %r accessible as expected.", perm)
+        assert _functional_scenario_passed(scenario, result), (
+            f"[FAIL] Unexpected result for permission {perm!r} in {scenario!r} scenario."
+        )
+        if scenario == "negative":
+            log.info("[PASS] %r correctly *not* accessible.", perm)
+        else:
+            log.info("[PASS] %r accessible as expected.", perm)
 
 
 # --- Small helpers (Katalon SubmissionRequest.clickHome, loading waits) ---
@@ -200,7 +216,7 @@ def _prepare_unique_program_tsv() -> Path:
     return dest
 
 
-def _functional_submission_request_view(hub: Hub, _role: str, _scenario: str) -> bool:
+def _functional_submission_request_view(hub: Hub, _role: str, scenario: str) -> bool:
     log.info("Verifying SR View...")
     try:
         hub.page.wait_for_timeout(1_000)
@@ -217,13 +233,16 @@ def _functional_submission_request_view(hub: Hub, _role: str, _scenario: str) ->
                 )
                 return False
         log.info("Number of rows in SR list found: %s", n)
-        if n > 1:
+        if scenario == "negative" and n > 1:
             ts = datetime.now().strftime("%Y%m%d-%H%M%S")
             log.info(
-                "Capturing screenshot: SR list shows data rows instead of permission-denied message (%s)",
+                "Capturing screenshot: SR list shows data rows on negative view check (%s)",
                 ts,
             )
-            hub.page.screenshot(full_page=True, path=str(repo_root() / f"reports/PBAC_FAIL_submission_request_view_SR_list_{ts}.png"))
+            hub.page.screenshot(
+                full_page=True,
+                path=str(repo_root() / f"reports/PBAC_FAIL_submission_request_view_SR_list_{ts}.png"),
+            )
         return n > 0
     except Exception as exc:
         log.info("Error verifying permission - submission_request:view -> %s", exc)
@@ -400,6 +419,10 @@ def _functional_data_submission_view(hub: Hub, _role: str, _scenario: str) -> bo
 
         ds_ok = _ds_or_explorer_list_has_positive_rows(rows_ds)
         _pbac_click_home(hub)
+        header = HeaderPage(hub)
+        if not header.is_nav_data_explorer_visible():
+            log.info("Data Explorer tab is not in the nav bar; view check fails for explorer")
+            return False
         explorer = DataExplorerListPage(hub)
         explorer.open_settled()
         rows_de = explorer.table_data_rows()

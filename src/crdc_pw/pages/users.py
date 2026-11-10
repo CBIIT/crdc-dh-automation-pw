@@ -7,6 +7,8 @@ Tests construct ManageUsersPage or UserProfilePage from hub, then:
   expand_permission_panels()
   read_permission_rows()   — (label, status) for every PBAC checkbox
   check_all_enabled_permission_checkboxes() — positive EnableAll (Katalon checkAllEnabled…)
+  uncheck_all_enabled_permission_checkboxes() — negative uncheck-all (Katalon uncheckAllEnabled…)
+  apply_positive_permission_edit / apply_negative_permission_edit — ManageUsersPage only
   enable_all_permissions(role) — on ManageUsersPage only (Katalon editPbacPermissions positive)
 
 Locator constants are Katalon object-repository paths (YAML), not raw XPath.
@@ -16,7 +18,7 @@ from __future__ import annotations
 
 import logging
 
-from playwright.sync_api import Error, Locator
+from playwright.sync_api import Error, Locator, expect
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from crdc_pw.pages.base import BasePage
@@ -100,11 +102,24 @@ class PermissionForm(BasePage):
         log.info("Resetting permissions for role: %s (toggle away and back, then Save)", role)
         self._select_role(alternate)
         self._select_role(display)
+        self._wait_for_permissions_hydrated()
         log.info("Role re-selected to %s; clicking Save", display)
         self._loc(SAVE).click()
         log.info("Clicked Save; waiting for snackbar")
         self._wait_for_snackbar_gone(self._loc(SNACKBAR))
-        log.info("Save finished; snackbar gone")
+        self._loc(CONTAINER).wait_for(state="visible")
+        log.info("Save finished; Manage Users list visible")
+
+    def _wait_for_permissions_hydrated(self) -> None:
+        """After a Role change, wait until the Permissions accordion is not still (0).
+
+        Katalon delay(2) after re-selecting the role before Save. Saving while the
+        header still shows Permissions (0) does not return to the Manage Users list.
+        """
+        panel = self._loc(PERMISSIONS_PANEL)
+        panel.wait_for(state="visible")
+        expect(panel).not_to_contain_text("(0)", timeout=self.DEFAULT_MS)
+        log.info("Permissions accordion hydrated after role select")
 
     def _select_role(self, role_display: str) -> None:
         self._select_dropdown(
@@ -134,6 +149,32 @@ class PermissionForm(BasePage):
             self._wait_for_snackbar_gone(snackbar)
             box.check()
             log.info("Checked permission checkbox after retry")
+
+    def uncheck_all_enabled_permission_checkboxes(self) -> None:
+        """Uncheck every enabled PBAC checkbox that is checked (Katalon negative scenario).
+
+        One pass only. Call twice from apply_negative_permission_edit so DCP SR View
+        can be unchecked after higher boxes unlock it.
+        """
+        snackbar = self._loc(SNACKBAR)
+        self._wait_for_snackbar_gone(snackbar)
+        boxes = self._loc(CHECKBOX)
+        boxes.first.wait_for(state="attached")
+        for i in range(boxes.count()):
+            box = boxes.nth(i)
+            if not box.is_enabled() or not box.is_checked():
+                continue
+            self._uncheck_permission_box(box, snackbar)
+
+    def _uncheck_permission_box(self, box: Locator, snackbar: Locator) -> None:
+        try:
+            box.uncheck()
+            log.info("Unchecked permission checkbox")
+        except Error as exc:
+            log.info("Checkbox uncheck failed (likely Notistack); waiting and retrying once: %s", exc)
+            self._wait_for_snackbar_gone(snackbar)
+            box.uncheck()
+            log.info("Unchecked permission checkbox after retry")
 
 
 class ManageUsersPage(PermissionForm):
@@ -242,7 +283,29 @@ class ManageUsersPage(PermissionForm):
         self._loc(SAVE).click()
         log.info("Clicked Save after positive permission edit for %s", role)
         self._wait_for_snackbar_gone(self._loc(SNACKBAR))
+        self._loc(CONTAINER).wait_for(state="visible")
         log.info("Positive permission edit finished for %s", role)
+
+    def apply_negative_permission_edit(self, role: str) -> None:
+        """Katalon editPbacPermissions(role, 'negative') UI only — reset, uncheck twice, Save.
+
+        Second uncheck pass is for DCP SR View, which stays disabled until higher boxes
+        are cleared.
+        """
+        if role not in ROLE_DISPLAY:
+            raise ValueError(f"Invalid role passed to apply_negative_permission_edit: {role}")
+        log.info("Negative permission edit for role: %s", role)
+        self.find_and_edit(role)
+        self.reset_permissions(role)
+        self.find_and_edit(role)
+        self.expand_permission_panels()
+        self.uncheck_all_enabled_permission_checkboxes()
+        self.uncheck_all_enabled_permission_checkboxes()
+        self._loc(SAVE).click()
+        log.info("Clicked Save after negative permission edit for %s", role)
+        self._wait_for_snackbar_gone(self._loc(SNACKBAR))
+        self._loc(CONTAINER).wait_for(state="visible")
+        log.info("Negative permission edit finished for %s", role)
 
     def enable_all_permissions(self, role: str) -> None:
         """Katalon editPbacPermissions(role, 'positive') without Excel — reset then check all enabled."""
