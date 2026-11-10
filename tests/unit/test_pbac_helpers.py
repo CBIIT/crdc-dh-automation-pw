@@ -49,6 +49,22 @@ def test_any_or_all_accessible(
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    ("scenario", "flags", "expected"),
+    [
+        ("positive", (True, True, True), True),
+        ("positive", (True, False, False), False),
+        ("negative", (True, False, False), True),
+        ("negative", (False, False, False), False),
+    ],
+)
+def test_any_or_all_accessible_three_flags(
+    scenario: str, flags: tuple[bool, bool, bool], expected: bool
+) -> None:
+    assert _any_or_all_accessible(scenario, *flags) is expected
+
+
+@pytest.mark.unit
 def test_any_or_all_accessible_rejects_unknown_scenario() -> None:
     with pytest.raises(ValueError, match="Unknown PBAC scenario"):
         _any_or_all_accessible("other", True, False)

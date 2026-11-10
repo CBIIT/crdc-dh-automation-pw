@@ -269,7 +269,7 @@ def _functional_submission_request_create(hub: Hub, _role: str, _scenario: str) 
         return False
 
 
-def _functional_submission_request_submit(hub: Hub, _role: str, _scenario: str) -> bool:
+def _functional_submission_request_submit(hub: Hub, _role: str, scenario: str) -> bool:
     log.info("Verifying SR Submit...")
     try:
         _pbac_click_home(hub)
@@ -323,13 +323,13 @@ def _functional_submission_request_submit(hub: Hub, _role: str, _scenario: str) 
             1,
         )
         sr_submit_exists = form.is_submit_button_visible()
-        return bool(sr_list_resume and sr_submit_exists)
+        return _any_or_all_accessible(scenario, sr_list_resume, sr_submit_exists)
     except Exception as exc:
         log.info("Error verifying permission - submission_request:submit -> %s", exc)
         return False
 
 
-def _functional_submission_request_review(hub: Hub, _role: str, _scenario: str) -> bool:
+def _functional_submission_request_review(hub: Hub, _role: str, scenario: str) -> bool:
     log.info("Verifying SR Review...")
     try:
         hub.page.wait_for_timeout(1_000)
@@ -349,7 +349,7 @@ def _functional_submission_request_review(hub: Hub, _role: str, _scenario: str) 
         sr_list.click_review_on_first_matching_row()
         form = SubmissionRequestFormPage(hub)
         form.click_review_progress_bar()
-        return form.are_review_decision_buttons_visible()
+        return _any_or_all_accessible(scenario, *form.review_decision_button_flags())
     except Exception as exc:
         log.info("Error verifying permission - submission_request:review -> %s", exc)
         return False
@@ -487,7 +487,7 @@ def _functional_data_submission_cancel(hub: Hub, _role: str, _scenario: str) -> 
         return False
 
 
-def _functional_data_submission_review(hub: Hub, _role: str, _scenario: str) -> bool:
+def _functional_data_submission_review(hub: Hub, _role: str, scenario: str) -> bool:
     log.info("Verifying DS Review...")
     try:
         _pbac_click_home(hub)
@@ -514,7 +514,7 @@ def _functional_data_submission_review(hub: Hub, _role: str, _scenario: str) -> 
         log.info("DS PBAC (review): validation finished")
         detail.click_submit_for_review()
         detail.wait_loading_spinner_gone()
-        return detail.is_release_reject_withdraw_visible()
+        return _any_or_all_accessible(scenario, *detail.release_reject_withdraw_flags())
     except Exception as exc:
         log.info("Error verifying permission - data_submission:review -> %s", exc)
         return False
@@ -581,7 +581,7 @@ def _functional_data_submission_confirm(hub: Hub, user_role: str, scenario: str)
         detail.click_release()
         detail.click_release_confirmation_yes()
         detail.wait_loading_spinner_gone()
-        return detail.is_complete_and_reject_visible()
+        return _any_or_all_accessible(scenario, *detail.complete_reject_flags())
     except Exception as exc:
         log.info("Error verifying permission - data_submission:confirm -> %s", exc)
         return False
