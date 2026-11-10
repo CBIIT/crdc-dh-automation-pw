@@ -32,7 +32,7 @@ The framework can:
 - Sign in through Login.gov with TOTP (one-time password)
 - Reuse a saved browser session so the next run does not pay OTP every time
 - Sign in as **Admin, Fedlead, Dcp, Submitter, User, and Master** and land on Hub (TC18)
-- Run **TC08** Manage Studies, **TC09** Manage Programs, PBAC **TC01–TC05** defaults and **TC06–TC10** checked permissions (positive functional), **CRDCDH-4006** Release Notes, **TC08** GC invalid-integer Data Submission (metadata VR), and **CRDCDH-3948** Submission Request TC01–TC04 (SRF Save / import-export / list reopen / Fed Lead inquire & reopen). The maintainer reported all PBAC positive cases passing in individual live runs on 2026-11-09; a combined run remains to be verified.
+- Run **TC08** Manage Studies, **TC09** Manage Programs, PBAC **TC01–TC05** defaults, **TC06–TC10** checked permissions (positive functional), and **TC11–TC15** unchecked permissions (negative functional), **CRDCDH-4006** Release Notes, **TC08** GC invalid-integer Data Submission (metadata VR), and **CRDCDH-3948** Submission Request TC01–TC04 (SRF Save / import-export / list reopen / Fed Lead inquire & reopen). The maintainer reported all PBAC positive cases passing in individual live runs on 2026-11-09; a combined run remains to be verified. Negative live dual-run vs Katalon is still the maintainer’s audit.
 
 That is the floor everything else builds on. Other Submission Request suites, emails, Mongo, and GraphQL are **not** here yet.
 
@@ -53,7 +53,7 @@ Replace the Katalon Hub suites with this repo so QA and CI run Playwright instea
 
 Planned order after this scaffold:
 
-1. **PBAC defaults** TC01–TC05 ported; **TC06–TC10** positive functional (Fedlead, Dcp, Admin, Submitter, User) implemented and reported passing individually by the maintainer; negative/unchecked functional (TC11–TC15), scope cases, and story tests remain
+1. **PBAC defaults** TC01–TC05 ported; **TC06–TC10** positive functional and **TC11–TC15** negative/unchecked functional implemented; remaining are manage-scope (TC16–TC17), notifications, and story tests
 2. **Shared UI helpers on BasePage** — tables, MUI dropdowns, snackbars (done; unblocks every list page)
 3. **Submission Requests**
 4. **Data Submissions** (upload, validate, results tables)
@@ -168,7 +168,7 @@ crdc-dh-automation-pw/
 ├── tests/                  # pytest files (Katalon Test Case / Script)
 │   ├── conftest.py         # builds `hub`: browser + login  ← start here if login fails
 │   ├── AuxiliaryTests/     # TC08 studies, TC09, TC18, CRDCDH-4006
-│   ├── Pbac/               # TC01–TC05 defaults; TC06–TC10 positives (orchestration in src/crdc_pw/utils/pbac_helpers.py)
+│   ├── Pbac/               # TC01–TC05 defaults; TC06–TC10 positives; TC11–TC15 UncheckedPermissions (orchestration in src/crdc_pw/utils/pbac_helpers.py)
 │   ├── SuiteSetup/         # EnableAllPermissions (CRDC_PBAC restore, Master)
 │   ├── DataSubmissions/    # DS flow (e.g. CRDCDH-697 summary headers); metadata VR is Excel under DataValidation/
 │   ├── DataValidation/     # Excel VR: GC|ICDC|CTDC/<ticket>/TC*.xlsx (mirrors Katalon DataSubmissions tree)
@@ -204,7 +204,7 @@ crdc-dh-automation-pw/
 | `Profiles/CRDC_QA.glbl` / `GlobalVariable` | `config/qa.yaml` |
 | Test Suite `CRDC_Smoke.ts` | `pytest -m CRDC_Smoke` — full port backlog: [smoke-suite-port-plan.md](smoke-suite-port-plan.md) |
 | Test Suite `CRDC_Auxiliary.ts` | `pytest -m CRDC_Auxiliary` |
-| Test Suite `CRDC_PBAC.ts` | `pytest -m CRDC_PBAC` — TC01–TC05 defaults, TC06–TC10 positives, then **EnableAllPermissions** last (conftest order); serial, no `-n` |
+| Test Suite `CRDC_PBAC.ts` | `pytest -m CRDC_PBAC` — TC01–TC05 defaults, TC06–TC10 positives, TC11–TC15 negatives, then **EnableAllPermissions** last (conftest order); serial, no `-n` |
 | `Test Cases/CRDC/SuiteSetup/EnableAllPermissions` | `tests/SuiteSetup/test_EnableAllPermissions.py` |
 | Test Suite `CRDC_DataValidation.ts` | `pytest -m CRDC_DataValidation` |
 | `Test Cases/CRDC/DataSubmissions/GC/CRDCDH-686-Partial/TC08_...` | Excel: `tests/DataValidation/GC/CRDCDH-686-Partial/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx` |
@@ -359,11 +359,23 @@ pytest
 
 Dcp and Admin exercise the existing `data_submission:admin_submit` handler; Submitter and User exercise `access:request`. The workbook selects each role's checks. Offline validation covers unit tests, collection, and linting. On 2026-11-09, the maintainer reported all five positive cases passing in individual live runs after the save/visibility fixes and providing the required User SR data. A combined serial run remains to be verified.
 
+**PBAC negatives TC11–TC15** (`tests/Pbac/test_TC1*_CRDC-PbacUncheckedPermissions-*.py`): Admin runs `edit_pbac_permissions(hub, role, "negative")` (reset, uncheck enabled boxes twice, Save, `write_expected(f"{role}-negative")`), then switches to the tested role and calls `verify_permissions_functional(..., "negative")`. Negative PASS is `correctly *not* accessible.` Notification/email keys skip with the same info log as positive. **TC13** parametrizes `hub` as **Master** (Admin cannot uncheck Admin without losing Manage Users) and restores Admin **positive** in `try`/`finally`.
+
+| Case | Role | Unchecked keys | Functional handlers | Notification keys skipped | Edit as | Suite markers |
+|---|---|---:|---:|---:|---|---|
+| TC11 | Fedlead | 43 | 18 | 25 | Admin | `CRDC_PBAC`, `CRDC_Regression` |
+| TC12 | Dcp | 43 | 18 | 25 | Admin | `CRDC_PBAC`, `CRDC_Regression` |
+| TC13 | Admin | 43 | 18 | 25 | **Master** + restore | `CRDC_PBAC`, `CRDC_Regression` |
+| TC14 | Submitter | 14 | 9 | 5 | Admin | `CRDC_PBAC`, `CRDC_Regression` |
+| TC15 | User | 26 | 12 | 14 | Admin | `CRDC_PBAC`, `CRDC_Regression` |
+
+Standalone `pytest tests/Pbac -m CRDC_PBAC -k UncheckedPermissions` leaves Fedlead, Dcp, Submitter, and User optional boxes **unchecked** (TC13 restores Admin only). Run **EnableAllPermissions** before positives or smoke. Full `pytest -m CRDC_PBAC` still ends with Master EnableAll so optional boxes are checked again. None of these are in Katalon smoke. Filename order is TC11–TC15; Katalon `CRDC_PBAC.ts` uses TC11, TC15, TC14, TC13, TC12 — do not reorder pytest unless a full-suite leftover fails.
+
 The SR Submit handler's draft-save step follows CRDCDH-3948: after filling PI information, it sets a unique PI address, verifies Save is enabled, saves, and verifies status changes from NEW to IN PROGRESS before returning to the list. This makes a real edit even when the role's PI information is prefilled.
 
 The Request Access check waits up to the standard 15-second Hub timeout for the profile button to become visible, returning False on timeout. This avoids checking visibility before the profile has rendered.
 
-Run selections containing PBAC **serially**, including Smoke and Regression; do not use `-n`. Future live runs need an **Approved** SR visible to each tested role for `submission_request:reopen`, and Submitted/In Review SRs for reviewer roles. Applicable DS checks also need the GC `ATS - AutoTest-Study` study and the files under `InputFiles/CRDC/MetadataData/PBAC/`. Standalone positive runs leave enabled permissions and create SR/DS data through the existing handlers; the full PBAC selection ends with Master running EnableAllPermissions. No live login, permission changes, data creation, or seeding is part of the offline validation.
+Run selections containing PBAC **serially**, including Smoke and Regression; do not use `-n`. Future live runs need an **Approved** SR visible to each tested role for `submission_request:reopen`, and Submitted/In Review SRs for reviewer roles. Applicable DS checks also need the GC `ATS - AutoTest-Study` study and the files under `InputFiles/CRDC/MetadataData/PBAC/`. Standalone positive runs leave enabled permissions and create SR/DS data through the existing handlers; standalone negative runs leave optional boxes unchecked except TC13’s Admin restore; the full PBAC selection ends with Master running EnableAllPermissions. No live login, permission changes, data creation, or seeding is part of the offline validation.
 
 `navigate`, `closeBrowser`, viewport, and the first OTP stay in the fixture. Scenario clicks stay in the pytest file as page-object calls — not as raw XPaths.
 
@@ -475,15 +487,17 @@ Always activate the venv first (`source .venv/bin/activate`).
 | Katalon Auxiliary suite | `pytest -m CRDC_Auxiliary` |
 | Katalon Smoke subset (includes PBAC TC09) | `pytest -m CRDC_Smoke` — serial |
 | Smoke excluding PBAC, four workers (cookies warm) | `pytest -m 'CRDC_Smoke and not CRDC_PBAC' -n 4` |
-| Katalon PBAC suite (TC01–TC10 + EnableAll restore) | `pytest -m CRDC_PBAC` — serial; do not use `-n` |
+| Katalon PBAC suite (TC01–TC15 + EnableAll restore) | `pytest -m CRDC_PBAC` — serial; do not use `-n` |
 | Same, watch the browser | `pytest -m CRDC_Auxiliary --headed` |
 | TC18 one role | `pytest -m CRDC_Auxiliary -k Admin` |
 | TC08 Manage Studies list only | `pytest tests/AuxiliaryTests/test_TC08_ManageStudiesListAndFilter.py` |
 | TC09 Manage Programs list only | `pytest tests/AuxiliaryTests/test_TC09_ManageProgramsListAndFilter.py` |
 | PBAC defaults TC01–TC05 (no EnableAll restore) | `pytest tests/Pbac -m CRDC_PBAC -k DefaultPermissions` |
 | PBAC positives TC06–TC10 (no EnableAll restore) | `pytest tests/Pbac -m CRDC_PBAC -k CheckedPermissions` — serial |
+| PBAC negatives TC11–TC15 (Admin restore in TC13 only) | `pytest tests/Pbac -m CRDC_PBAC -k UncheckedPermissions` — serial; EnableAll after |
 | TC01 PBAC Fedlead only | `pytest tests/Pbac -m CRDC_PBAC -k TC01` |
 | PBAC TC06 Fedlead functional only | `pytest tests/Pbac/test_TC06_CRDC-PbacCheckedPermissions-Fedlead.py -m CRDC_PBAC` |
+| PBAC TC13 Admin unchecked (Master) | `pytest tests/Pbac/test_TC13_CRDC-PbacUncheckedPermissions-Admin.py -m CRDC_PBAC` |
 | EnableAllPermissions only (Master) | `pytest tests/SuiteSetup/test_EnableAllPermissions.py` |
 | Katalon Data Validation suite | `pytest -m CRDC_DataValidation` |
 | TC08 invalid integer (GC metadata VR, Excel) | `pytest tests/DataValidation -m CRDC_DataValidation_Excel -k TC08` |

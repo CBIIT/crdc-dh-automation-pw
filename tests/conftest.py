@@ -36,10 +36,11 @@ _FAILURE_PNG = pytest.StashKey[bytes]()
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    """Run EnableAllPermissions after TC01–TC05 when both are collected (Katalon CRDC_PBAC).
+    """Run EnableAllPermissions last when it is collected (Katalon CRDC_PBAC).
 
-    Default file order already places tests/SuiteSetup/ after tests/Pbac/; this hook
-    guarantees Master restore stays last if collection order changes.
+    Full ``pytest -m CRDC_PBAC`` is TC01–TC15 then this restore. Default file order
+    already places tests/SuiteSetup/ after tests/Pbac/; this hook guarantees Master
+    restore stays last if collection order changes.
     """
     rest: list[pytest.Item] = []
     enable_all: list[pytest.Item] = []
