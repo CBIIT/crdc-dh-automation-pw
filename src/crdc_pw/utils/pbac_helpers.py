@@ -110,6 +110,15 @@ def _functional_scenario_passed(scenario: str, result: bool) -> bool:
     raise ValueError(f"Unknown PBAC scenario {scenario!r}; use 'positive' or 'negative'")
 
 
+def _any_or_all_accessible(scenario: str, *accessible: bool) -> bool:
+    """Positive: all surfaces. Negative: any leak counts as accessible (PW-only; Katalon stays AND)."""
+    if scenario == "positive":
+        return all(accessible)
+    if scenario == "negative":
+        return any(accessible)
+    raise ValueError(f"Unknown PBAC scenario {scenario!r}; use 'positive' or 'negative'")
+
+
 def verify_permissions_functional(
     hub: Hub,
     user_role: str,
@@ -404,7 +413,7 @@ def _functional_submission_request_reopen(
         return False
 
 
-def _functional_data_submission_view(hub: Hub, _role: str, _scenario: str) -> bool:
+def _functional_data_submission_view(hub: Hub, _role: str, scenario: str) -> bool:
     log.info("Verifying DS View...")
     try:
         _pbac_click_home(hub)
@@ -417,30 +426,30 @@ def _functional_data_submission_view(hub: Hub, _role: str, _scenario: str) -> bo
         n_ds = rows_ds.count()
         log.info("Number of rows in Data Submission list found: %s", n_ds)
 
-        ds_ok = _ds_or_explorer_list_has_positive_rows(rows_ds)
+        ds_accessible = _ds_or_explorer_list_has_positive_rows(rows_ds) and n_ds > 0
         _pbac_click_home(hub)
         header = HeaderPage(hub)
         if not header.is_nav_data_explorer_visible():
-            log.info("Data Explorer tab is not in the nav bar; view check fails for explorer")
-            return False
-        explorer = DataExplorerListPage(hub)
-        explorer.open_settled()
-        rows_de = explorer.table_data_rows()
-        if rows_de.count() == 1 and "do not have the appropriate permissions" in (
-            rows_de.first.inner_text() or ""
-        ):
-            log.info("The Data Explorer empty table message is displayed")
-        n_de = rows_de.count()
-        log.info("Number of rows in Data Explorer list found: %s", n_de)
-
-        de_ok = _ds_or_explorer_list_has_positive_rows(rows_de)
-        return ds_ok and de_ok and n_ds > 0 and n_de > 0
+            log.info("Data Explorer tab is not in the nav bar; explorer is not accessible")
+            de_accessible = False
+        else:
+            explorer = DataExplorerListPage(hub)
+            explorer.open_settled()
+            rows_de = explorer.table_data_rows()
+            if rows_de.count() == 1 and "do not have the appropriate permissions" in (
+                rows_de.first.inner_text() or ""
+            ):
+                log.info("The Data Explorer empty table message is displayed")
+            n_de = rows_de.count()
+            log.info("Number of rows in Data Explorer list found: %s", n_de)
+            de_accessible = _ds_or_explorer_list_has_positive_rows(rows_de) and n_de > 0
+        return _any_or_all_accessible(scenario, ds_accessible, de_accessible)
     except Exception as exc:
         log.info("Error verifying permission - data_submission:view -> %s", exc)
         return False
 
 
-def _functional_data_submission_create(hub: Hub, _role: str, _scenario: str) -> bool:
+def _functional_data_submission_create(hub: Hub, _role: str, scenario: str) -> bool:
     log.info("Verifying DS Create...")
     try:
         _pbac_click_home(hub)
@@ -450,7 +459,7 @@ def _functional_data_submission_create(hub: Hub, _role: str, _scenario: str) -> 
         header.open_user_menu()
         api_token = header.is_api_token_button_visible()
         _pbac_click_home(hub)
-        return data_submission_create and api_token
+        return _any_or_all_accessible(scenario, data_submission_create, api_token)
     except Exception as exc:
         log.info("Error verifying permission - data_submission:create -> %s", exc)
         return False
