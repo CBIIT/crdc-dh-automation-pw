@@ -28,9 +28,9 @@ pytestmark = [pytest.mark.CRDC_PBAC, pytest.mark.CRDC_Regression]
 
 @pytest.mark.parametrize("hub", ["Master"], indirect=True)
 def test_TC13_CRDC_PbacUncheckedPermissions_Admin(hub: Hub) -> None:
-    # 1. Master unchecks optional Admin permissions and writes the negative oracle
-    edit_pbac_permissions(hub, "Admin", "negative")
     try:
+        # 1. Master unchecks optional Admin permissions and writes the negative oracle
+        edit_pbac_permissions(hub, "Admin", "negative")
         # 2. Continue as Admin and confirm selected functional permissions are not accessible
         switch_user(hub, "Admin")
         verify_permissions_functional(hub, "Admin", "negative")
