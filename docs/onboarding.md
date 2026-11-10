@@ -493,7 +493,7 @@ Always activate the venv first (`source .venv/bin/activate`).
 | TC08 Manage Studies list only | `pytest tests/AuxiliaryTests/test_TC08_ManageStudiesListAndFilter.py` |
 | TC09 Manage Programs list only | `pytest tests/AuxiliaryTests/test_TC09_ManageProgramsListAndFilter.py` |
 | PBAC defaults TC01–TC05 (no EnableAll restore) | `pytest tests/Pbac -m CRDC_PBAC -k DefaultPermissions` |
-| PBAC positives TC06–TC10 (no EnableAll restore) | `pytest tests/Pbac -m CRDC_PBAC -k CheckedPermissions` — serial |
+| PBAC positives TC06–TC10 (no EnableAll restore) | `pytest tests/Pbac -m CRDC_PBAC -k 'CheckedPermissions and not UncheckedPermissions'` — serial |
 | PBAC negatives TC11–TC15 (Admin restore in TC13 only) | `pytest tests/Pbac -m CRDC_PBAC -k UncheckedPermissions` — serial; EnableAll after |
 | TC01 PBAC Fedlead only | `pytest tests/Pbac -m CRDC_PBAC -k TC01` |
 | PBAC TC06 Fedlead functional only | `pytest tests/Pbac/test_TC06_CRDC-PbacCheckedPermissions-Fedlead.py -m CRDC_PBAC` |
