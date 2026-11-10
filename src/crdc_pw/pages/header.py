@@ -102,8 +102,7 @@ class HeaderPage(BasePage):
         tab.click()
 
     def open_data_explorer(self) -> None:
-        """User menu → Data Explorer. Katalon clickTab DataExplorer-Tab (under user dropdown)."""
-        self.open_user_menu()
+        """Nav bar Data Explorer. Katalon clickTab DataExplorer-Tab (same chrome as Data Submissions)."""
         tab = self._loc(_DATA_EXPLORER)
         tab.wait_for(state="visible")
         tab.click()
@@ -140,3 +139,11 @@ class HeaderPage(BasePage):
     def is_nav_operation_dashboard_visible(self) -> bool:
         """User menu open — Operation Dashboard in dropdown (PBAC ``dashboard:view``)."""
         return self._loc(_OPERATION_DASHBOARD).first.is_visible()
+
+    def is_nav_data_submissions_visible(self) -> bool:
+        """True if the Data Submissions header tab is visible (PBAC ``data_submission:view`` / create)."""
+        return self._loc(_DATA_SUBMISSIONS).first.is_visible()
+
+    def is_nav_data_explorer_visible(self) -> bool:
+        """True if the Data Explorer header tab is visible (PBAC ``data_submission:view``)."""
+        return self._loc(_DATA_EXPLORER).first.is_visible()

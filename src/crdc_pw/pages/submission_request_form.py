@@ -315,12 +315,12 @@ class SubmissionRequestFormPage(BasePage):
             return False
         return btn.is_visible()
 
-    def are_review_decision_buttons_visible(self) -> bool:
-        """True when Approve, Reject, and Inquire are visible (PBAC submission_request:review)."""
+    def review_decision_button_flags(self) -> tuple[bool, bool, bool]:
+        """Approve, Reject, Inquire visibility (PBAC submission_request:review)."""
         approve = self._loc(_APPROVE_BTN).first
         reject = self._loc(_REJECT_BTN).first
         inquire = self._loc(_INQUIRE_BTN).first
-        return approve.is_visible() and reject.is_visible() and inquire.is_visible()
+        return approve.is_visible(), reject.is_visible(), inquire.is_visible()
 
     def inquire_with_comment(self, comment: str = _DEFAULT_INQUIRE_COMMENT) -> None:
         """Fed Lead: Inquire with comment (form must be on Review with Inquire visible)."""

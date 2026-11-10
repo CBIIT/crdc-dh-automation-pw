@@ -1,7 +1,7 @@
 """Data Explorer list (studies/explorer table).
 
-Katalon: ``CRDC/NavBar/DataExplorer-Tab`` (via user menu). Reuses the same generic table
-as Data Submissions list; filters use ``data-explorer-filters`` root."""
+Katalon: ``CRDC/NavBar/DataExplorer-Tab`` (header nav, same chrome as Data Submissions).
+Reuses the same generic table as Data Submissions list; filters use ``data-explorer-filters`` root."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ class DataExplorerListPage(BasePage):
         return self._loc(_FILTERS)
 
     def open(self) -> None:
-        """User menu → Data Explorer tab; wait for filter chrome."""
+        """Nav bar Data Explorer tab; wait for filter chrome."""
         log.info("Navigate: Data Explorer")
         HeaderPage(self._hub).open_data_explorer()
         self.container.wait_for(state="visible")
