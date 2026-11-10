@@ -140,6 +140,10 @@ class HeaderPage(BasePage):
         """User menu open — Operation Dashboard in dropdown (PBAC ``dashboard:view``)."""
         return self._loc(_OPERATION_DASHBOARD).first.is_visible()
 
+    def is_nav_data_submissions_visible(self) -> bool:
+        """True if the Data Submissions header tab is visible (PBAC ``data_submission:view`` / create)."""
+        return self._loc(_DATA_SUBMISSIONS).first.is_visible()
+
     def is_nav_data_explorer_visible(self) -> bool:
         """True if the Data Explorer header tab is visible (PBAC ``data_submission:view``)."""
         return self._loc(_DATA_EXPLORER).first.is_visible()

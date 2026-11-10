@@ -417,32 +417,43 @@ def _functional_data_submission_view(hub: Hub, _role: str, scenario: str) -> boo
     log.info("Verifying DS View...")
     try:
         _pbac_click_home(hub)
-        _open_data_submissions_list_settled(hub)
-        rows_ds = DataSubmissionsListPage(hub).table_data_rows()
-        if rows_ds.count() == 1 and "do not have the appropriate permissions" in (
-            rows_ds.first.inner_text() or ""
-        ):
-            log.info("The Data Submissions empty table message is displayed")
-        n_ds = rows_ds.count()
-        log.info("Number of rows in Data Submission list found: %s", n_ds)
-
-        ds_accessible = _ds_or_explorer_list_has_positive_rows(rows_ds) and n_ds > 0
-        _pbac_click_home(hub)
         header = HeaderPage(hub)
+        ds_accessible = False
+        if not header.is_nav_data_submissions_visible():
+            log.info("Data Submissions tab is not in the nav bar; submissions list is not accessible")
+        else:
+            try:
+                _open_data_submissions_list_settled(hub)
+                rows_ds = DataSubmissionsListPage(hub).table_data_rows()
+                if rows_ds.count() == 1 and "do not have the appropriate permissions" in (
+                    rows_ds.first.inner_text() or ""
+                ):
+                    log.info("The Data Submissions empty table message is displayed")
+                n_ds = rows_ds.count()
+                log.info("Number of rows in Data Submission list found: %s", n_ds)
+                ds_accessible = _ds_or_explorer_list_has_positive_rows(rows_ds) and n_ds > 0
+            except Exception as exc:
+                log.info("Error verifying Data Submissions list -> %s", exc)
+                ds_accessible = False
+        _pbac_click_home(hub)
+        de_accessible = False
         if not header.is_nav_data_explorer_visible():
             log.info("Data Explorer tab is not in the nav bar; explorer is not accessible")
-            de_accessible = False
         else:
-            explorer = DataExplorerListPage(hub)
-            explorer.open_settled()
-            rows_de = explorer.table_data_rows()
-            if rows_de.count() == 1 and "do not have the appropriate permissions" in (
-                rows_de.first.inner_text() or ""
-            ):
-                log.info("The Data Explorer empty table message is displayed")
-            n_de = rows_de.count()
-            log.info("Number of rows in Data Explorer list found: %s", n_de)
-            de_accessible = _ds_or_explorer_list_has_positive_rows(rows_de) and n_de > 0
+            try:
+                explorer = DataExplorerListPage(hub)
+                explorer.open_settled()
+                rows_de = explorer.table_data_rows()
+                if rows_de.count() == 1 and "do not have the appropriate permissions" in (
+                    rows_de.first.inner_text() or ""
+                ):
+                    log.info("The Data Explorer empty table message is displayed")
+                n_de = rows_de.count()
+                log.info("Number of rows in Data Explorer list found: %s", n_de)
+                de_accessible = _ds_or_explorer_list_has_positive_rows(rows_de) and n_de > 0
+            except Exception as exc:
+                log.info("Error verifying Data Explorer list -> %s", exc)
+                de_accessible = False
         return _any_or_all_accessible(scenario, ds_accessible, de_accessible)
     except Exception as exc:
         log.info("Error verifying permission - data_submission:view -> %s", exc)
@@ -453,9 +464,18 @@ def _functional_data_submission_create(hub: Hub, _role: str, scenario: str) -> b
     log.info("Verifying DS Create...")
     try:
         _pbac_click_home(hub)
-        _open_data_submissions_list_settled(hub)
-        data_submission_create = DataSubmissionsListPage(hub).is_create_visible()
         header = HeaderPage(hub)
+        data_submission_create = False
+        if not header.is_nav_data_submissions_visible():
+            log.info("Data Submissions tab is not in the nav bar; Create is not accessible")
+        else:
+            try:
+                _open_data_submissions_list_settled(hub)
+                data_submission_create = DataSubmissionsListPage(hub).is_create_visible()
+            except Exception as exc:
+                log.info("Error verifying Data Submission Create button -> %s", exc)
+                data_submission_create = False
+        _pbac_click_home(hub)
         header.open_user_menu()
         api_token = header.is_api_token_button_visible()
         _pbac_click_home(hub)
@@ -514,7 +534,7 @@ def _functional_data_submission_review(hub: Hub, _role: str, scenario: str) -> b
         log.info("DS PBAC (review): validation finished")
         detail.click_submit_for_review()
         detail.wait_loading_spinner_gone()
-        return _any_or_all_accessible(scenario, *detail.release_reject_withdraw_flags())
+        return _any_or_all_accessible(scenario, *detail.release_reject_flags())
     except Exception as exc:
         log.info("Error verifying permission - data_submission:review -> %s", exc)
         return False
