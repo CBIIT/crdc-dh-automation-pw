@@ -10,9 +10,11 @@ Goal: **`pytest -m CRDC_Smoke`** should cover the same Hub checks as Katalon **`
 
 ## Opinion: is full smoke worth it?
 
-**Yes.** Today Playwright smoke is only **Manage Studies (TC08)** and **Manage Programs (TC09)** plus **CRDCDH-697 TC01** (headers) on the feature branch. Katalon smoke is a **breadth slice**: list pages, SR create, table UX, PBAC functional check, and many DS paths (upload, validate, batch errors, cross-val, export, explorer). Porting it makes Playwright the credible pre-release gate Katalon smoke already is.
+**Yes.** Today Playwright smoke is **Manage Studies (TC08)**, **Manage Programs (TC09)**, **Data Submissions list (TC10)**, **PBAC TC09** (Submitter checked permissions), and **CRDCDH-697 TC01** (headers). Katalon smoke is a **breadth slice**: list pages, SR create, table UX, PBAC functional check, and many DS paths (upload, validate, batch errors, cross-val, export, explorer). Porting it makes Playwright the credible pre-release gate Katalon smoke already is.
 
 **Pragmatic approach:** work **top to bottom of the Katalon suite list** for traceability, but **implement in difficulty tiers** (below) so early merges add value without blocking on CLI or multi-role epics.
+
+**Approach (one case per change):** port one Katalon case at a time (group only where cases share new code: the three Excel marker rows, and TC03 + TC04 sharing generic table helpers). Dual-run the case against Katalon on the same profile before marking it **Done** in the table below.
 
 ---
 
@@ -34,15 +36,15 @@ Suite description says “GC-focused (no CTDC/ICDC)” but the file **includes C
 
 | # | Katalon test case | Role(s) | PW status | Port difficulty | Notes |
 |---|-------------------|---------|-----------|-----------------|-------|
-| 1 | `AuxiliaryTests/TC10_DataSubmissionsListAndFilter` | Submitter | **Not ported** | **Easy** | ~53-line script: nav, list chrome, filters, reset. **`DataSubmissionsListPage`** has `open()` + create; **missing** list filter/reset/read/verify helpers (mirror `DataSubmissionsList` keywords). |
+| 1 | `AuxiliaryTests/TC10_DataSubmissionsListAndFilter` | Submitter | **Done** | — | `tests/AuxiliaryTests/test_TC10_DataSubmissionsListAndFilter.py`; `DataSubmissionsListPage.apply_filters` / `read_table_rows` / `reset_filters`. |
 | 2 | `SubmissionRequest/CRDCDH-332/TC01_CRDC_Submission_Request-AllFields` | Submitter | **Partial** | **Medium** | **`SubmissionRequestFormPage.fill_submission_request_all_sections`** exists; smoke needs full A–D fill + submit path from Katalon TC01 (Excel/input if any). Not the same as CRDCDH-3948 Save tests. |
 | 3 | `AuxiliaryTests/TC12_SubmissionRequestsListAndFilter` | Submitter | **Partial** | **Easy** | **`SubmissionRequestsListPage`**: `open`, `apply_submission_requests_list_filters`, `reset_submission_requests_filters`. Add test: chrome + filter + assert row count (TC08 shape). |
 | 4 | `AuxiliaryTests/TC08_ManageStudiesListAndFilter` | Admin | **Done** | — | `tests/AuxiliaryTests/test_TC08_ManageStudiesListAndFilter.py` |
 | 5 | `AuxiliaryTests/TC09_ManageProgramsListAndFilter` | Admin | **Done** | — | `tests/AuxiliaryTests/test_TC09_ManageProgramsListAndFilter.py` |
 | 6 | `AuxiliaryTests/TC03_TableSortingVerification` | Dcp | **Not ported** | **Medium** | DS list: sortability, default sort, click-sort columns. Needs **generic table helpers** on `BasePage` or `utils/` (Katalon `WebUIUtils.verifyTableColumnSortability`, etc.) — **none in PW yet**. |
 | 7 | `AuxiliaryTests/TC04_PaginationVerification` | Dcp | **Not ported** | **Medium** | DS list pagination: rows/page options, default, navigation, change page size. Same **generic table** gap as TC03. |
-| 8 | `Pbac/TC09_CRDC-PbacCheckedPermissions-Submitter` | Admin → Submitter | **Partial** | **Medium** | **TC01 Fedlead** pattern exists (`pbac_sheet`, `ManageUsersPage`). TC09: Admin sets Submitter **positive** permissions, logout/login, **`verifyPermissionsFunctional`**. Need functional PBAC keyword port (nav + action checks), not just checkbox sheet. |
-| 9 | `DataSubmissions/GC/CRDCDH-697/TC01_CRDC-VerifyDataSubmissionHeaders` | Submitter | **Done** (PR) | — | `tests/DataSubmissions/GC/CRDCDH-697/...` |
+| 8 | `Pbac/TC09_CRDC-PbacCheckedPermissions-Submitter` | Admin → Submitter | **Done** | — | `tests/Pbac/test_TC09_CRDC-PbacCheckedPermissions-Submitter.py` (`CRDC_Smoke`); `edit_pbac_permissions` + `verify_permissions_functional` in `pbac_helpers.py`. |
+| 9 | `DataSubmissions/GC/CRDCDH-697/TC01_CRDC-VerifyDataSubmissionHeaders` | Submitter | **Done** | — | `tests/DataSubmissions/GC/CRDCDH-697/test_TC01_CRDC-VerifyDataSubmissionHeaders.py` |
 | 10 | `DataSubmissions/GC/CRDCDH-1163/TC16_...SubmittedMetadata` | Submitter (+ DCP flow in script) | **Not ported** | **Hard** | Create, upload, validate, **submit**, DCP validation path. Long workflow; uses PBAC/create helpers. |
 | 11 | `DataSubmissions/GC/CRDCDH-1051/TC25_VerifyDcpCrossValidation` | Submitter, Dcp | **Not ported** | **Hard** | **Two** submissions, same study, cross-validate, CV tab TSV, reject. **`switch_user`**, cross-val UI, expected TSV oracles. |
 | 12 | `DataSubmissions/GC/CRDCDH-514/TC06_VerifyFullDataSubmissionHistory` | Submitter | **Not ported** | **Hard** | ~147 lines: unique metadata upload, validate, history/audit assertions, **`prepareUniqueMetadataAndUpload`**. |
@@ -66,9 +68,9 @@ Use this order for **implementation**, while keeping **Katalon case IDs** in tes
 ### Wave 1 — List smoke + Excel smoke (high value, low new infra)
 
 1. **TC12** Submission Requests list + filter (`SubmissionRequestsListPage`).
-2. **TC10** Data Submissions list + filter (extend **`DataSubmissionsListPage`**).
+2. ~~**TC10** Data Submissions list + filter~~ — **Done** (`DataSubmissionsListPage` filters/read/reset).
 3. **CRDCDH-686 TC03**, **CRDCDH-699 CTDC TC101**, **CRDCDH-699 ICDC TC36** — expose on **`CRDC_Smoke`** via Excel runner markers (document `pytest -m "CRDC_Smoke and CRDC_DataValidation_Excel"` overlap or unify markers).
-4. Merge **CRDCDH-697 TC01** (headers).
+4. ~~**CRDCDH-697 TC01** (headers)~~ — **Done**.
 
 **Exit criteria:** Submitter can exercise three list pages (SR, DS, Studies/Programs already done) + one DS create + three validation smokes without new Katalon.
 
@@ -80,7 +82,7 @@ Use this order for **implementation**, while keeping **Katalon case IDs** in tes
 
 ### Wave 3 — PBAC + multi-role DS
 
-8. **PBAC TC09** Submitter checked permissions (functional verify).
+8. ~~**PBAC TC09** Submitter checked permissions (functional verify)~~ — **Done**.
 9. **CRDCDH-1035 TC101** VR export all roles (`switch_user`, submission deep link, download).
 
 ### Wave 4 — Heavy DS / CLI / Explorer
@@ -98,7 +100,7 @@ Use this order for **implementation**, while keeping **Katalon case IDs** in tes
 | Case | Katalon keywords | Playwright gap |
 |------|------------------|----------------|
 | TC08/09 | Studies/Programs list | **Done** |
-| TC10 | `DataSubmissionsList.*` | Filter fields (name, status, program, submitter, commons), `readDataSubmissionsListTableRows`, reset |
+| TC10 | `DataSubmissionsList.*` | **Done** — `DataSubmissionsListPage` filters (name, status multi-select, program, submitter, commons, dbGaP), `read_table_rows`, `reset_filters` |
 | TC12 | `SubmissionRequestList.*` | Filter + **test** asserting `expectAtLeastRows` (page has apply/reset) |
 
 **Easiest next step:** TC12 test file mirroring TC08 (~40 lines).
@@ -109,14 +111,12 @@ Katalon centralizes in **`WebUIUtils`**: sortability, default sort, column click
 
 Playwright: add locators under **`CRDC/AILocators/GenericTable/`** (if missing) and methods on **`BasePage`** or a small **`utils/table_helpers.py`** used by DS list tests. **One port serves both** TC03 and TC04.
 
-### PBAC TC09 vs Playwright TC01
+### PBAC TC09 (Done)
 
-| | Katalon TC09 | Playwright today |
-|---|--------------|------------------|
-| Setup | Admin `editPbacPermissions('Submitter', 'positive')` | TC01: Admin reset/compare **Fedlead** sheet |
-| Verify | Submitter `verifyPermissionsFunctional` | No functional PBAC runner in PW |
-
-Port needs **`verify_permissions_functional(role, scenario)`** (or split by resource) plus locators for actions PBAC gates.
+| | Katalon TC09 | Playwright |
+|---|--------------|------------|
+| Setup | Admin `editPbacPermissions('Submitter', 'positive')` | `edit_pbac_permissions(hub, "Submitter", "positive")` |
+| Verify | Submitter `verifyPermissionsFunctional` | `verify_permissions_functional(hub, "Submitter", "positive")` in `pbac_helpers.py` |
 
 ### DS validation / upload (686, 699, detail page)
 
@@ -160,9 +160,9 @@ pytest -m CRDC_Smoke --tracing=retain-on-failure
 
 | Wave | Cases | Owner / ticket |
 |------|-------|----------------|
-| 1 | TC12, TC10, Excel smoke ×3, 697 | DCA-686 (697); add DCA tasks per wave as needed |
+| 1 | TC12, ~~TC10~~ (done), Excel smoke ×3, ~~697~~ (done) | DCA-686 (697); add DCA tasks per wave as needed |
 | 2 | SR332 TC01, TC03, TC04, 887, 2864 | |
-| 3 | PBAC TC09, 1035 | |
+| 3 | ~~PBAC TC09~~ (done), 1035 | DCA-694 (PBAC positives) |
 | 4 | 1163, 1051, 514, 1405, 3026 | |
 
 Refresh this table when cases land on `develop`.
