@@ -94,21 +94,6 @@ def _xpath_literal(text: str) -> str:
     parts = text.split("'")
     return "concat(" + ", \"'\", ".join(f"'{p}'" for p in parts) + ")"
 
-
-# One JS pass per read (Katalon readGenericTableRowsViaJs): truncated cells expose the full
-# text on the wrapper aria-label, while innerText shows "auto-test_...".
-_READ_ROWS_JS = """
-rows => rows.map(row => Array.from(row.querySelectorAll('td')).map(cell => {
-    const trunc = cell.querySelector("[data-testid='truncated-text-wrapper']");
-    if (trunc) {
-        const aria = trunc.getAttribute('aria-label');
-        if (aria && aria.trim()) return aria.trim();
-    }
-    return (cell.innerText || '').trim();
-}))
-"""
-
-
 class DataSubmissionsListPage(BasePage):
     """List of submissions plus the Create a Data Submission dialog."""
 
@@ -241,8 +226,7 @@ class DataSubmissionsListPage(BasePage):
 
     def read_table_headers(self) -> list[str]:
         """Column header text in order, whitespace collapsed (for looking cells up by name)."""
-        texts = self._loc(LIST_TABLE).first.locator("xpath=.//thead//th").all_inner_texts()
-        return [" ".join(text.split()) for text in texts]
+        return self._read_table_headers(self._loc(LIST_TABLE))
 
     def read_table_rows(self) -> list[list[str]]:
         """Each visible data row as a list of cell text (header order). Empty list if none.
@@ -250,8 +234,7 @@ class DataSubmissionsListPage(BasePage):
         Truncated cells use the wrapper aria-label so the full value is returned.
         """
         self.wait_for_table_settled()
-        rows: list[list[str]] = self._loc(LIST_ROW).evaluate_all(_READ_ROWS_JS)
-        return rows
+        return self._read_table_rows_full_text(self._loc(LIST_ROW))
 
     def reset_filters(self) -> None:
         """Click Reset Filters when it is visible, then wait for the table to settle."""
