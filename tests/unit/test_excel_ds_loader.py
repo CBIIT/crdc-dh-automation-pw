@@ -203,6 +203,48 @@ def test_excel_collection_applies_settings_role_to_hub_fixture() -> None:
 
 
 @pytest.mark.unit
+def test_excel_smoke_allowlist_matches_committed_workbooks() -> None:
+    """Each smoke stem must be a committed TC*.xlsx, so a rename cannot drop a smoke case."""
+    from crdc_pw.utils.excel_ds_test_runner.test_collector import _SMOKE_CASE_STEMS
+
+    committed = {p.stem for p in _discover_committed_excel_cases()}
+    missing = sorted(_SMOKE_CASE_STEMS - committed)
+    assert not missing, f"smoke stems with no workbook under tests/DataValidation: {missing}"
+
+
+@pytest.mark.unit
+def test_excel_collection_smoke_marker() -> None:
+    """Only the Katalon CRDC_Smoke Excel workbooks are collected under -m CRDC_Smoke."""
+    from crdc_pw.utils.excel_ds_test_runner.test_collector import _SMOKE_CASE_STEMS
+
+    env = {**os.environ, "CRDC_EXCEL_DS_VALIDATION": "1"}
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/DataValidation",
+            "-m",
+            "CRDC_Smoke",
+            "--collect-only",
+            "-q",
+        ],
+        cwd=repo_root(),
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    collected = {
+        line.split("::", 1)[1].split("[", 1)[0]
+        for line in proc.stdout.splitlines()
+        if ".xlsx::" in line
+    }
+    assert collected == set(_SMOKE_CASE_STEMS), proc.stdout
+
+
+@pytest.mark.unit
 def test_missing_steps_sheet_raises(tmp_path: Path) -> None:
     path = tmp_path / "TC99_bad.xlsx"
     _write_minimal_excel_case(

@@ -30,6 +30,19 @@ def _is_excel_case_path(path: Path) -> bool:
     return len(parts) >= 3 and parts[0] == "tests" and parts[1] == "DataValidation"
 
 
+# Workbooks that are members of the Katalon CRDC_Smoke suite (see crdc-dh-automation
+# Test Suites/CRDC_Smoke.ts): 686-Partial TC03, 699 CTDC TC101, 699 ICDC TC36.
+# These get the CRDC_Smoke marker in addition to the Excel markers. Keep names in sync with
+# the workbook file names (a unit test checks each one exists).
+_SMOKE_CASE_STEMS = frozenset(
+    {
+        "TC03_CRDCDH-686_VerifyInvalidStrPtrn-IncompibleConsCode",
+        "TC101_CRDCDH-699_VerifyValidationResultsLongFormErrorsCTDC",
+        "TC36_CRDCDH-699_RequiredRelatedPropertyMissingICDC",
+    }
+)
+
+
 def _make_test_fn(case_path: Path, role: str):
     @pytest.mark.parametrize("hub", [role], indirect=True)
     @pytest.mark.CRDC_DataValidation
@@ -37,6 +50,8 @@ def _make_test_fn(case_path: Path, role: str):
     def test_fn(hub):
         run_testcase_excel(hub, case_path)
 
+    if case_path.stem in _SMOKE_CASE_STEMS:
+        test_fn = pytest.mark.CRDC_Smoke(test_fn)
     test_fn.__name__ = case_path.stem
     return test_fn
 
