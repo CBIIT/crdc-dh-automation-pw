@@ -18,6 +18,7 @@ _LIST_CONTAINER = "CRDC/AILocators/SubmissionRequests/List/Container"
 _START_BTN = "CRDC/SubmissionRequest/Start_a_SubmissionRequest-Btn"
 _STATUS_LBL = "CRDC/AILocators/SubmissionRequests/StatusBar/Status-Lbl"
 _TABLE = "CRDC/AILocators/GenericTable/Table"
+_TABLE_ROW = "CRDC/AILocators/GenericTable/TableRow"
 _RESET_FILTERS = "CRDC/AILocators/SubmissionRequests/List/Filters/ResetFilters-Btn"
 _STUDY_FILTER = "CRDC/AILocators/SubmissionRequests/List/Filters/Study-TxtBx"
 _STATUS_FILTER = "CRDC/AILocators/SubmissionRequests/List/Filters/Status-Ddn"
@@ -52,6 +53,24 @@ class SubmissionRequestsListPage(BasePage):
     def table_data_rows(self) -> Locator:
         """Data rows in the generic SR list table (PBAC row counts, permission-denied text)."""
         return self._table_rows()
+
+    @property
+    def start_button(self) -> Locator:
+        """Start a Submission Request button on the list."""
+        return self._loc(_START_BTN)
+
+    def read_table_headers(self) -> list[str]:
+        """Column header text in order, whitespace collapsed (for looking cells up by name)."""
+        return self._read_table_headers(self._loc(_TABLE))
+
+    def read_table_rows(self) -> list[list[str]]:
+        """Each data row as a list of cell text (header order). Empty list if none.
+
+        Reads generic-table-row only, so the "no submission requests" message row is not counted.
+        Truncated cells use the wrapper aria-label so the full value is returned.
+        """
+        self.wait_for_list_table_settled()
+        return self._read_table_rows_full_text(self._loc(_TABLE_ROW))
 
     def is_start_submission_request_visible(self) -> bool:
         """True if Start a Submission Request is visible on the list (PBAC submission_request:create)."""
