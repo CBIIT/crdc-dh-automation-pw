@@ -20,7 +20,9 @@ from crdc_pw.locators.loader import LocatorLoader, repo_root
 pytestmark = pytest.mark.unit
 
 # Letter after CRDC/ so docstring examples like _loc('CRDC/...') are not paths.
-_PATH = re.compile(r"""['"](CRDC/[A-Za-z][^'"]+)['"]""")
+# A trailing slash marks a folder prefix that code joins with a field name (for example
+# _REVIEW + "PI_Name-Txt"); those joined paths are checked in test_submission_request_locators.py.
+_PATH = re.compile(r"""['"](CRDC/[A-Za-z][^'"]*[^'"/])['"]""")
 _PAGES = repo_root() / "src" / "crdc_pw" / "pages"
 
 

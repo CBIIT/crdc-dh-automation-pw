@@ -37,6 +37,34 @@ def get_sheet_row(sheet_name: str, data_row_num: int, root: Path | None = None) 
         wb.close()
 
 
+def find_cell_containing(
+    sheet_name: str, column: str, token: str, root: Path | None = None
+) -> str:
+    """First non-empty cell in a column whose text contains token (case-insensitive).
+
+    Used where Katalon mapped a short dropdown word (for example Cholangiocarcinoma or Homo)
+    to the full list value on a fixed data row through a switch statement.
+    """
+    needle = token.strip().lower()
+    if not needle:
+        raise ValueError("token must not be empty")
+    wb = load_workbook(workbook_path(root), read_only=True, data_only=True)
+    try:
+        ws = wb[sheet_name]
+        rows = ws.iter_rows(values_only=True)
+        headers = [_cell_str(v) for v in next(rows)]
+        if column not in headers:
+            raise KeyError(f"Column {column!r} not in sheet {sheet_name!r}")
+        idx = headers.index(column)
+        for values in rows:
+            cell = _cell_str(values[idx]) if idx < len(values) else ""
+            if cell and needle in cell.lower():
+                return cell
+    finally:
+        wb.close()
+    raise LookupError(f"No {column!r} cell containing {token!r} in sheet {sheet_name!r}")
+
+
 def _cell_str(value: Any) -> str:
     """Header cell value as stripped string."""
     if value is None:
