@@ -10,7 +10,7 @@ Goal: **`pytest -m CRDC_Smoke`** should cover the same Hub checks as Katalon **`
 
 ## Opinion: is full smoke worth it?
 
-**Yes.** Today Playwright smoke is **Manage Studies (TC08)**, **Manage Programs (TC09)**, **Data Submissions list (TC10)**, **Submission Requests list (TC12)**, **PBAC TC09** (Submitter checked permissions), and **CRDCDH-697 TC01** (headers). Katalon smoke is a **breadth slice**: list pages, SR create, table UX, PBAC functional check, and many DS paths (upload, validate, batch errors, cross-val, export, explorer). Porting it makes Playwright the credible pre-release gate Katalon smoke already is.
+**Yes.** Today Playwright smoke is **Manage Studies (TC08)**, **Manage Programs (TC09)**, **Data Submissions list (TC10)**, **Submission Requests list (TC12)**, **PBAC TC09** (Submitter checked permissions), **CRDCDH-697 TC01** (headers), and **CRDCDH-332 TC01** (SR all fields through submit). Katalon smoke is a **breadth slice**: list pages, SR create, table UX, PBAC functional check, and many DS paths (upload, validate, batch errors, cross-val, export, explorer). Porting it makes Playwright the credible pre-release gate Katalon smoke already is.
 
 **Pragmatic approach:** work **top to bottom of the Katalon suite list** for traceability, but **implement in difficulty tiers** (below) so early merges add value without blocking on CLI or multi-role epics.
 
@@ -37,7 +37,7 @@ Suite description says “GC-focused (no CTDC/ICDC)” but the file **includes C
 | # | Katalon test case | Role(s) | PW status | Port difficulty | Notes |
 |---|-------------------|---------|-----------|-----------------|-------|
 | 1 | `AuxiliaryTests/TC10_DataSubmissionsListAndFilter` | Submitter | **Done** | — | `tests/AuxiliaryTests/test_TC10_DataSubmissionsListAndFilter.py`; `DataSubmissionsListPage.apply_filters` / `read_table_rows` / `reset_filters`. |
-| 2 | `SubmissionRequest/CRDCDH-332/TC01_CRDC_Submission_Request-AllFields` | Submitter | **Partial** | **Medium** | **`SubmissionRequestFormPage.fill_submission_request_all_sections`** exists; smoke needs full A–D fill + submit path from Katalon TC01 (Excel/input if any). Not the same as CRDCDH-3948 Save tests. |
+| 2 | `SubmissionRequest/CRDCDH-332/TC01_CRDC_Submission_Request-AllFields` | Submitter | **Done** | — | `tests/SubmissionRequest/CRDCDH-332/test_TC01_CRDC_Submission_Request-AllFields.py` (`CRDC_Smoke`). `SubmissionRequestFormPage` gained `enter_additional_contact_info`, `enter_existing_and_planned_publications_info`, `enter_repository_info` and a Review and Submit section of `verify_*` methods (PI, contacts, program, study, funding, publications, repository, access and disease, data types, file types). Expected values come from `SubmissionRequest.xlsx`; `find_cell_containing` replaces Katalon's switch from dropdown word to list value. Each run submits one real request (no cleanup, as in Katalon). Differences from Katalon: phone numbers for the primary and additional contact are compared for real, digits only (Excel `404-588-3432`, Review page `(404)588-3432`); Katalon's primary-contact phone check read the institution field again and its additional-contact phone check is commented out. Data types are limited to those with a Review locator (clinical, immunology, genomics, proteomics, imaging, epidemiologic). |
 | 3 | `AuxiliaryTests/TC12_SubmissionRequestsListAndFilter` | Submitter | **Done** | — | `tests/AuxiliaryTests/test_TC12_SubmissionRequestsListAndFilter.py`; `SubmissionRequestsListPage.read_table_rows` / `read_table_headers` / `start_button` plus existing apply/reset. |
 | 4 | `AuxiliaryTests/TC08_ManageStudiesListAndFilter` | Admin | **Done** | — | `tests/AuxiliaryTests/test_TC08_ManageStudiesListAndFilter.py` |
 | 5 | `AuxiliaryTests/TC09_ManageProgramsListAndFilter` | Admin | **Done** | — | `tests/AuxiliaryTests/test_TC09_ManageProgramsListAndFilter.py` |
@@ -76,7 +76,7 @@ Use this order for **implementation**, while keeping **Katalon case IDs** in tes
 
 ### Wave 2 — SR smoke + table UX + batch upload errors
 
-5. **CRDCDH-332 TC01** SR AllFields (extend form page orchestration).
+5. ~~**CRDCDH-332 TC01** SR AllFields~~ — **Done** (form page fill steps + Review verifiers).
 6. **TC03** table sorting + **TC04** pagination (shared generic table API on DS list).
 7. **CRDCDH-887 TC101** + **CRDCDH-2864 TC102** (shared upload-activities failed-modal verifier).
 
@@ -161,7 +161,7 @@ pytest -m CRDC_Smoke --tracing=retain-on-failure
 | Wave | Cases | Owner / ticket |
 |------|-------|----------------|
 | 1 | ~~TC12~~ (done), ~~TC10~~ (done), ~~Excel smoke ×3~~ (done), ~~697~~ (done) | DCA-686 (697); add DCA tasks per wave as needed |
-| 2 | SR332 TC01, TC03, TC04, 887, 2864 | |
+| 2 | ~~SR332 TC01~~ (done), TC03, TC04, 887, 2864 | |
 | 3 | ~~PBAC TC09~~ (done), 1035 | DCA-694 (PBAC positives) |
 | 4 | 1163, 1051, 514, 1405, 3026 | |
 
