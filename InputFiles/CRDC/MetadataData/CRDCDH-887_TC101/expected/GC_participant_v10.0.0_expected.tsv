@@ -1,0 +1,6 @@
+type	expected_errors	 study.study_id	 consent_group.consent_group_id	study_participant_id	study_participant_id	participant_id	race	sex	ethnicity	dbGaP_subject_id
+participant	"""GC_participant_v10.0.0.tsv"": multiple columns with the same header (""study_participant_id"") is not allowed."	st_id1	consent_1	Key_1		2	Asian|American Indian or Alaska Native	Male	Not Hispanic or Latino|Hispanic or Latino	dbgap_subID
+participant		st_id1	consent_1	Key_2		3	Asian|white	Male	Not Hispanic or Latino|Not reported	
+participant		st_id1	consent_3	Key_3		3	Asian|Native Hawaiian or other Pacific Islander	Male	Not Hispanic or Latino	
+participant		st_id1	consent_4	Key_4		4	Asian|Native Hawaiian or other Pacific Islander	Male	Not Hispanic or Latino	
+participant		st_id1	consent_5	Key_5		5	Asian|Native Hawaiian or other Pacific Islander	Male	Not Hispanic or Latino	

@@ -10,7 +10,7 @@ Goal: **`pytest -m CRDC_Smoke`** should cover the same Hub checks as Katalon **`
 
 ## Opinion: is full smoke worth it?
 
-**Yes.** Today Playwright smoke is **Manage Studies (TC08)**, **Manage Programs (TC09)**, **Data Submissions list (TC10)**, **Submission Requests list (TC12)**, **PBAC TC09** (Submitter checked permissions), **CRDCDH-697 TC01** (headers), **CRDCDH-332 TC01** (SR all fields through submit), and **TC03 / TC04** (DS list sorting and pagination, Dcp). Katalon smoke is a **breadth slice**: list pages, SR create, table UX, PBAC functional check, and many DS paths (upload, validate, batch errors, cross-val, export, explorer). Porting it makes Playwright the credible pre-release gate Katalon smoke already is.
+**Yes.** Today Playwright smoke is **Manage Studies (TC08)**, **Manage Programs (TC09)**, **Data Submissions list (TC10)**, **Submission Requests list (TC12)**, **PBAC TC09** (Submitter checked permissions), **CRDCDH-697 TC01** (headers), **CRDCDH-332 TC01** (SR all fields through submit), **TC03 / TC04** (DS list sorting and pagination, Dcp), and **887 TC101 / 2864 TC102** (Upload Errors modal). Katalon smoke is a **breadth slice**: list pages, SR create, table UX, PBAC functional check, and many DS paths (upload, validate, batch errors, cross-val, export, explorer). Porting it makes Playwright the credible pre-release gate Katalon smoke already is.
 
 **Pragmatic approach:** work **top to bottom of the Katalon suite list** for traceability, but **implement in difficulty tiers** (below) so early merges add value without blocking on CLI or multi-role epics.
 
@@ -49,8 +49,8 @@ Suite description says “GC-focused (no CTDC/ICDC)” but the file **includes C
 | 11 | `DataSubmissions/GC/CRDCDH-1051/TC25_VerifyDcpCrossValidation` | Submitter, Dcp | **Not ported** | **Hard** | **Two** submissions, same study, cross-validate, CV tab TSV, reject. **`switch_user`**, cross-val UI, expected TSV oracles. |
 | 12 | `DataSubmissions/GC/CRDCDH-514/TC06_VerifyFullDataSubmissionHistory` | Submitter | **Not ported** | **Hard** | ~147 lines: unique metadata upload, validate, history/audit assertions, **`prepareUniqueMetadataAndUpload`**. |
 | 13 | `DataSubmissions/GC/CRDCDH-1035/TC101_VerifyValidationResultsExportAllRoles` | Submitter, Dcp, Fedlead, Admin | **Not ported** | **Hard** | Create + upload + validate; then **four roles** open same submission by ID, VR tab **export** + filename check. Needs deep-link nav + download assertion. |
-| 14 | `DataSubmissions/GC/CRDCDH-887/TC101_ColumnRequiredBatchErrors` | Submitter | **Not ported** | **Medium** | Upload fail → **`verifyUploadActivitiesBatchRow`** + **`verifyUploadActivitiesFailedErrorsModal`**. Detail page has VR/oracles; **batch upload error modal** keywords not ported. |
-| 15 | `DataSubmissions/GC/CRDCDH-2864/TC102_BatchErrorsCompositeIdRequiredProperty` | Submitter | **Not ported** | **Medium** | Same shape as 887 (different folder `CRDCDH-2864_TC102`). Share one port for batch-error modal pattern. |
+| 14 | `DataSubmissions/GC/CRDCDH-887/TC101_ColumnRequiredBatchErrors` | Submitter | **Done** | — | `tests/DataSubmissions/GC/CRDCDH-887/test_TC101_CRDCDH-887_ColumnRequiredBatchErrors.py` (`CRDC_Smoke`, `CRDC_DataValidation`, `CRDC_Regression`). Create a GC metadata-only submission, `upload_folder("CRDCDH-887_TC101")`, then `verify_upload_activities_batch_row("Metadata", 5, "Failed")` and `verify_upload_errors_modal`. Input folder copied from Katalon. Run live on QA2 (passes; one transient backend 'Batch loading failed' on a first 2864 run). Not yet dual-run against Katalon. |
+| 15 | `DataSubmissions/GC/CRDCDH-2864/TC102_BatchErrorsCompositeIdRequiredProperty` | Submitter | **Done** | — | `tests/DataSubmissions/GC/CRDCDH-2864/test_TC102_CRDCDH-2864_BatchErrorsCompositeIdRequiredProperty.py` (same markers). Same flow with `CRDCDH-2864_TC102` and 4 files. Run live on QA2 (passes; one transient backend 'Batch loading failed' on a first 2864 run). Not yet dual-run against Katalon. |
 | 16 | `DataSubmissions/GC/CRDCDH-1405/TC101_CLINoFileIdVerifyFinalManifest` | Submitter | **Not ported** | **Very hard** | **`CliUploader.uploadFilesViaCli`**, **`verifyFinalManifest`**, deterministic re-run. **No CLI layer in PW.** |
 | 17 | `DataSubmissions/GC/CRDCDH-686-Partial/TC03_VerifyInvalidStrPtrn-IncompibleConsCode` | Submitter | **Done** | — | Workbook **`tests/DataValidation/GC/CRDCDH-686-Partial/TC03_....xlsx`** + runner **`verify_validation_results`**. `CRDC_Smoke` via collector allowlist (`_SMOKE_CASE_STEMS`). |
 | 18 | `DataSubmissions/CTDC/.../TC101_...LongFormErrorsCTDC` | Submitter (Excel Settings) | **Done** | — | Workbook under `tests/DataValidation/CTDC/CRDCDH-699-CTDC/`. `CRDC_Smoke` via collector allowlist. On 2026-11-16 the Hub moved to CTDC 4.3.0 before STS had values for it (the nightly MDB promotion and the Hub PV puller had not run), so participant `radiology_report_available` (CDE-linked, no list in the model file) was not value-checked and the participant expected TSV was removed from smoke so the case does not depend on STS. The original `NO1` participant check lives in non-smoke, PW-only `TC104_CRDCDH-699_VerifyCdePermissibleValueErrorsCTDC` (not in Katalon). `Value not permitted` is now asserted on a second specimen record `ctdc_spec_2` with an invalid `specimen_type` (the VR table labels a record with its first issue, so each issue type needs its own record). Katalon's copy of `CRDCDH-699_TC101` needs the same edits. |
@@ -78,7 +78,7 @@ Use this order for **implementation**, while keeping **Katalon case IDs** in tes
 
 5. ~~**CRDCDH-332 TC01** SR AllFields~~ — **Done** (form page fill steps + Review verifiers).
 6. ~~**TC03** table sorting + **TC04** pagination~~ — **Done** (shared generic table methods on `BasePage`, run on the DS list).
-7. **CRDCDH-887 TC101** + **CRDCDH-2864 TC102** (shared upload-activities failed-modal verifier).
+7. ~~**CRDCDH-887 TC101** + **CRDCDH-2864 TC102**~~ — **Done** (shared upload-activities batch row and Upload Errors modal verifiers on `DataSubmissionDetailPage`).
 
 ### Wave 3 — PBAC + multi-role DS
 
@@ -103,7 +103,7 @@ Use this order for **implementation**, while keeping **Katalon case IDs** in tes
 | TC10 | `DataSubmissionsList.*` | **Done** — `DataSubmissionsListPage` filters (name, status multi-select, program, submitter, commons, dbGaP), `read_table_rows`, `reset_filters` |
 | TC12 | `SubmissionRequestList.*` | **Done** — `SubmissionRequestsListPage` filters/reset plus `read_table_rows`, `read_table_headers`, `start_button` |
 
-**Next step:** CRDCDH-887 TC101 + CRDCDH-2864 TC102 (Wave 2): shared upload-activities failed-modal verifier.
+**Next step:** Wave 3 — CRDCDH-1035 TC101 (VR export for all roles: `switch_user`, submission deep link, download check).
 
 ### Generic table (TC03, TC04) — Done
 
@@ -122,7 +122,9 @@ Playwright: locators `HeaderCell` under **`CRDC/AILocators/GenericTable/`** and 
 
 **Already on `DataSubmissionDetailPage`:** `upload_folder`, `click_validate`, `verify_validation_results_vs_expected_for_tc`, error details.
 
-**Not ported:** upload-activities batch row status, failed-errors modal (887/2864), cross-validation tab, VR export download, CLI, submission history timeline.
+**Also on `DataSubmissionDetailPage` (887 TC101, 2864 TC102):** `verify_upload_activities_batch_row` and `verify_upload_errors_modal`. The expected-error oracle is in `utils/validation_results.py` (`load_expected_upload_errors`, `diff_upload_errors`, reading `MetadataData/<tc>/expected/*.tsv`). Other Katalon cases that end the same way (887 TC102 to TC104, 2864 TC101, 1195 TC101, 1405 batch-error cases) can reuse it with a new input folder and a short test file each.
+
+**Not ported:** cross-validation tab, VR export download, CLI, submission history timeline.
 
 ### Excel vs native pytest for smoke
 
@@ -161,7 +163,7 @@ pytest -m CRDC_Smoke --tracing=retain-on-failure
 | Wave | Cases | Owner / ticket |
 |------|-------|----------------|
 | 1 | ~~TC12~~ (done), ~~TC10~~ (done), ~~Excel smoke ×3~~ (done), ~~697~~ (done) | DCA-686 (697); add DCA tasks per wave as needed |
-| 2 | ~~SR332 TC01~~ (done), ~~TC03~~ (done), ~~TC04~~ (done), 887, 2864 | |
+| 2 | ~~SR332 TC01~~ (done), ~~TC03~~ (done), ~~TC04~~ (done), ~~887~~ (done), ~~2864~~ (done) | |
 | 3 | ~~PBAC TC09~~ (done), 1035 | DCA-694 (PBAC positives) |
 | 4 | 1163, 1051, 514, 1405, 3026 | |
 

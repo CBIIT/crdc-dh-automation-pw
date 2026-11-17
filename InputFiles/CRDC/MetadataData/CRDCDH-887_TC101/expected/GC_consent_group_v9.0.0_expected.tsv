@@ -1,0 +1,2 @@
+type	expected_errors	 study.study_id	consent_group_id	consent_group_name	consent_group_number
+consent_group	"""GC_consent_group_v9.0.0.tsv:2"": Key property ""consent_group_id"" value is required."	st_id1		gp name1	10
