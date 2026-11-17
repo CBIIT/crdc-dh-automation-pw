@@ -436,6 +436,12 @@ class BasePage:
         if self._page_button_enabled(_PREVIOUS_PAGE) is not False:
             problems.append("Previous is not disabled on page 1")
         total = self.read_total_pages()
+        shown = self.read_displayed_rows()
+        if shown is not None:
+            page_size = self.read_rows_per_page()
+            expected_total = max(1, (shown.total + page_size - 1) // page_size)
+            if total != expected_total:
+                problems.append(f"pagination ends at page {total}, expected {expected_total}")
         log.info("Total pages: %s", total)
         if total is None or total < 2:
             if self._page_button_enabled(_NEXT_PAGE) is not False:
