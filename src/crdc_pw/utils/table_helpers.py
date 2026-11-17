@@ -28,6 +28,13 @@ def parse_displayed_rows(text: str | None) -> DisplayedRows | None:
     return DisplayedRows(int(match.group(1)), int(match.group(2)), int(match.group(3)))
 
 
+def expected_page_count(total_rows: int, rows_per_page: int) -> int:
+    """Pages needed for total_rows at rows_per_page each. An empty table still has one page."""
+    if rows_per_page < 1:
+        raise ValueError(f"rows_per_page must be at least 1, got {rows_per_page}")
+    return max(1, -(-total_rows // rows_per_page))
+
+
 def _compare(a: str, b: str) -> int:
     """Negative, zero or positive like Java compare: numbers first, then case-insensitive text."""
     try:

@@ -17,7 +17,12 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from crdc_pw.hub import Hub
 from crdc_pw.locators.loader import LocatorLoader
-from crdc_pw.utils.table_helpers import DisplayedRows, is_sorted, parse_displayed_rows
+from crdc_pw.utils.table_helpers import (
+    DisplayedRows,
+    expected_page_count,
+    is_sorted,
+    parse_displayed_rows,
+)
 
 log = logging.getLogger("crdc_pw.table")
 
@@ -355,11 +360,20 @@ class BasePage:
 
     # --- pagination actions ---
 
+    def _page_rows_fingerprint(self) -> str:
+        """Joined text of the data rows on the current page (compare before and after a page change)."""
+        return self._table_fingerprint(self._loc(_GENERIC_TABLE_ROW))
+
     def _click_page_control(self, path: str, reached: Callable[[int | None], bool]) -> None:
-        """Click a pagination control, wait until reached(current page) is true, then for the table."""
+        """Click a pagination control, wait until reached(current page) is true, then for new rows.
+
+        Waits on the row text changing (up to the Hub default) so the next read is not of the
+        old page. If the rows never change this returns anyway and the caller's check reports it.
+        """
+        previous = self._page_rows_fingerprint()
         self._loc(path).first.click()
         self._poll_until(lambda: reached(self.read_current_page()))
-        self.wait_for_generic_table_settled()
+        self.wait_for_generic_table_settled(self._loc(_GENERIC_TABLE_ROW), previous=previous)
 
     def go_to_next_page(self) -> None:
         before = self.read_current_page()
@@ -372,9 +386,10 @@ class BasePage:
     def go_to_page(self, number: int) -> None:
         if self.read_current_page() == number:
             return
+        previous = self._page_rows_fingerprint()
         self._loc(_GO_TO_PAGE, page=str(number)).first.click()
         self._poll_until(lambda: self.read_current_page() == number)
-        self.wait_for_generic_table_settled()
+        self.wait_for_generic_table_settled(self._loc(_GENERIC_TABLE_ROW), previous=previous)
 
     def change_rows_per_page(self, count: int) -> None:
         """Pick count in the rows-per-page select and wait until the page shows that many rows."""
@@ -385,8 +400,8 @@ class BasePage:
             rows = self.read_visible_row_count()
             return (
                 self.read_rows_per_page() == count
-                and rows <= count
                 and shown is not None
+                and rows == min(count, shown.total)
                 and shown.last - shown.first + 1 == rows
             )
 
@@ -438,8 +453,7 @@ class BasePage:
         total = self.read_total_pages()
         shown = self.read_displayed_rows()
         if shown is not None:
-            page_size = self.read_rows_per_page()
-            expected_total = max(1, (shown.total + page_size - 1) // page_size)
+            expected_total = expected_page_count(shown.total, self.read_rows_per_page())
             if total != expected_total:
                 problems.append(f"pagination ends at page {total}, expected {expected_total}")
         log.info("Total pages: %s", total)
@@ -449,26 +463,37 @@ class BasePage:
             self._fail_if(problems, "Page navigation")
             return
 
+        # Every move also has to replace the rows on screen, not only the button and label.
+        # Each step compares with the page just left (page 1 against page 2, and so on), never
+        # page 1 against its earlier self, so a list that reorders mid-run does not fail this.
+        rows_before = self._page_rows_fingerprint()
         self.go_to_next_page()
         if self.read_current_page() != 2:
             problems.append(f"Next from page 1 landed on {self.read_current_page()}, expected 2")
         shown = self.read_displayed_rows()
         if shown is None or shown.first <= 1:
             problems.append(f"page 2 label should start after row 1: {shown}")
+        rows_before = self._expect_rows_replaced(rows_before, "Next to page 2", problems)
+
         self.go_to_previous_page()
         if self.read_current_page() != 1:
             problems.append(f"Previous from page 2 landed on {self.read_current_page()}, expected 1")
         shown = self.read_displayed_rows()
         if shown is None or shown.first != 1:
             problems.append(f"page 1 label should start at 1: {shown}")
+        rows_before = self._expect_rows_replaced(rows_before, "Previous to page 1", problems)
 
         self.go_to_page(2)
         if self.read_current_page() != 2:
             problems.append(f"page button 2 landed on {self.read_current_page()}")
+        rows_before = self._expect_rows_replaced(rows_before, "page button 2", problems)
 
+        # With exactly two pages the last page is the one already shown, so nothing changes.
         self.go_to_page(total)
         if self.read_current_page() != total:
             problems.append(f"last page button landed on {self.read_current_page()}, expected {total}")
+        if total > 2:
+            rows_before = self._expect_rows_replaced(rows_before, f"page button {total}", problems)
         if self._page_button_enabled(_NEXT_PAGE) is not False:
             problems.append("Next is not disabled on the last page")
         shown = self.read_displayed_rows()
@@ -478,7 +503,18 @@ class BasePage:
         self.go_to_page(1)
         if self.read_current_page() != 1:
             problems.append(f"could not return to page 1 (current {self.read_current_page()})")
+        self._expect_rows_replaced(rows_before, "page button 1", problems)
         self._fail_if(problems, "Page navigation")
+
+    def _expect_rows_replaced(self, before: str, what: str, problems: list[str]) -> str:
+        """Add a problem if the rows on screen are still those of the page just left.
+
+        Returns the rows now shown, to compare with after the next move.
+        """
+        now = self._page_rows_fingerprint()
+        if now == before:
+            problems.append(f"{what}: the table rows did not change")
+        return now
 
     def verify_rows_per_page_change(self, count: int) -> None:
         """After choosing count: the select shows it, and the page shows 1 to count rows from row 1."""

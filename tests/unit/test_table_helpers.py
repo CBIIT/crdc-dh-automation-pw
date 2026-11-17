@@ -6,7 +6,12 @@ import pytest
 
 from crdc_pw.locators.loader import LocatorLoader
 from crdc_pw.pages import base
-from crdc_pw.utils.table_helpers import DisplayedRows, is_sorted, parse_displayed_rows
+from crdc_pw.utils.table_helpers import (
+    DisplayedRows,
+    expected_page_count,
+    is_sorted,
+    parse_displayed_rows,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -67,6 +72,26 @@ def test_parse_displayed_rows_rejects_other_text() -> None:
     assert parse_displayed_rows(None) is None
     assert parse_displayed_rows("Showing everything") is None
     assert parse_displayed_rows("1 of 5") is None
+
+
+# --- expected_page_count ---
+
+
+def test_expected_page_count_rounds_up() -> None:
+    assert expected_page_count(193, 20) == 10
+    assert expected_page_count(200, 20) == 10
+    assert expected_page_count(201, 20) == 11
+    assert expected_page_count(193, 5) == 39
+    assert expected_page_count(20, 20) == 1
+
+
+def test_expected_page_count_empty_table_has_one_page() -> None:
+    assert expected_page_count(0, 20) == 1
+
+
+def test_expected_page_count_rejects_bad_page_size() -> None:
+    with pytest.raises(ValueError):
+        expected_page_count(10, 0)
 
 
 # --- locator keys the BasePage table methods use ---
