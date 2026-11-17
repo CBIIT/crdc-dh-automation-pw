@@ -15,16 +15,21 @@ import pytest
 
 from crdc_pw.utils.validation_results import (
     diff_error_details_dialog_issues,
+    diff_upload_errors,
     diff_validation_results,
+    expected_upload_errors_dir,
     expected_error_detail_issues_for_row,
     find_expected_validation_results_tsv,
     list_nodes_from_expected_validation_results_folder,
     list_tsv_files_and_nodes_for_tc,
     load_all_expected_error_detail_rows_from_tsv,
+    load_expected_upload_errors,
     load_expected_validation_results_tsv,
     load_validation_results_mappings,
     node_from_expected_validation_results_filename,
     node_from_filename,
+    normalize_quotes,
+    parse_expected_errors_cell,
     unquote_csv_style,
     unique_severity_issue_type_pairs_from_expected_tsv,
 )
@@ -166,3 +171,100 @@ def test_diff_error_details_missing_or_mismatched_issue_fails(
 ) -> None:
     expected = [{"severity": "Error", "message": "Required property"}]
     assert diff_error_details_dialog_issues(expected, actual)
+
+
+# --- Upload Errors modal oracle (887 TC101, 2864 TC102) ---
+
+
+def test_parse_expected_errors_cell_plain_quoted_and_list() -> None:
+    assert parse_expected_errors_cell("one message") == ["one message"]
+    assert parse_expected_errors_cell('"say ""hi"" now"') == ['say "hi" now']
+    assert parse_expected_errors_cell("['a', 'b']") == ["a", "b"]
+    assert parse_expected_errors_cell("['a', \"b c\"]") == ["a", "b c"]
+    assert parse_expected_errors_cell("['only']") == ["only"]
+
+
+def test_parse_expected_errors_cell_blank_gives_nothing() -> None:
+    assert parse_expected_errors_cell("") == []
+    assert parse_expected_errors_cell("   ") == []
+    assert parse_expected_errors_cell(None) == []
+    assert parse_expected_errors_cell("[]") == []
+
+
+def test_normalize_quotes_makes_curly_and_straight_equal() -> None:
+    assert normalize_quotes("\u201cx\u201d and \u201ey\u201f") == '"x" and "y"'
+    assert normalize_quotes(None) == ""
+
+
+def test_diff_upload_errors_ignores_order_and_quote_style() -> None:
+    expected = ['"a.tsv": "x" is required.', "second"]
+    actual = ["second", "\u201ca.tsv\u201d: \u201cx\u201d is required."]
+    assert diff_upload_errors(expected, actual) == ([], [])
+
+
+def test_diff_upload_errors_reports_missing_and_extra() -> None:
+    missing, extra = diff_upload_errors(["a", "b"], ["b", "c"])
+    assert missing == ["a"]
+    assert extra == ["c"]
+
+
+def test_diff_upload_errors_counts_repeats() -> None:
+    assert diff_upload_errors(["a", "a"], ["a"]) == (["a"], [])
+    assert diff_upload_errors(["a"], ["a", "a"]) == ([], ["a"])
+
+
+def test_expected_upload_errors_dir_is_not_the_validation_results_folder() -> None:
+    folder = expected_upload_errors_dir("CRDCDH-887_TC101")
+    assert folder.name == "expected"
+    assert folder.parent.name == "CRDCDH-887_TC101"
+
+
+@pytest.mark.parametrize(
+    ("tc_name", "tsv_count", "error_count", "known_message"),
+    [
+        (
+            "CRDCDH-887_TC101",
+            5,
+            5,
+            '"GC_study_v10.0.0.tsv": "type" column is required.',
+        ),
+        (
+            "CRDCDH-2864_TC102",
+            4,
+            4,
+            '"GC_study_v10.0.0.tsv": Column "study_acronym" is required to generate composite ID.',
+        ),
+    ],
+)
+def test_upload_errors_inputs_match_what_the_tests_expect(
+    tc_name: str, tsv_count: int, error_count: int, known_message: str
+) -> None:
+    """One expected error per uploaded TSV; the test asserts that many files in the batch row."""
+    files, _nodes = list_tsv_files_and_nodes_for_tc(tc_name)
+    assert len(files) == tsv_count
+    errors = load_expected_upload_errors(tc_name)
+    assert len(errors) == error_count
+    assert known_message in errors
+
+
+def test_load_expected_upload_errors_missing_folder_raises() -> None:
+    with pytest.raises(FileNotFoundError):
+        load_expected_upload_errors("no-such-tc")
+
+
+def test_load_expected_upload_errors_without_any_errors_raises(tmp_path) -> None:
+    folder = tmp_path / "InputFiles" / "CRDC" / "MetadataData" / "tc" / "expected"
+    folder.mkdir(parents=True)
+    (folder / "a_expected.tsv").write_text("type\texpected_errors\nx\t\n", encoding="utf-8")
+    with pytest.raises(ValueError):
+        load_expected_upload_errors("tc", root=tmp_path)
+
+
+def test_load_expected_upload_errors_reads_column_case_insensitively(tmp_path) -> None:
+    folder = tmp_path / "InputFiles" / "CRDC" / "MetadataData" / "tc" / "expected"
+    folder.mkdir(parents=True)
+    (folder / "a_expected.tsv").write_text(
+        'type\t Expected_Errors \nx\t"msg ""q"""\ny\t\nz\t[\'m1\', \'m2\']\n', encoding="utf-8"
+    )
+    (folder / "b_no_column.tsv").write_text("type\tother\nx\tignored\n", encoding="utf-8")
+    assert load_expected_upload_errors("tc", root=tmp_path) == ['msg "q"', "m1", "m2"]

@@ -1,0 +1,4 @@
+type	expected_errors	treatment_id	treatment_type	days_to_treatment	therapeutic_agents	response
+treatment	"""GC_treatment_v10.0.0.tsv"": Column ""participant.study_participant_id"" is required to generate composite ID."					
+treatment						
+treatment						
