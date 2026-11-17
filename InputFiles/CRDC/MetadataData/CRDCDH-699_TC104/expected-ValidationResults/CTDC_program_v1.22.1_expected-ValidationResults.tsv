@@ -1,0 +1,2 @@
+type	Issue_Type	Expected_Severity	Expected_Issues	program_name	program_short_name
+program	Missing required property	Error	"[CTDC_program_v1.22.1.tsv: line 2] Required property ""program_name"" is empty."		AUTPPROGRAM
