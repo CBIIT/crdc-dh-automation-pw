@@ -80,19 +80,43 @@ def edit_pbac_permissions(
     role: str,
     scenario: Literal["positive", "negative"],
 ) -> None:
-    """Katalon editPbacPermissions: Admin edits PBAC for role, then writes expected sheet."""
-    if scenario == "negative":
-        raise NotImplementedError(
-            "edit_pbac_permissions negative scenario is reserved for TC11+ (uncheck path)."
+    """Katalon editPbacPermissions: Admin or Master edits PBAC for role, then writes expected sheet.
+
+    Positive checks every enabled box. Negative unchecks twice (second pass for DCP SR View).
+    """
+    if hub.role not in ("Admin", "Master"):
+        raise AssertionError(
+            f"edit_pbac_permissions requires Admin or Master; hub.role is {hub.role!r}"
         )
-    if hub.role != "Admin":
-        raise AssertionError(f"edit_pbac_permissions requires Admin; hub.role is {hub.role!r}")
     users = ManageUsersPage(hub)
     users.open()
-    users.apply_positive_permission_edit(role)
+    if scenario == "positive":
+        users.apply_positive_permission_edit(role)
+    elif scenario == "negative":
+        users.apply_negative_permission_edit(role)
+    else:
+        raise ValueError(f"Unknown PBAC scenario {scenario!r}; use 'positive' or 'negative'")
     key = f"{role}-{scenario}"
     write_expected(key)
-    log.info("Wrote expected PBAC sheet %r after positive edit", key)
+    log.info("Wrote expected PBAC sheet %r after %s edit", key, scenario)
+
+
+def _functional_scenario_passed(scenario: str, result: bool) -> bool:
+    """Katalon polarity: positive PASS when accessible; negative PASS when not accessible."""
+    if scenario == "positive":
+        return bool(result)
+    if scenario == "negative":
+        return not result
+    raise ValueError(f"Unknown PBAC scenario {scenario!r}; use 'positive' or 'negative'")
+
+
+def _any_or_all_accessible(scenario: str, *accessible: bool) -> bool:
+    """Positive: all surfaces. Negative: any leak counts as accessible (PW-only; Katalon stays AND)."""
+    if scenario == "positive":
+        return all(accessible)
+    if scenario == "negative":
+        return any(accessible)
+    raise ValueError(f"Unknown PBAC scenario {scenario!r}; use 'positive' or 'negative'")
 
 
 def verify_permissions_functional(
@@ -101,10 +125,6 @@ def verify_permissions_functional(
     scenario: Literal["positive", "negative"],
 ) -> None:
     """Katalon verifyPermissionsFunctional: iterate output sheet keys, handler or skip."""
-    if scenario == "negative":
-        raise NotImplementedError(
-            "verify_permissions_functional for negative scenario is reserved for TC11+."
-        )
     keys = list_internal_names_for_scenario(user_role, scenario)
     log.info(
         "Permissions to verify for %r role for %r scenario: %s",
@@ -124,8 +144,13 @@ def verify_permissions_functional(
             result = handler(hub, user_role, scenario)
         except Exception as exc:
             pytest.fail(f"[ERROR] Exception during permission {perm!r}: {exc}")
-        assert result, f"[FAIL] Unexpected result for permission {perm!r} in positive scenario."
-        log.info("[PASS] %r accessible as expected.", perm)
+        assert _functional_scenario_passed(scenario, result), (
+            f"[FAIL] Unexpected result for permission {perm!r} in {scenario!r} scenario."
+        )
+        if scenario == "negative":
+            log.info("[PASS] %r correctly *not* accessible.", perm)
+        else:
+            log.info("[PASS] %r accessible as expected.", perm)
 
 
 # --- Small helpers (Katalon SubmissionRequest.clickHome, loading waits) ---
@@ -200,7 +225,7 @@ def _prepare_unique_program_tsv() -> Path:
     return dest
 
 
-def _functional_submission_request_view(hub: Hub, _role: str, _scenario: str) -> bool:
+def _functional_submission_request_view(hub: Hub, _role: str, scenario: str) -> bool:
     log.info("Verifying SR View...")
     try:
         hub.page.wait_for_timeout(1_000)
@@ -217,13 +242,16 @@ def _functional_submission_request_view(hub: Hub, _role: str, _scenario: str) ->
                 )
                 return False
         log.info("Number of rows in SR list found: %s", n)
-        if n > 1:
+        if scenario == "negative" and n > 1:
             ts = datetime.now().strftime("%Y%m%d-%H%M%S")
             log.info(
-                "Capturing screenshot: SR list shows data rows instead of permission-denied message (%s)",
+                "Capturing screenshot: SR list shows data rows on negative view check (%s)",
                 ts,
             )
-            hub.page.screenshot(full_page=True, path=str(repo_root() / f"reports/PBAC_FAIL_submission_request_view_SR_list_{ts}.png"))
+            hub.page.screenshot(
+                full_page=True,
+                path=str(repo_root() / f"reports/PBAC_FAIL_submission_request_view_SR_list_{ts}.png"),
+            )
         return n > 0
     except Exception as exc:
         log.info("Error verifying permission - submission_request:view -> %s", exc)
@@ -241,7 +269,7 @@ def _functional_submission_request_create(hub: Hub, _role: str, _scenario: str) 
         return False
 
 
-def _functional_submission_request_submit(hub: Hub, _role: str, _scenario: str) -> bool:
+def _functional_submission_request_submit(hub: Hub, _role: str, scenario: str) -> bool:
     log.info("Verifying SR Submit...")
     try:
         _pbac_click_home(hub)
@@ -295,13 +323,13 @@ def _functional_submission_request_submit(hub: Hub, _role: str, _scenario: str) 
             1,
         )
         sr_submit_exists = form.is_submit_button_visible()
-        return bool(sr_list_resume and sr_submit_exists)
+        return _any_or_all_accessible(scenario, sr_list_resume, sr_submit_exists)
     except Exception as exc:
         log.info("Error verifying permission - submission_request:submit -> %s", exc)
         return False
 
 
-def _functional_submission_request_review(hub: Hub, _role: str, _scenario: str) -> bool:
+def _functional_submission_request_review(hub: Hub, _role: str, scenario: str) -> bool:
     log.info("Verifying SR Review...")
     try:
         hub.page.wait_for_timeout(1_000)
@@ -321,7 +349,7 @@ def _functional_submission_request_review(hub: Hub, _role: str, _scenario: str) 
         sr_list.click_review_on_first_matching_row()
         form = SubmissionRequestFormPage(hub)
         form.click_review_progress_bar()
-        return form.are_review_decision_buttons_visible()
+        return _any_or_all_accessible(scenario, *form.review_decision_button_flags())
     except Exception as exc:
         log.info("Error verifying permission - submission_request:review -> %s", exc)
         return False
@@ -385,49 +413,73 @@ def _functional_submission_request_reopen(
         return False
 
 
-def _functional_data_submission_view(hub: Hub, _role: str, _scenario: str) -> bool:
+def _functional_data_submission_view(hub: Hub, _role: str, scenario: str) -> bool:
     log.info("Verifying DS View...")
     try:
         _pbac_click_home(hub)
-        _open_data_submissions_list_settled(hub)
-        rows_ds = DataSubmissionsListPage(hub).table_data_rows()
-        if rows_ds.count() == 1 and "do not have the appropriate permissions" in (
-            rows_ds.first.inner_text() or ""
-        ):
-            log.info("The Data Submissions empty table message is displayed")
-        n_ds = rows_ds.count()
-        log.info("Number of rows in Data Submission list found: %s", n_ds)
-
-        ds_ok = _ds_or_explorer_list_has_positive_rows(rows_ds)
+        header = HeaderPage(hub)
+        ds_accessible = False
+        if not header.is_nav_data_submissions_visible():
+            log.info("Data Submissions tab is not in the nav bar; submissions list is not accessible")
+        else:
+            try:
+                _open_data_submissions_list_settled(hub)
+                rows_ds = DataSubmissionsListPage(hub).table_data_rows()
+                if rows_ds.count() == 1 and "do not have the appropriate permissions" in (
+                    rows_ds.first.inner_text() or ""
+                ):
+                    log.info("The Data Submissions empty table message is displayed")
+                n_ds = rows_ds.count()
+                log.info("Number of rows in Data Submission list found: %s", n_ds)
+                ds_accessible = _ds_or_explorer_list_has_positive_rows(rows_ds) and n_ds > 0
+            except Exception as exc:
+                log.info("Error verifying Data Submissions list -> %s", exc)
+                ds_accessible = False
         _pbac_click_home(hub)
-        explorer = DataExplorerListPage(hub)
-        explorer.open_settled()
-        rows_de = explorer.table_data_rows()
-        if rows_de.count() == 1 and "do not have the appropriate permissions" in (
-            rows_de.first.inner_text() or ""
-        ):
-            log.info("The Data Explorer empty table message is displayed")
-        n_de = rows_de.count()
-        log.info("Number of rows in Data Explorer list found: %s", n_de)
-
-        de_ok = _ds_or_explorer_list_has_positive_rows(rows_de)
-        return ds_ok and de_ok and n_ds > 0 and n_de > 0
+        de_accessible = False
+        if not header.is_nav_data_explorer_visible():
+            log.info("Data Explorer tab is not in the nav bar; explorer is not accessible")
+        else:
+            try:
+                explorer = DataExplorerListPage(hub)
+                explorer.open_settled()
+                rows_de = explorer.table_data_rows()
+                if rows_de.count() == 1 and "do not have the appropriate permissions" in (
+                    rows_de.first.inner_text() or ""
+                ):
+                    log.info("The Data Explorer empty table message is displayed")
+                n_de = rows_de.count()
+                log.info("Number of rows in Data Explorer list found: %s", n_de)
+                de_accessible = _ds_or_explorer_list_has_positive_rows(rows_de) and n_de > 0
+            except Exception as exc:
+                log.info("Error verifying Data Explorer list -> %s", exc)
+                de_accessible = False
+        return _any_or_all_accessible(scenario, ds_accessible, de_accessible)
     except Exception as exc:
         log.info("Error verifying permission - data_submission:view -> %s", exc)
         return False
 
 
-def _functional_data_submission_create(hub: Hub, _role: str, _scenario: str) -> bool:
+def _functional_data_submission_create(hub: Hub, _role: str, scenario: str) -> bool:
     log.info("Verifying DS Create...")
     try:
         _pbac_click_home(hub)
-        _open_data_submissions_list_settled(hub)
-        data_submission_create = DataSubmissionsListPage(hub).is_create_visible()
         header = HeaderPage(hub)
+        data_submission_create = False
+        if not header.is_nav_data_submissions_visible():
+            log.info("Data Submissions tab is not in the nav bar; Create is not accessible")
+        else:
+            try:
+                _open_data_submissions_list_settled(hub)
+                data_submission_create = DataSubmissionsListPage(hub).is_create_visible()
+            except Exception as exc:
+                log.info("Error verifying Data Submission Create button -> %s", exc)
+                data_submission_create = False
+        _pbac_click_home(hub)
         header.open_user_menu()
         api_token = header.is_api_token_button_visible()
         _pbac_click_home(hub)
-        return data_submission_create and api_token
+        return _any_or_all_accessible(scenario, data_submission_create, api_token)
     except Exception as exc:
         log.info("Error verifying permission - data_submission:create -> %s", exc)
         return False
@@ -455,7 +507,7 @@ def _functional_data_submission_cancel(hub: Hub, _role: str, _scenario: str) -> 
         return False
 
 
-def _functional_data_submission_review(hub: Hub, _role: str, _scenario: str) -> bool:
+def _functional_data_submission_review(hub: Hub, _role: str, scenario: str) -> bool:
     log.info("Verifying DS Review...")
     try:
         _pbac_click_home(hub)
@@ -482,7 +534,7 @@ def _functional_data_submission_review(hub: Hub, _role: str, _scenario: str) -> 
         log.info("DS PBAC (review): validation finished")
         detail.click_submit_for_review()
         detail.wait_loading_spinner_gone()
-        return detail.is_release_reject_withdraw_visible()
+        return _any_or_all_accessible(scenario, *detail.release_reject_flags())
     except Exception as exc:
         log.info("Error verifying permission - data_submission:review -> %s", exc)
         return False
@@ -549,7 +601,7 @@ def _functional_data_submission_confirm(hub: Hub, user_role: str, scenario: str)
         detail.click_release()
         detail.click_release_confirmation_yes()
         detail.wait_loading_spinner_gone()
-        return detail.is_complete_and_reject_visible()
+        return _any_or_all_accessible(scenario, *detail.complete_reject_flags())
     except Exception as exc:
         log.info("Error verifying permission - data_submission:confirm -> %s", exc)
         return False

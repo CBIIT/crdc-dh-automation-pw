@@ -1,6 +1,12 @@
 """Data Submissions list and create dialog.
 
-Tests construct DataSubmissionsListPage(hub), then open() and create_data_submission(...).
+Tests construct DataSubmissionsListPage(hub), then:
+  open()               — header nav → Data Submissions
+  apply_filters()      — fill/select any of name, status, program, submitter, data commons, dbGaP
+  read_table_rows()    — current table as lists of cell text (truncated cells use aria-label)
+  reset_filters()      — click Reset when visible
+  create_data_submission(...) — Create dialog
+
 Upload / validate / VR live on DataSubmissionDetailPage in data_submission_details.py.
 """
 
@@ -21,9 +27,16 @@ from crdc_pw.pages.header import HeaderPage
 log = logging.getLogger("crdc_pw.data_submissions_list")
 
 CREATE_BTN = "CRDC/AILocators/DataSubmissions/List/Table/CreateDataSubmission-Btn"
+LIST_TABLE = "CRDC/AILocators/DataSubmissions/List/Table/Table"
 FILTERS = "CRDC/AILocators/DataSubmissions/List/Filters/Filters-Container"
 LIST_ROW = "CRDC/AILocators/GenericTable/TableRow"
 NAME_FILTER = "CRDC/AILocators/DataSubmissions/List/Filters/SubmissionName-TxtBx"
+STATUS_FILTER = "CRDC/AILocators/DataSubmissions/List/Filters/Status-Ddn"
+PROGRAM_FILTER = "CRDC/AILocators/DataSubmissions/List/Filters/Program-Ddn"
+SUBMITTER_FILTER = "CRDC/AILocators/DataSubmissions/List/Filters/SubmitterName-Ddn"
+DATA_COMMONS_FILTER = "CRDC/AILocators/DataSubmissions/List/Filters/DataCommons-Ddn"
+DBGAP_FILTER = "CRDC/AILocators/DataSubmissions/List/Filters/DbGaPID-TxtBx"
+RESET_FILTERS = "CRDC/AILocators/DataSubmissions/List/Filters/ResetFilters-Btn"
 NAME_LINK = "CRDC/DataSubmissions/DataSubmissionName-Link"
 
 SUB_TYPE_DELETE = "CRDC/DataSubmissions/Create/SubTypeDelete-Btn"
@@ -72,6 +85,15 @@ def _inner_text(locator: Locator) -> str:
     return value if isinstance(value, str) else ""
 
 
+def _xpath_literal(text: str) -> str:
+    """Safe XPath string literal for dropdown option text."""
+    if "'" not in text:
+        return f"'{text}'"
+    if '"' not in text:
+        return f'"{text}"'
+    parts = text.split("'")
+    return "concat(" + ", \"'\", ".join(f"'{p}'" for p in parts) + ")"
+
 class DataSubmissionsListPage(BasePage):
     """List of submissions plus the Create a Data Submission dialog."""
 
@@ -103,6 +125,127 @@ class DataSubmissionsListPage(BasePage):
     def is_create_visible(self) -> bool:
         """True if the list shows Create a Data Submission (PBAC ``data_submission:create`` gate)."""
         return self._loc(CREATE_BTN).first.is_visible()
+
+    @property
+    def table(self) -> Locator:
+        """The generic table on the list page."""
+        return self._loc(LIST_TABLE)
+
+    @property
+    def create_button(self) -> Locator:
+        """Create a Data Submission button."""
+        return self._loc(CREATE_BTN)
+
+    def apply_filters(
+        self,
+        submission_name: str | None = None,
+        status: str | None = None,
+        program: str | None = None,
+        submitter_name: str | None = None,
+        data_commons: str | None = None,
+        dbgap: str | None = None,
+    ) -> None:
+        """Fill/select only the filters that have a value, then wait for the table to reload.
+
+        Blank or None arguments are skipped (Katalon applyDataSubmissionsListFilters).
+        status may be one label or a comma-separated list; the Status multi-select is
+        cleared first, then only those labels are selected.
+        """
+        submission_name = self._trim(submission_name)
+        status = self._trim(status)
+        program = self._trim(program)
+        submitter_name = self._trim(submitter_name)
+        data_commons = self._trim(data_commons)
+        dbgap = self._trim(dbgap)
+        if not any((submission_name, status, program, submitter_name, data_commons, dbgap)):
+            log.info("Apply Data Submissions filters: no criteria; skipping")
+            return
+        log.info(
+            "Apply Data Submissions filters: name=%r status=%r program=%r submitter=%r "
+            "dataCommons=%r dbGaP=%r",
+            submission_name,
+            status,
+            program,
+            submitter_name,
+            data_commons,
+            dbgap,
+        )
+        rows = self._loc(LIST_ROW)
+        before = self._table_fingerprint(rows)
+        if submitter_name:
+            self._select_list_option(SUBMITTER_FILTER, submitter_name)
+        if submission_name:
+            self._loc(NAME_FILTER).first.fill(submission_name)
+        if status:
+            self._select_status_filter(status)
+        if program:
+            self._select_list_option(PROGRAM_FILTER, program)
+        if data_commons:
+            self._select_list_option(DATA_COMMONS_FILTER, data_commons)
+        if dbgap:
+            self._loc(DBGAP_FILTER).first.fill(dbgap)
+        self.wait_for_generic_table_settled(rows, previous=before)
+        log.info("Apply Data Submissions filters: completed")
+
+    def _select_list_option(self, dropdown_path: str, label: str) -> None:
+        """Open a single-select filter dropdown and click the option whose text is label."""
+        self._loc(dropdown_path).first.click()
+        option = self.page.locator(f"xpath=//li[normalize-space(text())={_xpath_literal(label)}]")
+        option.first.click()
+
+    def _select_status_filter(self, status_csv: str) -> None:
+        """Multi-select Status: clear every selected option, pick each label, then close."""
+        values = [s.strip() for s in status_csv.split(",") if s.strip()]
+        if not values:
+            return
+        self._loc(STATUS_FILTER).first.click()
+        listbox = self.page.locator("[role='listbox']").first
+        listbox.wait_for(state="visible")
+        selected = listbox.locator("li[aria-selected='true'], li.Mui-selected")
+        for _ in range(20):
+            if selected.count() == 0:
+                break
+            selected.first.click()
+        missing: list[str] = []
+        for label in values:
+            option = listbox.locator(f"xpath=.//li[normalize-space(text())={_xpath_literal(label)}]")
+            if option.count() == 0:
+                missing.append(label)
+                continue
+            option.first.click()
+        self.page.keyboard.press("Escape")
+        listbox.wait_for(state="hidden")
+        if missing:
+            raise AssertionError(
+                f"Status filter option(s) not found: {missing}. Use the UI labels from the list."
+            )
+
+    def wait_for_table_settled(self) -> None:
+        """Wait until the table spinner is gone. Used after open when no filter ran."""
+        self.wait_for_generic_table_settled()
+
+    def read_table_headers(self) -> list[str]:
+        """Column header text in order, whitespace collapsed (for looking cells up by name)."""
+        return self._read_table_headers(self._loc(LIST_TABLE))
+
+    def read_table_rows(self) -> list[list[str]]:
+        """Each visible data row as a list of cell text (header order). Empty list if none.
+
+        Truncated cells use the wrapper aria-label so the full value is returned.
+        """
+        self.wait_for_table_settled()
+        return self._read_table_rows_full_text(self._loc(LIST_ROW))
+
+    def reset_filters(self) -> None:
+        """Click Reset Filters when it is visible, then wait for the table to settle."""
+        reset = self._loc(RESET_FILTERS).first
+        if not reset.is_visible():
+            return
+        rows = self._loc(LIST_ROW)
+        before = self._table_fingerprint(rows)
+        reset.click()
+        self.wait_for_generic_table_settled(rows, previous=before)
+        log.info("Reset Data Submissions list filters")
 
     def create_data_submission(
         self,

@@ -20,6 +20,19 @@ _POLL_MS = 150
 # Shared by DS list, SR list, Manage Users/Programs/Studies, Data Explorer, VR table, etc.
 _GENERIC_TABLE_LOADING_ROW = "CRDC/AILocators/GenericTable/LoadingRow"
 
+# One JS pass per read (Katalon readGenericTableRowsViaJs): truncated cells expose the full
+# text on the wrapper aria-label, while innerText shows "auto-test_...".
+_READ_ROWS_JS = """
+rows => rows.map(row => Array.from(row.querySelectorAll('td')).map(cell => {
+    const trunc = cell.querySelector("[data-testid='truncated-text-wrapper']");
+    if (trunc) {
+        const aria = trunc.getAttribute('aria-label');
+        if (aria && aria.trim()) return aria.trim();
+    }
+    return (cell.innerText || '').trim();
+}))
+"""
+
 
 class BasePage:
     """Hub-backed screen page: _loc('CRDC/...') always uses the live tab on hub.
@@ -106,6 +119,19 @@ class BasePage:
         for row in rows.all():
             result.append([text.strip() for text in row.locator("td").all_inner_texts()])
         return result
+
+    def _read_table_rows_full_text(self, rows: Locator) -> list[list[str]]:
+        """Each data row as td text, using the truncated-text aria-label when a cell is truncated.
+
+        One JS pass (no stale handles across re-renders). Empty list if there are no rows.
+        """
+        result: list[list[str]] = rows.evaluate_all(_READ_ROWS_JS)
+        return result
+
+    def _read_table_headers(self, table: Locator) -> list[str]:
+        """Column header text in order, whitespace collapsed (look cells up by name)."""
+        texts = table.first.locator("xpath=.//thead//th").all_inner_texts()
+        return [" ".join(text.split()) for text in texts]
 
     def _select_dropdown(self, dropdown: Locator, option: Locator) -> None:
         """Click a MUI/select dropdown, then the option locator."""

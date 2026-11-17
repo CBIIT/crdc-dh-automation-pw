@@ -338,18 +338,20 @@ class DataSubmissionDetailPage(BasePage):
         """Cancel action on draft detail (PBAC data_submission:cancel)."""
         return self._loc(_ACTION_CANCEL).first.is_visible()
 
-    def is_release_reject_withdraw_visible(self) -> bool:
-        """Post–submit-for-review chrome (PBAC data_submission:review)."""
+    def release_reject_flags(self) -> tuple[bool, bool]:
+        """Release and Reject visibility (PBAC data_submission:review).
+
+        Withdraw is owner chrome after Submit, not a Review permission. Do not score it here.
+        """
         release = self._loc(_ACTION_RELEASE).first
         reject = self._loc(_ACTION_REJECT).first
-        withdraw = self._loc(_ACTION_WITHDRAW).first
-        return release.is_visible() and reject.is_visible() and withdraw.is_visible()
+        return release.is_visible(), reject.is_visible()
 
-    def is_complete_and_reject_visible(self) -> bool:
-        """After release confirmation (PBAC data_submission:confirm positive)."""
+    def complete_reject_flags(self) -> tuple[bool, bool]:
+        """Complete and Reject visibility after release confirmation (PBAC data_submission:confirm)."""
         complete = self._loc(_ACTION_COMPLETE).first
         reject = self._loc(_ACTION_REJECT).first
-        return complete.is_visible() and reject.is_visible()
+        return complete.is_visible(), reject.is_visible()
 
     def is_cross_validate_or_release_or_complete_any_visible(self) -> bool:
         """Negative confirm check: any of cross-validate / release / complete (PBAC submitter negative)."""
