@@ -244,6 +244,60 @@ def test_excel_collection_smoke_marker() -> None:
     assert collected == set(_SMOKE_CASE_STEMS), proc.stdout
 
 
+# PW-only CTDC 699 case: original TC101 data with participant NO1 expected as Value not permitted.
+# It depends on STS having values for the Hub's CTDC model version, so it stays out of smoke.
+_CTDC_NO1_CASE_STEM = "TC104_CRDCDH-699_VerifyCdePermissibleValueErrorsCTDC"
+
+
+@pytest.mark.unit
+def test_ctdc_no1_case_is_committed_but_not_smoke() -> None:
+    """TC104 is a committed workbook, collected as a normal Excel case, and not a smoke member."""
+    from crdc_pw.utils.excel_ds_test_runner.test_collector import _SMOKE_CASE_STEMS
+
+    committed = {p.stem for p in _discover_committed_excel_cases()}
+    assert _CTDC_NO1_CASE_STEM in committed
+    assert _CTDC_NO1_CASE_STEM not in _SMOKE_CASE_STEMS
+
+    env = {**os.environ, "CRDC_EXCEL_DS_VALIDATION": "1"}
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/DataValidation",
+            "-m",
+            "CRDC_DataValidation_Excel and not CRDC_Smoke",
+            "--collect-only",
+            "-q",
+        ],
+        cwd=repo_root(),
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    collected = {
+        line.split("::", 1)[1].split("[", 1)[0]
+        for line in proc.stdout.splitlines()
+        if ".xlsx::" in line
+    }
+    assert _CTDC_NO1_CASE_STEM in collected, proc.stdout
+
+
+@pytest.mark.unit
+def test_ctdc_no1_case_input_has_participant_no1_expectation() -> None:
+    """TC104 keeps the original NO1 participant row and its expected Value not permitted TSV."""
+    root = repo_root() / "InputFiles" / "CRDC" / "MetadataData" / "CRDCDH-699_TC104"
+    participant = (root / "CTDC_participant_v1.22.1.tsv").read_text(encoding="utf-8")
+    assert "\tNO1\t" in participant
+    expected = (
+        root / "expected-ValidationResults" / "CTDC_participant_v1.22.1_expected-ValidationResults.tsv"
+    ).read_text(encoding="utf-8")
+    assert "Value not permitted" in expected
+    assert '""NO1"" is not a permissible value for property ""radiology_report_available""' in expected
+
+
 @pytest.mark.unit
 def test_missing_steps_sheet_raises(tmp_path: Path) -> None:
     path = tmp_path / "TC99_bad.xlsx"
