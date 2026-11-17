@@ -370,6 +370,8 @@ class BasePage:
         self._click_page_control(_PREVIOUS_PAGE, lambda page: page != before)
 
     def go_to_page(self, number: int) -> None:
+        if self.read_current_page() == number:
+            return
         self._loc(_GO_TO_PAGE, page=str(number)).first.click()
         self._poll_until(lambda: self.read_current_page() == number)
         self.wait_for_generic_table_settled()
