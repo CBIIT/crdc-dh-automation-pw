@@ -484,8 +484,9 @@ class BasePage:
         problems: list[str] = []
         if selected != count:
             problems.append(f"select shows {selected}, expected {count}")
-        if not 1 <= rows <= count:
-            problems.append(f"{rows} rows shown, expected between 1 and {count}")
+        expected_rows = min(count, shown.total) if shown is not None else None
+        if expected_rows is not None and rows != expected_rows:
+            problems.append(f"{rows} rows shown, expected {expected_rows}")
         if shown is None:
             problems.append("displayed-rows label missing")
         elif shown.first != 1 or shown.last != rows:
