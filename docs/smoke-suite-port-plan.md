@@ -10,7 +10,7 @@ Goal: **`pytest -m CRDC_Smoke`** should cover the same Hub checks as Katalon **`
 
 ## Opinion: is full smoke worth it?
 
-**Yes.** Today Playwright smoke is **Manage Studies (TC08)**, **Manage Programs (TC09)**, **Data Submissions list (TC10)**, **Submission Requests list (TC12)**, **PBAC TC09** (Submitter checked permissions), **CRDCDH-697 TC01** (headers), and **CRDCDH-332 TC01** (SR all fields through submit). Katalon smoke is a **breadth slice**: list pages, SR create, table UX, PBAC functional check, and many DS paths (upload, validate, batch errors, cross-val, export, explorer). Porting it makes Playwright the credible pre-release gate Katalon smoke already is.
+**Yes.** Today Playwright smoke is **Manage Studies (TC08)**, **Manage Programs (TC09)**, **Data Submissions list (TC10)**, **Submission Requests list (TC12)**, **PBAC TC09** (Submitter checked permissions), **CRDCDH-697 TC01** (headers), **CRDCDH-332 TC01** (SR all fields through submit), and **TC03 / TC04** (DS list sorting and pagination, Dcp). Katalon smoke is a **breadth slice**: list pages, SR create, table UX, PBAC functional check, and many DS paths (upload, validate, batch errors, cross-val, export, explorer). Porting it makes Playwright the credible pre-release gate Katalon smoke already is.
 
 **Pragmatic approach:** work **top to bottom of the Katalon suite list** for traceability, but **implement in difficulty tiers** (below) so early merges add value without blocking on CLI or multi-role epics.
 
@@ -41,8 +41,8 @@ Suite description says “GC-focused (no CTDC/ICDC)” but the file **includes C
 | 3 | `AuxiliaryTests/TC12_SubmissionRequestsListAndFilter` | Submitter | **Done** | — | `tests/AuxiliaryTests/test_TC12_SubmissionRequestsListAndFilter.py`; `SubmissionRequestsListPage.read_table_rows` / `read_table_headers` / `start_button` plus existing apply/reset. |
 | 4 | `AuxiliaryTests/TC08_ManageStudiesListAndFilter` | Admin | **Done** | — | `tests/AuxiliaryTests/test_TC08_ManageStudiesListAndFilter.py` |
 | 5 | `AuxiliaryTests/TC09_ManageProgramsListAndFilter` | Admin | **Done** | — | `tests/AuxiliaryTests/test_TC09_ManageProgramsListAndFilter.py` |
-| 6 | `AuxiliaryTests/TC03_TableSortingVerification` | Dcp | **Not ported** | **Medium** | DS list: sortability, default sort, click-sort columns. Needs **generic table helpers** on `BasePage` or `utils/` (Katalon `WebUIUtils.verifyTableColumnSortability`, etc.) — **none in PW yet**. |
-| 7 | `AuxiliaryTests/TC04_PaginationVerification` | Dcp | **Not ported** | **Medium** | DS list pagination: rows/page options, default, navigation, change page size. Same **generic table** gap as TC03. |
+| 6 | `AuxiliaryTests/TC03_TableSortingVerification` | Dcp | **Done** | — | `tests/AuxiliaryTests/test_TC03_DSTableSortingVerification.py` (`CRDC_Smoke`; renamed with `DS` so the page is clear at a glance). `BasePage` verify_column_sortability (all sortable except SRF), verify_default_sort (Last Updated, desc), verify_column_sort_on_click (Status, Data Commons: both directions, rows checked). Order compare is `utils/table_helpers.is_sorted`. Sort direction is read from the MUI sort label classes (no aria-sort), and the wait is on that direction, not on row text. Not yet run live or dual-run against Katalon. |
+| 7 | `AuxiliaryTests/TC04_PaginationVerification` | Dcp | **Done** | — | `tests/AuxiliaryTests/test_TC04_DSPaginationVerification.py` (`CRDC_Smoke`; renamed with `DS`). `BasePage` verify_rows_per_page_options (5, 10, 20, 50), verify_default_rows_per_page (20; Katalon's value, its comment says 10), verify_displayed_rows_text, verify_page_navigation, verify_rows_per_page_change (5). Needs more than one page of Data Submissions for Dcp; with one page it only checks that Previous and Next are disabled. Not yet run live or dual-run against Katalon. |
 | 8 | `Pbac/TC09_CRDC-PbacCheckedPermissions-Submitter` | Admin → Submitter | **Done** | — | `tests/Pbac/test_TC09_CRDC-PbacCheckedPermissions-Submitter.py` (`CRDC_Smoke`); `edit_pbac_permissions` + `verify_permissions_functional` in `pbac_helpers.py`. |
 | 9 | `DataSubmissions/GC/CRDCDH-697/TC01_CRDC-VerifyDataSubmissionHeaders` | Submitter | **Done** | — | `tests/DataSubmissions/GC/CRDCDH-697/test_TC01_CRDC-VerifyDataSubmissionHeaders.py` |
 | 10 | `DataSubmissions/GC/CRDCDH-1163/TC16_...SubmittedMetadata` | Submitter (+ DCP flow in script) | **Not ported** | **Hard** | Create, upload, validate, **submit**, DCP validation path. Long workflow; uses PBAC/create helpers. |
@@ -77,7 +77,7 @@ Use this order for **implementation**, while keeping **Katalon case IDs** in tes
 ### Wave 2 — SR smoke + table UX + batch upload errors
 
 5. ~~**CRDCDH-332 TC01** SR AllFields~~ — **Done** (form page fill steps + Review verifiers).
-6. **TC03** table sorting + **TC04** pagination (shared generic table API on DS list).
+6. ~~**TC03** table sorting + **TC04** pagination~~ — **Done** (shared generic table methods on `BasePage`, run on the DS list).
 7. **CRDCDH-887 TC101** + **CRDCDH-2864 TC102** (shared upload-activities failed-modal verifier).
 
 ### Wave 3 — PBAC + multi-role DS
@@ -103,13 +103,13 @@ Use this order for **implementation**, while keeping **Katalon case IDs** in tes
 | TC10 | `DataSubmissionsList.*` | **Done** — `DataSubmissionsListPage` filters (name, status multi-select, program, submitter, commons, dbGaP), `read_table_rows`, `reset_filters` |
 | TC12 | `SubmissionRequestList.*` | **Done** — `SubmissionRequestsListPage` filters/reset plus `read_table_rows`, `read_table_headers`, `start_button` |
 
-**Easiest next step:** TC03 sorting + TC04 pagination (Wave 2): one shared generic table helper on `BasePage`.
+**Next step:** CRDCDH-887 TC101 + CRDCDH-2864 TC102 (Wave 2): shared upload-activities failed-modal verifier.
 
-### Generic table (TC03, TC04)
+### Generic table (TC03, TC04) — Done
 
 Katalon centralizes in **`WebUIUtils`**: sortability, default sort, column click sort, pagination options, page nav, rows-per-page change.
 
-Playwright: add locators under **`CRDC/AILocators/GenericTable/`** (if missing) and methods on **`BasePage`** or a small **`utils/table_helpers.py`** used by DS list tests. **One port serves both** TC03 and TC04.
+Playwright: locators `HeaderCell` under **`CRDC/AILocators/GenericTable/`** and `CurrentPage-Btn`, `GoToPage-Btn` (placeholder `${page}`), `PaginationNav-Buttons` under `.../Pagination/`. The compare rules (`is_sorted`, `parse_displayed_rows`) are pure functions in **`utils/table_helpers.py`** with unit tests. The table reads, actions and `verify_*` methods are on **`BasePage`**, so any generic-table list page can reuse them. **One port serves both** TC03 and TC04. Katalon's `ValidationReport` helper is not ported.
 
 ### PBAC TC09 (Done)
 
@@ -161,7 +161,7 @@ pytest -m CRDC_Smoke --tracing=retain-on-failure
 | Wave | Cases | Owner / ticket |
 |------|-------|----------------|
 | 1 | ~~TC12~~ (done), ~~TC10~~ (done), ~~Excel smoke ×3~~ (done), ~~697~~ (done) | DCA-686 (697); add DCA tasks per wave as needed |
-| 2 | ~~SR332 TC01~~ (done), TC03, TC04, 887, 2864 | |
+| 2 | ~~SR332 TC01~~ (done), ~~TC03~~ (done), ~~TC04~~ (done), 887, 2864 | |
 | 3 | ~~PBAC TC09~~ (done), 1035 | DCA-694 (PBAC positives) |
 | 4 | 1163, 1051, 514, 1405, 3026 | |
 
