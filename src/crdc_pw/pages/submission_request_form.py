@@ -844,7 +844,13 @@ class SubmissionRequestFormPage(BasePage):
             )
 
     def verify_principal_investigator_info(self, data_row_num: int) -> None:
-        """Review: PI name, position, email, institution and address vs section-a row."""
+        """Review: PI name, position, email, institution and address vs section-a row.
+
+        Assumes the signed-in user's profile PI details equal that section-a row, because
+        enter_principal_investigator_info keeps non-empty fields (only email is always
+        overwritten). Same as Katalon. If the profile changes, this check fails with both
+        values in the message.
+        """
         row = get_sheet_row("section-a", data_row_num)
         self._verify_review_text(
             "PI name",
