@@ -20,6 +20,7 @@ from crdc_pw.locators.loader import LocatorLoader
 from crdc_pw.utils.table_helpers import (
     DisplayedRows,
     expected_page_count,
+    expected_page_range,
     is_sorted,
     parse_displayed_rows,
 )
@@ -452,8 +453,10 @@ class BasePage:
             problems.append("Previous is not disabled on page 1")
         total = self.read_total_pages()
         shown = self.read_displayed_rows()
-        if shown is not None:
-            expected_total = expected_page_count(shown.total, self.read_rows_per_page())
+        page_size = self.read_rows_per_page()
+        total_rows = shown.total if shown is not None else None
+        if total_rows is not None:
+            expected_total = expected_page_count(total_rows, page_size)
             if total != expected_total:
                 problems.append(f"pagination ends at page {total}, expected {expected_total}")
         log.info("Total pages: %s", total)
@@ -470,22 +473,19 @@ class BasePage:
         self.go_to_next_page()
         if self.read_current_page() != 2:
             problems.append(f"Next from page 1 landed on {self.read_current_page()}, expected 2")
-        shown = self.read_displayed_rows()
-        if shown is None or shown.first <= 1:
-            problems.append(f"page 2 label should start after row 1: {shown}")
+        self._expect_label_range(2, page_size, total_rows, problems)
         rows_before = self._expect_rows_replaced(rows_before, "Next to page 2", problems)
 
         self.go_to_previous_page()
         if self.read_current_page() != 1:
             problems.append(f"Previous from page 2 landed on {self.read_current_page()}, expected 1")
-        shown = self.read_displayed_rows()
-        if shown is None or shown.first != 1:
-            problems.append(f"page 1 label should start at 1: {shown}")
+        self._expect_label_range(1, page_size, total_rows, problems)
         rows_before = self._expect_rows_replaced(rows_before, "Previous to page 1", problems)
 
         self.go_to_page(2)
         if self.read_current_page() != 2:
             problems.append(f"page button 2 landed on {self.read_current_page()}")
+        self._expect_label_range(2, page_size, total_rows, problems)
         rows_before = self._expect_rows_replaced(rows_before, "page button 2", problems)
 
         # With exactly two pages the last page is the one already shown, so nothing changes.
@@ -496,15 +496,32 @@ class BasePage:
             rows_before = self._expect_rows_replaced(rows_before, f"page button {total}", problems)
         if self._page_button_enabled(_NEXT_PAGE) is not False:
             problems.append("Next is not disabled on the last page")
-        shown = self.read_displayed_rows()
-        if shown is None or shown.last != shown.total:
-            problems.append(f"last page label should end at the total: {shown}")
+        self._expect_label_range(total, page_size, total_rows, problems)
 
         self.go_to_page(1)
         if self.read_current_page() != 1:
             problems.append(f"could not return to page 1 (current {self.read_current_page()})")
+        self._expect_label_range(1, page_size, total_rows, problems)
         self._expect_rows_replaced(rows_before, "page button 1", problems)
         self._fail_if(problems, "Page navigation")
+
+    def _expect_label_range(
+        self, page: int, page_size: int, total_rows: int | None, problems: list[str]
+    ) -> None:
+        """Add a problem unless the label shows both ends of page's slice, like 21-40 of 193.
+
+        total_rows is the label total read on page 1 (None if the label was missing then).
+        """
+        shown = self.read_displayed_rows()
+        if shown is None or total_rows is None:
+            problems.append(f"page {page}: displayed-rows label missing ({shown})")
+            return
+        first, last = expected_page_range(page, page_size, total_rows)
+        if (shown.first, shown.last, shown.total) != (first, last, total_rows):
+            problems.append(
+                f"page {page} label is {shown.first}-{shown.last} of {shown.total}, "
+                f"expected {first}-{last} of {total_rows}"
+            )
 
     def _expect_rows_replaced(self, before: str, what: str, problems: list[str]) -> str:
         """Add a problem if the rows on screen are still those of the page just left.

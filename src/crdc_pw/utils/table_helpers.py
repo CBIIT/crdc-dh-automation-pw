@@ -35,6 +35,16 @@ def expected_page_count(total_rows: int, rows_per_page: int) -> int:
     return max(1, -(-total_rows // rows_per_page))
 
 
+def expected_page_range(page: int, rows_per_page: int, total_rows: int) -> tuple[int, int]:
+    """The (first, last) row numbers the label should show on a page, like (21, 40) for page 2.
+
+    The last page ends at total_rows, not at a full page.
+    """
+    if page < 1 or rows_per_page < 1:
+        raise ValueError(f"page and rows_per_page must be at least 1, got {page}, {rows_per_page}")
+    return (page - 1) * rows_per_page + 1, min(page * rows_per_page, total_rows)
+
+
 def _compare(a: str, b: str) -> int:
     """Negative, zero or positive like Java compare: numbers first, then case-insensitive text."""
     try:

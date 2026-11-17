@@ -9,6 +9,7 @@ from crdc_pw.pages import base
 from crdc_pw.utils.table_helpers import (
     DisplayedRows,
     expected_page_count,
+    expected_page_range,
     is_sorted,
     parse_displayed_rows,
 )
@@ -92,6 +93,35 @@ def test_expected_page_count_empty_table_has_one_page() -> None:
 def test_expected_page_count_rejects_bad_page_size() -> None:
     with pytest.raises(ValueError):
         expected_page_count(10, 0)
+
+
+# --- expected_page_range ---
+
+
+def test_expected_page_range_full_pages() -> None:
+    assert expected_page_range(1, 20, 193) == (1, 20)
+    assert expected_page_range(2, 20, 193) == (21, 40)
+    assert expected_page_range(2, 5, 193) == (6, 10)
+
+
+def test_expected_page_range_last_page_ends_at_total() -> None:
+    assert expected_page_range(10, 20, 193) == (181, 193)
+    assert expected_page_range(2, 20, 25) == (21, 25)
+    assert expected_page_range(1, 20, 3) == (1, 3)
+
+
+def test_expected_page_range_matches_page_count() -> None:
+    """The last page from expected_page_count always ends at the total."""
+    for total in (1, 19, 20, 21, 193):
+        pages = expected_page_count(total, 20)
+        assert expected_page_range(pages, 20, total)[1] == total
+
+
+def test_expected_page_range_rejects_bad_input() -> None:
+    with pytest.raises(ValueError):
+        expected_page_range(0, 20, 100)
+    with pytest.raises(ValueError):
+        expected_page_range(1, 0, 100)
 
 
 # --- locator keys the BasePage table methods use ---
