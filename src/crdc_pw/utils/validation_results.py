@@ -442,3 +442,33 @@ def diff_upload_errors(expected: list[str], actual: list[str]) -> tuple[list[str
     want = Counter(normalize_quotes(item).strip() for item in expected)
     got = Counter(normalize_quotes(item).strip() for item in actual)
     return sorted((want - got).elements()), sorted((got - want).elements())
+
+
+# ---------------------------------------------------------------------------
+# Validation Results export file name (Katalon clickValidationResultsExportAndVerifyDownloadedFileName)
+# ---------------------------------------------------------------------------
+
+# {submissionName}-{YYYY-MM-DDThhmmss}, with .csv, .xlsx or no extension.
+_EXPORT_FILENAME = re.compile(r"^(.+)-(\d{4}-\d{2}-\d{2}T\d{6})(\.(csv|xlsx))?$")
+
+
+def normalize_submission_name_for_export(name: str | None) -> str:
+    """Submission name as it appears in the export file name: spaces to "-", other symbols dropped."""
+    return re.sub(r"[^a-zA-Z0-9-]", "", (name or "").strip().replace(" ", "-"))
+
+
+def check_export_filename(filename: str, expected_submission_name: str | None = None) -> str | None:
+    """None when filename looks like {name}-YYYY-MM-DDThhmmss[.csv|.xlsx], else why not.
+
+    When expected_submission_name is given, the name part must start with it after
+    normalize_submission_name_for_export (a prefix match, as in Katalon, because the Hub
+    label can be shorter than the name used in the file).
+    """
+    match = _EXPORT_FILENAME.match(filename)
+    if not match:
+        return f"file name {filename!r} does not match {{submissionName}}-YYYY-MM-DDThhmmss[.csv|.xlsx]"
+    if expected_submission_name and expected_submission_name.strip():
+        expected = normalize_submission_name_for_export(expected_submission_name)
+        if not match.group(1).startswith(expected):
+            return f"submission name {match.group(1)!r} in file name does not start with {expected!r}"
+    return None

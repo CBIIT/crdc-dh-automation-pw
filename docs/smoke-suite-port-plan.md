@@ -10,7 +10,7 @@ Goal: **`pytest -m CRDC_Smoke`** should cover the same Hub checks as Katalon **`
 
 ## Opinion: is full smoke worth it?
 
-**Yes.** Today Playwright smoke is **Manage Studies (TC08)**, **Manage Programs (TC09)**, **Data Submissions list (TC10)**, **Submission Requests list (TC12)**, **PBAC TC09** (Submitter checked permissions), **CRDCDH-697 TC01** (headers), **CRDCDH-332 TC01** (SR all fields through submit), **TC03 / TC04** (DS list sorting and pagination, Dcp), and **887 TC101 / 2864 TC102** (Upload Errors modal). Katalon smoke is a **breadth slice**: list pages, SR create, table UX, PBAC functional check, and many DS paths (upload, validate, batch errors, cross-val, export, explorer). Porting it makes Playwright the credible pre-release gate Katalon smoke already is.
+**Yes.** Today Playwright smoke is **Manage Studies (TC08)**, **Manage Programs (TC09)**, **Data Submissions list (TC10)**, **Submission Requests list (TC12)**, **PBAC TC09** (Submitter checked permissions), **CRDCDH-697 TC01** (headers), **CRDCDH-332 TC01** (SR all fields through submit), **TC03 / TC04** (DS list sorting and pagination, Dcp), and **887 TC101 / 2864 TC102** (Upload Errors modal), and **1035 TC101** (Validation Results export, all roles). Katalon smoke is a **breadth slice**: list pages, SR create, table UX, PBAC functional check, and many DS paths (upload, validate, batch errors, cross-val, export, explorer). Porting it makes Playwright the credible pre-release gate Katalon smoke already is.
 
 **Pragmatic approach:** work **top to bottom of the Katalon suite list** for traceability, but **implement in difficulty tiers** (below) so early merges add value without blocking on CLI or multi-role epics.
 
@@ -48,7 +48,7 @@ Suite description says “GC-focused (no CTDC/ICDC)” but the file **includes C
 | 10 | `DataSubmissions/GC/CRDCDH-1163/TC16_...SubmittedMetadata` | Submitter (+ DCP flow in script) | **Not ported** | **Hard** | Create, upload, validate, **submit**, DCP validation path. Long workflow; uses PBAC/create helpers. |
 | 11 | `DataSubmissions/GC/CRDCDH-1051/TC25_VerifyDcpCrossValidation` | Submitter, Dcp | **Not ported** | **Hard** | **Two** submissions, same study, cross-validate, CV tab TSV, reject. **`switch_user`**, cross-val UI, expected TSV oracles. |
 | 12 | `DataSubmissions/GC/CRDCDH-514/TC06_VerifyFullDataSubmissionHistory` | Submitter | **Not ported** | **Hard** | ~147 lines: unique metadata upload, validate, history/audit assertions, **`prepareUniqueMetadataAndUpload`**. |
-| 13 | `DataSubmissions/GC/CRDCDH-1035/TC101_VerifyValidationResultsExportAllRoles` | Submitter, Dcp, Fedlead, Admin | **Not ported** | **Hard** | Create + upload + validate; then **four roles** open same submission by ID, VR tab **export** + filename check. Needs deep-link nav + download assertion. |
+| 13 | `DataSubmissions/GC/CRDCDH-1035/TC101_VerifyValidationResultsExportAllRoles` | Submitter, Dcp, Fedlead, Admin | **Done** | — | `tests/DataSubmissions/GC/CRDCDH-1035/test_TC101_CRDCDH-1035_VerifyValidationResultsExportAllRoles.py` (`CRDC_Smoke`, `CRDC_DSFlow`). Submitter creates a GC metadata-only submission, `upload_folder("TC04")`, `click_validate`, then `verify_validation_results_export_enabled` and `export_validation_results_and_verify_filename`; Dcp, Fedlead and Admin each `switch_user`, `open_upload_activity(submission_id)` and check Export is enabled. File name rule is `utils/validation_results.check_export_filename`. Difference from Katalon: the download is caught with Playwright's download event, not by clearing Downloads and reading the newest file after a sleep. Not yet run live or dual-run against Katalon. |
 | 14 | `DataSubmissions/GC/CRDCDH-887/TC101_ColumnRequiredBatchErrors` | Submitter | **Done** | — | `tests/DataSubmissions/GC/CRDCDH-887/test_TC101_CRDCDH-887_ColumnRequiredBatchErrors.py` (`CRDC_Smoke`, `CRDC_DataValidation`, `CRDC_Regression`). Create a GC metadata-only submission, `upload_folder("CRDCDH-887_TC101")`, then `verify_upload_activities_batch_row("Metadata", 5, "Failed")` and `verify_upload_errors_modal`. Input folder copied from Katalon. Run live on QA2 (passes; one transient backend 'Batch loading failed' on a first 2864 run). Not yet dual-run against Katalon. |
 | 15 | `DataSubmissions/GC/CRDCDH-2864/TC102_BatchErrorsCompositeIdRequiredProperty` | Submitter | **Done** | — | `tests/DataSubmissions/GC/CRDCDH-2864/test_TC102_CRDCDH-2864_BatchErrorsCompositeIdRequiredProperty.py` (same markers). Same flow with `CRDCDH-2864_TC102` and 4 files. Run live on QA2 (passes; one transient backend 'Batch loading failed' on a first 2864 run). Not yet dual-run against Katalon. |
 | 16 | `DataSubmissions/GC/CRDCDH-1405/TC101_CLINoFileIdVerifyFinalManifest` | Submitter | **Not ported** | **Very hard** | **`CliUploader.uploadFilesViaCli`**, **`verifyFinalManifest`**, deterministic re-run. **No CLI layer in PW.** |
@@ -83,7 +83,7 @@ Use this order for **implementation**, while keeping **Katalon case IDs** in tes
 ### Wave 3 — PBAC + multi-role DS
 
 8. ~~**PBAC TC09** Submitter checked permissions (functional verify)~~ — **Done**.
-9. **CRDCDH-1035 TC101** VR export all roles (`switch_user`, submission deep link, download).
+9. ~~**CRDCDH-1035 TC101** VR export all roles~~ — **Done** (`switch_user`, submission deep link, download event).
 
 ### Wave 4 — Heavy DS / CLI / Explorer
 
@@ -103,7 +103,7 @@ Use this order for **implementation**, while keeping **Katalon case IDs** in tes
 | TC10 | `DataSubmissionsList.*` | **Done** — `DataSubmissionsListPage` filters (name, status multi-select, program, submitter, commons, dbGaP), `read_table_rows`, `reset_filters` |
 | TC12 | `SubmissionRequestList.*` | **Done** — `SubmissionRequestsListPage` filters/reset plus `read_table_rows`, `read_table_headers`, `start_button` |
 
-**Next step:** Wave 3 — CRDCDH-1035 TC101 (VR export for all roles: `switch_user`, submission deep link, download check).
+**Next step:** Wave 4 — start with CRDCDH-1163 TC16, CRDCDH-1051 TC25 and CRDCDH-514 TC06 (heavy DS flows).
 
 ### Generic table (TC03, TC04) — Done
 
@@ -124,7 +124,9 @@ Playwright: locators `HeaderCell` under **`CRDC/AILocators/GenericTable/`** and 
 
 **Also on `DataSubmissionDetailPage` (887 TC101, 2864 TC102):** `verify_upload_activities_batch_row` and `verify_upload_errors_modal`. The expected-error oracle is in `utils/validation_results.py` (`load_expected_upload_errors`, `diff_upload_errors`, reading `MetadataData/<tc>/expected/*.tsv`). Other Katalon cases that end the same way (887 TC102 to TC104, 2864 TC101, 1195 TC101, 1405 batch-error cases) can reuse it with a new input folder and a short test file each.
 
-**Not ported:** cross-validation tab, VR export download, CLI, submission history timeline.
+**Also on `DataSubmissionDetailPage` (1035 TC101):** `submission_id_from_url`, `open_upload_activity`, `verify_validation_results_export_enabled`, `export_validation_results_and_verify_filename`.
+
+**Not ported:** cross-validation tab, CLI, submission history timeline.
 
 ### Excel vs native pytest for smoke
 
@@ -164,7 +166,7 @@ pytest -m CRDC_Smoke --tracing=retain-on-failure
 |------|-------|----------------|
 | 1 | ~~TC12~~ (done), ~~TC10~~ (done), ~~Excel smoke ×3~~ (done), ~~697~~ (done) | DCA-686 (697); add DCA tasks per wave as needed |
 | 2 | ~~SR332 TC01~~ (done), ~~TC03~~ (done), ~~TC04~~ (done), ~~887~~ (done), ~~2864~~ (done) | |
-| 3 | ~~PBAC TC09~~ (done), 1035 | DCA-694 (PBAC positives) |
+| 3 | ~~PBAC TC09~~ (done), ~~1035~~ (done) | DCA-694 (PBAC positives) |
 | 4 | 1163, 1051, 514, 1405, 3026 | |
 
 Refresh this table when cases land on `develop`.

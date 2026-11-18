@@ -19,6 +19,7 @@ from crdc_pw.utils.validation_results import (
     diff_validation_results,
     expected_upload_errors_dir,
     expected_error_detail_issues_for_row,
+    check_export_filename,
     find_expected_validation_results_tsv,
     list_nodes_from_expected_validation_results_folder,
     list_tsv_files_and_nodes_for_tc,
@@ -29,6 +30,7 @@ from crdc_pw.utils.validation_results import (
     node_from_expected_validation_results_filename,
     node_from_filename,
     normalize_quotes,
+    normalize_submission_name_for_export,
     parse_expected_errors_cell,
     unquote_csv_style,
     unique_severity_issue_type_pairs_from_expected_tsv,
@@ -268,3 +270,47 @@ def test_load_expected_upload_errors_reads_column_case_insensitively(tmp_path) -
     )
     (folder / "b_no_column.tsv").write_text("type\tother\nx\tignored\n", encoding="utf-8")
     assert load_expected_upload_errors("tc", root=tmp_path) == ['msg "q"', "m1", "m2"]
+
+
+# --- Validation Results export file name (CRDCDH-1035) ---
+
+
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "auto-test20260309142645-2026-03-09T151725.csv",
+        "auto-test20260309142645-2026-03-09T151725.xlsx",
+        "auto-test20260309142645-2026-03-09T151725",
+    ],
+)
+def test_check_export_filename_accepts_valid_names(filename: str) -> None:
+    assert check_export_filename(filename) is None
+    assert check_export_filename(filename, "auto-test_20260309_142645") is None
+
+
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "auto-test20260309142645.csv",
+        "auto-test20260309142645-2026-03-09T1517.csv",
+        "auto-test20260309142645-2026-03-09T151725.pdf",
+        "-2026-03-09T151725.csv",
+    ],
+)
+def test_check_export_filename_rejects_bad_pattern(filename: str) -> None:
+    assert "does not match" in (check_export_filename(filename) or "")
+
+
+def test_check_export_filename_requires_submission_name_prefix() -> None:
+    problem = check_export_filename("other-name-2026-03-09T151725.csv", "auto-test_2026")
+    assert problem is not None and "does not start with" in problem
+
+
+def test_check_export_filename_is_a_prefix_match() -> None:
+    assert check_export_filename("auto-test2026-extra-2026-03-09T151725.csv", "auto-test_2026") is None
+
+
+def test_normalize_submission_name_for_export() -> None:
+    assert normalize_submission_name_for_export("  My DS: name_1! ") == "My-DS-name1"
+    assert normalize_submission_name_for_export("auto-test_20261117_12edbf") == "auto-test2026111712edbf"
+    assert normalize_submission_name_for_export(None) == ""
