@@ -57,8 +57,13 @@ def strip_yaml_frontmatter(raw: str) -> str:
 
 
 def _oracle_line_from_markdown(line: str) -> str | None:
-    """Map one markdown source line to plain text Hub should contain, or skip."""
+    """Map one markdown source line to plain text Hub should contain, or skip.
+
+    A trailing backslash is a markdown hard line break, so Hub does not show it.
+    """
     stripped = line.strip()
+    if stripped.endswith("\\"):
+        stripped = stripped[:-1].rstrip()
     if not stripped or stripped == "---":
         return None
     if stripped.startswith("#"):

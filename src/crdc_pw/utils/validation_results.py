@@ -1,15 +1,20 @@
-"""Validation Results expected-TSV oracle (Katalon DataSubmissions VR compare).
+"""Expected-TSV oracles under InputFiles/CRDC/MetadataData/<tc>/ (Katalon DataSubmissions compares).
 
-Discovers InputFiles/CRDC/MetadataData/<tc>/expected-ValidationResults TSVs,
-maps node → submitted-id column from DSV_ValidationResults-mappings.xlsx,
-and diffs UI rows to expected by submitted identifier. Pages filter and read;
-this module does not click Hub.
+Validation Results: discovers expected-ValidationResults TSVs, maps node → submitted-id
+column from DSV_ValidationResults-mappings.xlsx, and diffs UI rows to expected by submitted
+identifier.
+
+Upload Errors modal: reads the expected_errors column of the expected/ TSVs and diffs it
+with the errors the modal shows (see load_expected_upload_errors, diff_upload_errors).
+
+Pages filter and read; this module does not click Hub.
 """
 
 from __future__ import annotations
 
 import logging
 import re
+from collections import Counter
 from pathlib import Path
 
 from openpyxl import load_workbook
@@ -346,3 +351,124 @@ def diff_validation_results(
         if submitted_id not in expected_ids:
             errors.append(f"Submitted Identifier '{submitted_id}': present in UI but not in expected TSV")
     return errors
+
+
+# ---------------------------------------------------------------------------
+# Upload Errors modal oracle (Katalon verifyUploadActivitiesFailedErrorsModal)
+# ---------------------------------------------------------------------------
+
+_UPLOAD_ERRORS_SUBFOLDER = "expected"
+_EXPECTED_ERROR_COLUMNS = ("expected_errors", "expected_error")
+# Quote pairs that separate items inside a ['a', 'b'] list cell.
+_LIST_SEPARATORS = ("', '", '", "', "', \"", "\", '")
+_CURLY_DOUBLE_QUOTES = str.maketrans({"\u201c": '"', "\u201d": '"', "\u201e": '"', "\u201f": '"'})
+
+
+def expected_upload_errors_dir(tc_name: str, root: Path | None = None) -> Path:
+    """InputFiles/CRDC/MetadataData/<tcName>/expected (not expected-ValidationResults)."""
+    return metadata_dir(tc_name, root) / _UPLOAD_ERRORS_SUBFOLDER
+
+
+def normalize_quotes(text: str | None) -> str:
+    """Curly double quotes to straight ones, so UI text (curly) matches TSV text (straight)."""
+    return (text or "").translate(_CURLY_DOUBLE_QUOTES)
+
+
+def parse_expected_errors_cell(raw: str | None) -> list[str]:
+    """One expected_errors cell as a list of messages (Katalon parseExpectedErrorsToList).
+
+    Accepts a plain message, a CSV-style quoted message ("" for an inner quote), or a
+    list written as ['msg1', 'msg2']. A blank cell gives an empty list.
+    """
+    text = unquote_csv_style(raw)
+    if not text:
+        return []
+    text = text.strip()
+    if text.startswith("[") and text.endswith("]"):
+        inner = text[1:-1].strip()
+        if not inner:
+            return []
+        marker = "\x00"
+        for separator in _LIST_SEPARATORS:
+            inner = inner.replace(separator, marker)
+        segments = [segment.strip() for segment in inner.split(marker)]
+        # Separators consumed the quotes between items, so only the list's own first and
+        # last quote are left to remove.
+        if segments[0][:1] in ("'", '"'):
+            segments[0] = segments[0][1:]
+        if segments[-1][-1:] in ("'", '"'):
+            segments[-1] = segments[-1][:-1]
+        return [item.strip() for item in segments if item.strip()]
+    return [text]
+
+
+def load_expected_upload_errors(tc_name: str, root: Path | None = None) -> list[str]:
+    """Every expected error from expected/*.tsv for the TC (Katalon loadAggregatedExpectedErrorsForUi).
+
+    A TSV without an expected_errors or expected_error column is skipped, as in Katalon.
+    Raises FileNotFoundError if the folder or its TSVs are missing, and ValueError if the
+    files hold no errors at all.
+    """
+    folder = expected_upload_errors_dir(tc_name, root)
+    if not folder.is_dir():
+        raise FileNotFoundError(f"Upload Errors expected folder not found: {folder}")
+    files = sorted(p for p in folder.iterdir() if p.is_file() and p.suffix.lower() == ".tsv")
+    if not files:
+        raise FileNotFoundError(f"no .tsv files in {folder}")
+    errors: list[str] = []
+    for path in files:
+        lines = _read_tsv_lines(path)
+        if len(lines) < 2:
+            continue
+        headers = [h.strip().lower() for h in lines[0].split("\t")]
+        index = next((headers.index(name) for name in _EXPECTED_ERROR_COLUMNS if name in headers), -1)
+        if index < 0:
+            continue
+        for line in lines[1:]:
+            cells = line.split("\t")
+            if index < len(cells):
+                errors.extend(parse_expected_errors_cell(cells[index]))
+    if not errors:
+        raise ValueError(f"no expected errors loaded from {folder}")
+    return errors
+
+
+def diff_upload_errors(expected: list[str], actual: list[str]) -> tuple[list[str], list[str]]:
+    """(missing, extra) after normalizing quotes; order is ignored, repeats are counted.
+
+    Both empty means the modal shows exactly the expected errors. Katalon requires the two
+    sorted lists to be equal, so extras fail here (unlike diff_error_details_dialog_issues).
+    """
+    want = Counter(normalize_quotes(item).strip() for item in expected)
+    got = Counter(normalize_quotes(item).strip() for item in actual)
+    return sorted((want - got).elements()), sorted((got - want).elements())
+
+
+# ---------------------------------------------------------------------------
+# Validation Results export file name (Katalon clickValidationResultsExportAndVerifyDownloadedFileName)
+# ---------------------------------------------------------------------------
+
+# {submissionName}-{YYYY-MM-DDThhmmss}, with .csv, .xlsx or no extension.
+_EXPORT_FILENAME = re.compile(r"^(.+)-(\d{4}-\d{2}-\d{2}T\d{6})(\.(csv|xlsx))?$")
+
+
+def normalize_submission_name_for_export(name: str | None) -> str:
+    """Submission name as it appears in the export file name: spaces to "-", other symbols dropped."""
+    return re.sub(r"[^a-zA-Z0-9-]", "", (name or "").strip().replace(" ", "-"))
+
+
+def check_export_filename(filename: str, expected_submission_name: str | None = None) -> str | None:
+    """None when filename looks like {name}-YYYY-MM-DDThhmmss[.csv|.xlsx], else why not.
+
+    When expected_submission_name is given, the name part must start with it after
+    normalize_submission_name_for_export (a prefix match, as in Katalon, because the Hub
+    label can be shorter than the name used in the file).
+    """
+    match = _EXPORT_FILENAME.match(filename)
+    if not match:
+        return f"file name {filename!r} does not match {{submissionName}}-YYYY-MM-DDThhmmss[.csv|.xlsx]"
+    if expected_submission_name and expected_submission_name.strip():
+        expected = normalize_submission_name_for_export(expected_submission_name)
+        if not match.group(1).startswith(expected):
+            return f"submission name {match.group(1)!r} in file name does not start with {expected!r}"
+    return None

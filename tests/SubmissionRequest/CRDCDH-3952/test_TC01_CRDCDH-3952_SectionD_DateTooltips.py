@@ -33,8 +33,6 @@ _EXPECTED_PUB_TOOLTIP = (
 
 @pytest.mark.parametrize("hub", ["Submitter"], indirect=True)
 def test_TC01_CRDCDH_3952_SectionD_DateTooltips(hub: Hub) -> None:
-    hub.page.set_viewport_size({"width": 1920, "height": 1080})
-
     sr_list = SubmissionRequestsListPage(hub)
     form = SubmissionRequestFormPage(hub)
 

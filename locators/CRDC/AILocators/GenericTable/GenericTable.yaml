@@ -1,6 +1,8 @@
 # CRDC/AILocators/GenericTable
 
 DataCell: "//*[@data-testid='table-body-cell-with-data']"
+# Every column header cell (sortable or not); sort state is read from its MuiTableSortLabel classes.
+HeaderCell: "//*[starts-with(@data-testid,'generic-table-header-')]"
 LoadingRow: "//*[@data-testid='loading-row']"
 Table: "//*[@data-testid='generic-table']"
 TableBody: "//*[@data-testid='generic-table-body']"

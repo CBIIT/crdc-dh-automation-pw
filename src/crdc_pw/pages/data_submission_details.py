@@ -19,12 +19,15 @@ from crdc_pw.locators.loader import repo_root
 from crdc_pw.pages.base import BasePage
 from crdc_pw.utils.validation_results import (
     diff_error_details_dialog_issues,
+    diff_upload_errors,
     diff_validation_results,
     expected_error_detail_issues_for_row,
+    check_export_filename,
     find_expected_validation_results_tsv,
     list_nodes_from_expected_validation_results_folder,
     list_tsv_files_and_nodes_for_tc,
     load_all_expected_error_detail_rows_from_tsv,
+    load_expected_upload_errors,
     load_expected_validation_results_tsv,
     load_validation_results_mappings,
     unique_severity_issue_type_pairs_from_expected_tsv,
@@ -72,8 +75,19 @@ VR_SEVERITY = "CRDC/DataSubmissions/Validation/ValidationResults_Severity-Ddn"
 VR_ISSUE = "CRDC/DataSubmissions/Validation/ValidationResults_IssueType-Ddn"
 VR_HEADERS = "CRDC/DataSubmissions/Validation/Table-Headers"
 VR_ROW = "CRDC/DataSubmissions/Validation/Table-Row"
+VR_EXPORT = "CRDC/DataSubmissions/Validation/Download-Btn-ValidationResults"
+_EXPORT_DOWNLOAD_DIR = repo_root() / "test-results" / "downloads"
 
 ERR_DIALOG = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/Dialog"
+ERR_LIST = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/ErrorList-Container"
+ERR_ITEM = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/ErrorList-Item"
+
+# Upload Activities tab: batch table rows, the "N Errors" link, and column names to look up.
+_UA_ROW = "CRDC/AILocators/GenericTable/TableRow"
+_UA_ERROR_COUNT = "CRDC/AILocators/DataSubmissions/Detail/UploadActivity/ErrorCount-Btn"
+_UA_TYPE_HEADERS = ("Batch Type", "Type")
+_UA_FILE_COUNT_HEADERS = ("File Count", "Files")
+_UA_STATUS_HEADERS = ("Status",)
 ERR_CLOSE = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/Close-Btn"
 ERR_SEVERITY = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/IssueSeverity-Lbl"
 ERR_MESSAGE = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/IssueMessage-Lbl"
@@ -366,6 +380,58 @@ class DataSubmissionDetailPage(BasePage):
         self._wait_loading_gone()
         self._ensure_validation_results_expanded()
 
+    # --- Validation Results export (Katalon CRDCDH-1035) ---
+
+    def submission_id_from_url(self) -> str:
+        """Submission id (UUID) from the current URL (Katalon getSubmissionIdFromUploadActivityUrl)."""
+        # data_submissions_list imports this module, so import it here, not at the top.
+        from crdc_pw.pages.data_submissions_list import parse_submission_id_from_text
+
+        submission_id = parse_submission_id_from_text(self.page.url)
+        if not submission_id:
+            raise AssertionError(f"No submission id in URL {self.page.url!r}")
+        log.info("Submission ID: %s", submission_id)
+        return submission_id
+
+    def open_upload_activity(self, submission_id: str) -> None:
+        """Open a submission's upload-activity page by id (Katalon navigateToSubmissionUploadActivity)."""
+        url = f"{self._hub.settings.base_url.rstrip('/')}/data-submission/{submission_id}/upload-activity"
+        log.info("Navigating to URL: %s", url)
+        self.page.goto(url, wait_until="domcontentloaded")
+        self._loc(VR_TAB).wait_for(state="visible")
+        self._wait_loading_gone()
+
+    def verify_validation_results_export_enabled(self) -> None:
+        """Validation Results tab: the export button is visible and enabled (Katalon verifyButtonEnabled true)."""
+        self._loc(VR_TAB).click()
+        self._wait_loading_gone()
+        # The table has an export icon above and below it; Katalon used the first match.
+        export = self._loc(VR_EXPORT).first
+        export.wait_for(state="visible")
+        expect(export).to_be_enabled()
+        log.info("Validation Results export button is enabled for %s", self._hub.role)
+
+    def export_validation_results_and_verify_filename(
+        self, submission_name: str, *, timeout_s: float = 60
+    ) -> Path:
+        """Click Export on the Validation Results tab, save the download and check its file name.
+
+        Katalon clicked, slept, and read the newest file in Downloads; this waits for the
+        download event instead. Returns the saved path under test-results/downloads.
+        """
+        _EXPORT_DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        with self.page.expect_download(timeout=timeout_s * 1000) as download_info:
+            self._loc(VR_EXPORT).first.click()
+        download = download_info.value
+        name = download.suggested_filename or ""
+        problem = check_export_filename(name, submission_name)
+        if problem:
+            raise AssertionError(f"Validation Results export: {problem}")
+        dest = _EXPORT_DOWNLOAD_DIR / name
+        download.save_as(dest)
+        log.info("Validation Results export verified: %s", name)
+        return dest
+
     def _vr_node_filter_visible(self) -> bool:
         try:
             self._loc(VR_NODE).first.wait_for(state="visible", timeout=self.PROBE_MS)
@@ -533,6 +599,123 @@ class DataSubmissionDetailPage(BasePage):
         """Close the error-details dialog and wait until it is hidden."""
         self._loc(ERR_CLOSE).click()
         self._loc(ERR_DIALOG).wait_for(state="hidden", timeout=5_000)
+
+    # --- Upload Activities tab (Katalon verifyUploadActivitiesBatchRow / FailedErrorsModal) ---
+
+    @staticmethod
+    def _first_header_index(names: list[str], candidates: tuple[str, ...]) -> int:
+        """Index of the first header equal (case-insensitive) to any candidate, in candidate order."""
+        for candidate in candidates:
+            index = _header_index(names, candidate)
+            if index >= 0:
+                return index
+        return -1
+
+    def _upload_batch_row_problem(
+        self, batch_type: str, expected_file_count: int, expected_status: str
+    ) -> str | None:
+        """None when some Upload Activities row matches type, file count and status, else why not."""
+        headers = [" ".join(text.split()) for text in self._loc(VR_HEADERS).all_inner_texts()]
+        type_i = self._first_header_index(headers, _UA_TYPE_HEADERS)
+        count_i = self._first_header_index(headers, _UA_FILE_COUNT_HEADERS)
+        status_i = self._first_header_index(headers, _UA_STATUS_HEADERS)
+        if min(type_i, count_i, status_i) < 0:
+            return f"Batch Type, File Count or Status column not found; headers are {headers}"
+        rows = self._read_table_rows_full_text(self._loc(_UA_ROW))
+        if not rows:
+            return "no batch rows in the Upload Activities table"
+        seen: list[tuple[str, str, str]] = []
+        for cells in rows:
+            if len(cells) <= max(type_i, count_i, status_i):
+                continue
+            row_type, count_text, row_status = cells[type_i], cells[count_i], cells[status_i]
+            seen.append((row_type, count_text, row_status))
+            digits = re.sub(r"\D", "", count_text)
+            if (
+                row_type.strip().lower() == batch_type.strip().lower()
+                and digits
+                and int(digits) == expected_file_count
+                and row_status.strip().lower() == expected_status.strip().lower()
+            ):
+                return None
+        return (
+            f"no {batch_type} batch with {expected_file_count} file(s) and status "
+            f"{expected_status!r}; rows seen (type, files, status): {seen}"
+        )
+
+    def verify_upload_activities_batch_row(
+        self, batch_type: str, expected_file_count: int, expected_status: str
+    ) -> None:
+        """Upload Activities has a batch of batch_type with expected_file_count files and expected_status.
+
+        Polls up to the Hub default, because a batch can still read Uploading just after the
+        upload indicator clears. Katalon stopped at the first row of the right type; this
+        passes if any row matches.
+        """
+        if not expected_status.strip():
+            raise ValueError("verify_upload_activities_batch_row: expected_status is required")
+        self._poll_until(
+            lambda: self._upload_batch_row_problem(batch_type, expected_file_count, expected_status)
+            is None
+        )
+        problem = self._upload_batch_row_problem(batch_type, expected_file_count, expected_status)
+        if problem:
+            raise AssertionError(f"Upload Activities batch row: {problem}")
+        log.info(
+            "Upload Activities: found %s batch, %s file(s), status %s",
+            batch_type,
+            expected_file_count,
+            expected_status,
+        )
+
+    def read_upload_errors_modal_messages(self) -> list[str]:
+        """Messages in the open Upload Errors modal, without the leading "1. " numbering.
+
+        Reads the numbered list items; if none are numbered, splits the container text on
+        the numbers (Katalon fallback).
+        """
+        self._loc(ERR_LIST).wait_for(state="visible", timeout=10_000)
+        numbered = [text.strip() for text in self._loc(ERR_ITEM).all_inner_texts()]
+        messages = [
+            re.sub(r"^\d+\.\s*", "", text)
+            for text in numbered
+            if re.match(r"\d+\.\s+.+", text)
+        ]
+        if messages:
+            return messages
+        container_text = self._loc(ERR_LIST).first.inner_text() or ""
+        return [part.strip() for part in re.split(r"\d+\.\s", container_text)[1:] if part.strip()]
+
+    def verify_upload_errors_modal(self, tc_name: str) -> None:
+        """Open the first Upload Errors link and compare the modal with expected/*.tsv for tc_name.
+
+        The two lists must be equal ignoring order and curly versus straight quotes; the
+        modal is always closed again.
+        """
+        expected = load_expected_upload_errors(tc_name)
+        link = self._loc(_UA_ERROR_COUNT).first
+        try:
+            link.wait_for(state="visible", timeout=10_000)
+        except PlaywrightTimeoutError:
+            raise AssertionError("Upload Errors link not found on the Upload Activities tab") from None
+        link.click()
+        self._loc(ERR_DIALOG).wait_for(state="visible", timeout=10_000)
+        try:
+            actual = self.read_upload_errors_modal_messages()
+        finally:
+            try:
+                self.close_error_details_dialog()
+            except PlaywrightTimeoutError:
+                log.info("Upload Errors modal did not close cleanly")
+        missing, extra = diff_upload_errors(expected, actual)
+        log.info("Upload Errors modal: expected %d, actual %d", len(expected), len(actual))
+        if missing or extra:
+            raise AssertionError(
+                f"Upload Errors modal for {tc_name}: expected {len(expected)} error(s), "
+                f"actual {len(actual)}. Expected but not shown: {missing[:3]}"
+                f"{'...' if len(missing) > 3 else ''}. Shown but not expected: {extra[:3]}"
+                f"{'...' if len(extra) > 3 else ''}"
+            )
 
     def verify_error_details_for_submitted_id(
         self,

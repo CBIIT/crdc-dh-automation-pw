@@ -78,6 +78,19 @@ def test_published_notes_oracle_lines_first_section_cap() -> None:
 
 
 @pytest.mark.unit
+def test_published_notes_oracle_lines_drop_trailing_hard_break_backslash() -> None:
+    body = (
+        "## 3.7.1 (Released 11/16/2026)\n\n"
+        "- Data file upload services are now able to automatically detect certain \\\n"
+        "  data file upload errors earlier in the upload process.\n"
+    )
+    assert published_notes_oracle_lines(body) == [
+        "3.7.1 (Released 11/16/2026)",
+        "Data file upload services are now able to automatically detect certain",
+    ]
+
+
+@pytest.mark.unit
 def test_first_stable_bullet_when_no_heading() -> None:
     body = "- Previously approved forms can be reopened.\n"
     assert (
