@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import pytest
+
 from crdc_pw.utils.ui_helpers import diff_history_statuses, normalize_history_status
+
+pytestmark = pytest.mark.unit
 
 EXPECTED = ["COMPLETED", "RELEASED", "SUBMITTED", "REJECTED", "SUBMITTED", "INPROGRESS", "NEW"]
 
