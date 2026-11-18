@@ -6,7 +6,7 @@ import logging
 import re
 import time
 
-from typing import Protocol
+from typing import Protocol, Sequence
 
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -16,6 +16,10 @@ log = logging.getLogger("crdc_pw.ui_helpers")
 
 __all__ = [
     "assert_button_enabled",
+    "assert_button_selected",
+    "assert_element_text",
+    "diff_history_statuses",
+    "normalize_history_status",
     "verify_tooltip_on_click",
     "verify_tooltip_on_click_page",
     "verify_tooltip_on_click_path",
@@ -218,3 +222,38 @@ def assert_button_enabled(button: Locator, expected_enabled: bool) -> None:
         expect(button.first).to_be_enabled()
     else:
         expect(button.first).to_be_disabled()
+
+
+def assert_button_selected(control: Locator, expected_selected: bool) -> None:
+    """Assert a radio, checkbox or toggle is selected or not (Katalon verifyButtonSelected)."""
+    if expected_selected:
+        expect(control.first).to_be_checked()
+    else:
+        expect(control.first).not_to_be_checked()
+
+
+def assert_element_text(element: Locator, expected: str) -> None:
+    """Assert the element text equals expected, waiting for it to update (Katalon verifyElementText).
+
+    Whitespace is collapsed on both sides, as in Katalon.
+    """
+    expect(element.first).to_have_text(_normalize_whitespace(expected))
+
+
+def normalize_history_status(text: str) -> str:
+    """Strip all whitespace and upper-case, so "In Progress" and "INPROGRESS" compare equal."""
+    return re.sub(r"\s+", "", text or "").upper()
+
+
+def diff_history_statuses(
+    expected_newest_first: Sequence[str], actual_newest_first: Sequence[str]
+) -> str | None:
+    """None when the Full History statuses match in order and length, else a reason string.
+
+    Katalon verifyFullSubmissionHistory: whitespace and case are ignored.
+    """
+    expected = [normalize_history_status(s) for s in expected_newest_first]
+    actual = [normalize_history_status(s) for s in actual_newest_first]
+    if expected == actual:
+        return None
+    return f"history (newest first): expected {', '.join(expected)}; actual {', '.join(actual)}"

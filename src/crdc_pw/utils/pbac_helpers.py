@@ -201,7 +201,7 @@ def _ds_or_explorer_list_has_positive_rows(rows) -> bool:
     return n > 0
 
 
-def _prepare_unique_program_tsv() -> Path:
+def prepare_unique_program_tsv() -> Path:
     """Same uniqueness idea as Katalon prepareUniqueMetadataAndUpload (program_acronym)."""
     root = repo_root()
     src = root / PROGRAM_TSV
@@ -524,7 +524,7 @@ def _functional_data_submission_review(hub: Hub, _role: str, scenario: str) -> b
         detail = DataSubmissionDetailPage(hub)
         log.info("DS PBAC (review): waiting for detail loading spinner")
         detail.wait_loading_spinner_gone()
-        temp = _prepare_unique_program_tsv()
+        temp = prepare_unique_program_tsv()
         try:
             detail.upload_metadata_file(temp)
         finally:
@@ -585,7 +585,7 @@ def _functional_data_submission_confirm(hub: Hub, user_role: str, scenario: str)
         detail = DataSubmissionDetailPage(hub)
         log.info("DS PBAC (confirm): waiting for detail loading spinner")
         detail.wait_loading_spinner_gone()
-        temp = _prepare_unique_program_tsv()
+        temp = prepare_unique_program_tsv()
         try:
             detail.upload_metadata_file(temp)
         finally:
