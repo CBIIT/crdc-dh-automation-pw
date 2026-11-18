@@ -93,6 +93,17 @@ ERR_SEVERITY = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/IssueSeverity
 ERR_MESSAGE = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/IssueMessage-Lbl"
 
 SUMMARY_SUBMISSION_NAME = "CRDC/AILocators/DataSubmissions/Detail/Summary/SubmissionName-Lbl"
+SUMMARY_STATUS = "CRDC/AILocators/DataSubmissions/Detail/Summary/Status-Lbl"
+VALIDATE_CONTROL = "CRDC/AILocators/DataSubmissions/Detail/ValidationControls/Validate-Btn"
+VALIDATION_TYPE_METADATA = (
+    "CRDC/AILocators/DataSubmissions/Detail/ValidationControls/ValidationType-Metadata-RadioBtn"
+)
+VALIDATION_TARGET_ALL = (
+    "CRDC/AILocators/DataSubmissions/Detail/ValidationControls/ValidationTarget-AllUploadedData-RadioBtn"
+)
+VALIDATION_TARGET_NEW = (
+    "CRDC/AILocators/DataSubmissions/Detail/ValidationControls/ValidationTarget-NewUploadedData-RadioBtn"
+)
 SUMMARY_COLLABORATORS_BTN = "CRDC/AILocators/DataSubmissions/Detail/Summary/Collaborators-Btn"
 SUMMARY_HEADER_ROOT = "CRDC/AILocators/DataSubmissions/Detail/Summary/SummaryHeader-Root"
 _TRUNCATED = 15
@@ -112,6 +123,14 @@ _ACTION_REJECT = "CRDC/AILocators/DataSubmissions/Detail/Actions/Reject-Btn"
 _ACTION_WITHDRAW = "CRDC/AILocators/DataSubmissions/Detail/Actions/Withdraw-Btn"
 _ACTION_ADMIN_SUBMIT = "CRDC/AILocators/DataSubmissions/Detail/Actions/AdminSubmit-Btn"
 _ACTION_CANCEL = "CRDC/AILocators/DataSubmissions/Detail/Actions/Cancel-Btn"
+_ACTION_REJECT_COMMENT = "CRDC/AILocators/DataSubmissions/Detail/Actions/RejectDsComment-Txtbx"
+_ACTION_CONFIRM_REJECT = "CRDC/AILocators/DataSubmissions/Detail/Actions/ConfirmToReject-Btn"
+_COMPLETE_CONFIRMATION_YES = "CRDC/AILocators/DataSubmissions/Detail/Actions/CompleteConfirmationYes-Btn"
+SUMMARY_FULL_HISTORY = "CRDC/AILocators/DataSubmissions/Detail/Summary/FullHistory-Btn"
+HISTORY_DIALOG = "CRDC/AILocators/DataSubmissions/HistoryDialog/Dialog"
+HISTORY_CLOSE = "CRDC/AILocators/DataSubmissions/HistoryDialog/Close-Btn"
+HISTORY_ITEM_STATUS = "CRDC/AILocators/DataSubmissions/HistoryDialog/Item-Status"
+HISTORY_ITEM0_STATUS = "CRDC/AILocators/DataSubmissions/HistoryDialog/Item0-Status"
 
 
 def _header_index(names: list[str], wanted: str) -> int:
@@ -132,6 +151,86 @@ class DataSubmissionDetailPage(BasePage):
     def collaborators_button(self) -> Locator:
         """Collaborators control on the summary header (tooltip hover target)."""
         return self._loc(SUMMARY_COLLABORATORS_BTN)
+
+    @property
+    def status_label(self) -> Locator:
+        """Submission status in the summary header (Submitted, Rejected, ...)."""
+        return self._loc(SUMMARY_STATUS)
+
+    @property
+    def validate_button(self) -> Locator:
+        """Validate button in the validation controls."""
+        return self._loc(VALIDATE_CONTROL)
+
+    @property
+    def validation_type_metadata_radio(self) -> Locator:
+        """Validation Type: Metadata."""
+        return self._loc(VALIDATION_TYPE_METADATA)
+
+    @property
+    def validation_target_all_radio(self) -> Locator:
+        """Validation Target: All Uploaded Data."""
+        return self._loc(VALIDATION_TARGET_ALL)
+
+    @property
+    def validation_target_new_radio(self) -> Locator:
+        """Validation Target: New Uploaded Data."""
+        return self._loc(VALIDATION_TARGET_NEW)
+
+    @property
+    def reject_button(self) -> Locator:
+        """Reject action (Dcp or Fedlead on a Submitted submission)."""
+        return self._loc(_ACTION_REJECT)
+
+    @property
+    def reject_comment(self) -> Locator:
+        """Reject justification text box in the reject dialog."""
+        return self._loc(_ACTION_REJECT_COMMENT)
+
+    @property
+    def confirm_reject_button(self) -> Locator:
+        """Confirm to Reject button in the reject dialog."""
+        return self._loc(_ACTION_CONFIRM_REJECT)
+
+    @property
+    def cross_validate_button(self) -> Locator:
+        """Cross Validate button in the validation controls."""
+        return self._loc(_CROSS_VALIDATE)
+
+    @property
+    def complete_button(self) -> Locator:
+        """Complete action (after Release)."""
+        return self._loc(_ACTION_COMPLETE)
+
+    @property
+    def complete_confirmation_yes(self) -> Locator:
+        """Yes button on the Complete confirmation dialog."""
+        return self._loc(_COMPLETE_CONFIRMATION_YES)
+
+    @property
+    def full_history_button(self) -> Locator:
+        """Full History button in the summary header."""
+        return self._loc(SUMMARY_FULL_HISTORY)
+
+    @property
+    def history_dialog(self) -> Locator:
+        """Submission History dialog."""
+        return self._loc(HISTORY_DIALOG)
+
+    @property
+    def history_close_button(self) -> Locator:
+        """Close button of the Submission History dialog."""
+        return self._loc(HISTORY_CLOSE)
+
+    def read_history_statuses(self) -> list[str]:
+        """Status text of each Submission History row, newest first (dialog must be open).
+
+        Waits for the first row so the full list is rendered before reading (as Katalon does).
+        """
+        self._loc(HISTORY_ITEM0_STATUS).first.wait_for(state="visible", timeout=10_000)
+        cells = self._loc(HISTORY_ITEM_STATUS)
+        texts = [(cells.nth(i).inner_text() or "").strip() for i in range(cells.count())]
+        return [t for t in texts if t]
 
     @property
     def submission_name_tooltip_trigger(self) -> Locator:
