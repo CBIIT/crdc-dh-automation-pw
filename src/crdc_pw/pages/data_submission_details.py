@@ -22,6 +22,7 @@ from crdc_pw.utils.validation_results import (
     diff_upload_errors,
     diff_validation_results,
     expected_error_detail_issues_for_row,
+    check_export_filename,
     find_expected_validation_results_tsv,
     list_nodes_from_expected_validation_results_folder,
     list_tsv_files_and_nodes_for_tc,
@@ -74,6 +75,8 @@ VR_SEVERITY = "CRDC/DataSubmissions/Validation/ValidationResults_Severity-Ddn"
 VR_ISSUE = "CRDC/DataSubmissions/Validation/ValidationResults_IssueType-Ddn"
 VR_HEADERS = "CRDC/DataSubmissions/Validation/Table-Headers"
 VR_ROW = "CRDC/DataSubmissions/Validation/Table-Row"
+VR_EXPORT = "CRDC/DataSubmissions/Validation/Download-Btn-ValidationResults"
+_EXPORT_DOWNLOAD_DIR = repo_root() / "test-results" / "downloads"
 
 ERR_DIALOG = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/Dialog"
 ERR_LIST = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/ErrorList-Container"
@@ -376,6 +379,58 @@ class DataSubmissionDetailPage(BasePage):
         self._loc(VR_TAB).click()
         self._wait_loading_gone()
         self._ensure_validation_results_expanded()
+
+    # --- Validation Results export (Katalon CRDCDH-1035) ---
+
+    def submission_id_from_url(self) -> str:
+        """Submission id (UUID) from the current URL (Katalon getSubmissionIdFromUploadActivityUrl)."""
+        # data_submissions_list imports this module, so import it here, not at the top.
+        from crdc_pw.pages.data_submissions_list import parse_submission_id_from_text
+
+        submission_id = parse_submission_id_from_text(self.page.url)
+        if not submission_id:
+            raise AssertionError(f"No submission id in URL {self.page.url!r}")
+        log.info("Submission ID: %s", submission_id)
+        return submission_id
+
+    def open_upload_activity(self, submission_id: str) -> None:
+        """Open a submission's upload-activity page by id (Katalon navigateToSubmissionUploadActivity)."""
+        url = f"{self._hub.settings.base_url.rstrip('/')}/data-submission/{submission_id}/upload-activity"
+        log.info("Navigating to URL: %s", url)
+        self.page.goto(url, wait_until="domcontentloaded")
+        self._loc(VR_TAB).wait_for(state="visible")
+        self._wait_loading_gone()
+
+    def verify_validation_results_export_enabled(self) -> None:
+        """Validation Results tab: the export button is visible and enabled (Katalon verifyButtonEnabled true)."""
+        self._loc(VR_TAB).click()
+        self._wait_loading_gone()
+        # The table has an export icon above and below it; Katalon used the first match.
+        export = self._loc(VR_EXPORT).first
+        export.wait_for(state="visible")
+        expect(export).to_be_enabled()
+        log.info("Validation Results export button is enabled for %s", self._hub.role)
+
+    def export_validation_results_and_verify_filename(
+        self, submission_name: str, *, timeout_s: float = 60
+    ) -> Path:
+        """Click Export on the Validation Results tab, save the download and check its file name.
+
+        Katalon clicked, slept, and read the newest file in Downloads; this waits for the
+        download event instead. Returns the saved path under test-results/downloads.
+        """
+        _EXPORT_DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        with self.page.expect_download(timeout=timeout_s * 1000) as download_info:
+            self._loc(VR_EXPORT).first.click()
+        download = download_info.value
+        name = download.suggested_filename or ""
+        problem = check_export_filename(name, submission_name)
+        if problem:
+            raise AssertionError(f"Validation Results export: {problem}")
+        dest = _EXPORT_DOWNLOAD_DIR / name
+        download.save_as(dest)
+        log.info("Validation Results export verified: %s", name)
+        return dest
 
     def _vr_node_filter_visible(self) -> bool:
         try:
