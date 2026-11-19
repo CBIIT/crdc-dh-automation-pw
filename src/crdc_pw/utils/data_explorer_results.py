@@ -12,14 +12,27 @@ from crdc_pw.utils.validation_results import metadata_dir, node_from_filename, r
 
 
 def find_expected_data_explorer_tsv(tc_name: str, node: str, root: Path | None = None) -> Path | None:
-    """First TSV under <tc>/ then <tc>/Metadata/ whose node (see node_from_filename) equals node, ignoring case."""
+    """First TSV under <tc>/ then <tc>/Metadata/ for the node, ignoring case.
+
+    Two names are accepted. The literal file name without .tsv (consent_group.tsv is consent_group)
+    is tried first, in both folders, so an exact name always wins. Then the upload-style node from
+    node_from_filename (GC_diagnosis_v11.0.3.tsv is diagnosis), which drops the text before the
+    first underscore and so cannot find a plain name that contains an underscore.
+    """
     base = metadata_dir(tc_name, root)
-    for folder in (base, base / "Metadata"):
-        if not folder.is_dir():
-            continue
-        for path in sorted(folder.glob("*.tsv")):
-            if node_from_filename(path.name).lower() == node.strip().lower():
-                return path
+    wanted = node.strip().lower()
+    paths = [
+        path
+        for folder in (base, base / "Metadata")
+        if folder.is_dir()
+        for path in sorted(folder.glob("*.tsv"))
+    ]
+    for path in paths:
+        if path.stem.lower() == wanted:
+            return path
+    for path in paths:
+        if node_from_filename(path.name).lower() == wanted:
+            return path
     return None
 
 

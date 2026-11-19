@@ -56,6 +56,23 @@ def test_find_expected_tsv_uses_metadata_subfolder_and_ignores_case(tmp_path: Pa
     assert find_expected_data_explorer_tsv("TC", "study", root=tmp_path) is None
 
 
+def test_find_expected_tsv_matches_plain_name_with_underscore() -> None:
+    """consent_group.tsv is consent_group, though node_from_filename reads it as group."""
+    path = find_expected_data_explorer_tsv("CRDCDH-3026", "consent_group")
+    assert path is not None and path.name == "consent_group.tsv"
+
+
+def test_find_expected_tsv_literal_name_wins_over_upload_style_name(tmp_path: Path) -> None:
+    _write_tsv(tmp_path, "TC", "GC_study_arm.tsv", "type\tid\nstudy_arm\tupload\n")
+    _write_tsv(tmp_path, "TC", "study_arm.tsv", "type\tid\nstudy_arm\tliteral\n")
+    path = find_expected_data_explorer_tsv("TC", "study_arm", root=tmp_path)
+    assert path is not None and path.name == "study_arm.tsv"
+    # The upload-style name is still found when there is no plain file
+    (tmp_path / "InputFiles" / "CRDC" / "MetadataData" / "TC" / "study_arm.tsv").unlink()
+    path = find_expected_data_explorer_tsv("TC", "study_arm", root=tmp_path)
+    assert path is not None and path.name == "GC_study_arm.tsv"
+
+
 def test_load_unquotes_values_and_sorts_ignoring_case(tmp_path: Path) -> None:
     _write_tsv(tmp_path, "TC", "study.tsv", 'type\tstudy_id\tnote\nstudy\tb2\t"quoted"\nstudy\tA1\t\n')
     headers, rows = load_expected_data_explorer_table("TC", "study", root=tmp_path)
