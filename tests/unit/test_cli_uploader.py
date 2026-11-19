@@ -16,12 +16,16 @@ from __future__ import annotations
 import stat
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
+from typing import cast
 
 import pytest
 import yaml
 
 import crdc_pw.pages.cli_uploader as cli_uploader
+import crdc_pw.utils.validation_results as validation_results
 from crdc_pw.config import Settings
+from crdc_pw.hub import Hub
 from crdc_pw.pages.cli_uploader import (
     TYPE_DATA_FILE,
     TYPE_METADATA,
@@ -79,9 +83,7 @@ def test_build_config_data_file(tmp_path: Path) -> None:
 
 
 def test_build_config_metadata_has_no_manifest(tmp_path: Path) -> None:
-    config = build_config(
-        api_url="u", token="t", submission_id="s", upload_type=TYPE_METADATA, data_dir=tmp_path
-    )
+    config = build_config(api_url="u", token="t", submission_id="s", upload_type=TYPE_METADATA, data_dir=tmp_path)
     assert "manifest" not in config["Config"]
 
 
@@ -115,7 +117,7 @@ def test_exit_code_and_failure_line_are_reported() -> None:
     problems = cli_output_problems(CliResult(1, output))
     assert "CLI exit code 1" in problems
     assert "CLI output contains 'Failed to upload files'" in problems
-    assert "CLI output contains \"can't get data file config\"" in problems
+    assert 'CLI output contains "can\'t get data file config"' in problems
 
 
 def test_missing_success_lines_are_reported() -> None:
@@ -237,6 +239,21 @@ def test_has_zip_files(tmp_path: Path) -> None:
     assert has_zip_files(tmp_path)
 
 
+_SUBMISSION_ID = "5bdb2b5c-984d-5562-b329-1631f206c7da"
+
+
+def _hub(settings: Settings, url: str | None = None) -> Hub:
+    """Just what upload_files_via_cli reads from the hub: settings and the page URL."""
+    page = SimpleNamespace(url=url or f"https://hub/data-submission/{_SUBMISSION_ID}/upload-activity")
+    return cast("Hub", SimpleNamespace(settings=settings, page=page))
+
+
+@pytest.fixture(autouse=True)
+def _repo_root_is_tmp_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Input folders (InputFiles/CRDC/MetadataData/<tc>) are looked up under tmp_path, not the repo."""
+    monkeypatch.setattr(validation_results, "repo_root", lambda: tmp_path)
+
+
 def _input_folder(root: Path, tc: str, folder: str, files: dict[str, str]) -> Path:
     path = root / "InputFiles" / "CRDC" / "MetadataData" / tc / folder
     path.mkdir(parents=True)
@@ -281,14 +298,14 @@ def test_upload_data_files_leaves_inputs_alone_and_copies_manifest_files(
     monkeypatch.setattr(cli_uploader, "run_uploader", fake)
     settings = _settings(SubmitterApiToken="tok", ApiUrl="https://hub/api/graphql", CRDC_MANIFEST_ID_FIELD="my_id")
 
-    upload = upload_files_via_cli(settings, "sub-1", "TC", "datafile", tmp_path / "run", root=tmp_path)
+    upload = upload_files_via_cli(_hub(settings), "TC", "datafile", work_dir=tmp_path / "run")
 
     config = fake.configs[0]
     manifest_dir = tmp_path / "run" / "manifest"
     assert upload.data_dir == source and upload.manifest == manifest_dir / "manifest.tsv"
     assert upload.cli_work_dir == tmp_path / "run" / "cli"
     assert config["api-url"] == "https://hub/api/graphql" and config["token"] == "tok"
-    assert config["submission"] == "sub-1" and config["type"] == "data file"
+    assert config["submission"] == _SUBMISSION_ID and config["type"] == "data file"
     assert config["data"] == str(source.resolve())
     assert config["manifest"] == str(upload.manifest.resolve()) and config["id-field"] == "my_id"
     assert "archive_manifest" not in config
@@ -309,23 +326,35 @@ def test_upload_passes_configured_python_to_the_runner(tmp_path: Path, monkeypat
     fake = _FakeRun(CliResult(0, _GOOD_OUTPUT))
     monkeypatch.setattr(cli_uploader, "run_uploader", fake)
     upload_files_via_cli(
-        _settings(SubmitterApiToken="tok", CRDC_CLI_PYTHON="/opt/py313/bin/python"),
-        "sub-1",
+        _hub(_settings(SubmitterApiToken="tok", CRDC_CLI_PYTHON="/opt/py313/bin/python")),
         "TC",
         "datafile",
-        tmp_path / "run",
-        root=tmp_path,
+        work_dir=tmp_path / "run",
     )
     assert fake.pythons == ["/opt/py313/bin/python"]
+
+
+def test_upload_without_work_dir_uses_a_new_temporary_folder_each_call(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _input_folder(tmp_path, "TC", "DataFiles", {"manifest.tsv": "x"})
+    monkeypatch.setattr(cli_uploader, "run_uploader", _FakeRun(CliResult(0, _GOOD_OUTPUT)))
+    monkeypatch.setattr(
+        cli_uploader.tempfile, "mkdtemp", lambda prefix="": str(tmp_path / f"{prefix}{len(list(tmp_path.iterdir()))}")
+    )
+    settings = _settings(SubmitterApiToken="tok")
+    first = upload_files_via_cli(_hub(settings), "TC", "datafile")
+    second = upload_files_via_cli(_hub(settings), "TC", "datafile")
+    assert first.manifest is not None and second.manifest is not None
+    assert first.manifest != second.manifest
+    assert first.manifest.parent.parent.name.startswith("crdc-cli-")
 
 
 def test_upload_metadata_uses_metadata_folder_without_manifest(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _input_folder(tmp_path, "TC", "Metadata", {"GC_study.tsv": "type\tid\n"})
     fake = _FakeRun(CliResult(0, _GOOD_OUTPUT))
     monkeypatch.setattr(cli_uploader, "run_uploader", fake)
-    upload = upload_files_via_cli(
-        _settings(SubmitterApiToken="tok"), "sub-1", "TC", "metadata", tmp_path / "run", root=tmp_path
-    )
+    upload = upload_files_via_cli(_hub(_settings(SubmitterApiToken="tok")), "TC", "metadata", work_dir=tmp_path / "run")
     assert upload.manifest is None and upload.data_dir.name == "Metadata"
     assert not (tmp_path / "run" / "manifest").exists()
     assert fake.configs[0]["type"] == "metadata" and "manifest" not in fake.configs[0]
@@ -335,9 +364,7 @@ def test_upload_failed_run_raises_with_output(tmp_path: Path, monkeypatch: pytes
     _input_folder(tmp_path, "TC", "DataFiles", {"manifest.tsv": "x"})
     monkeypatch.setattr(cli_uploader, "run_uploader", _FakeRun(CliResult(0, "Failed to upload files: nope")))
     with pytest.raises(AssertionError, match="CLI upload problems"):
-        upload_files_via_cli(
-            _settings(SubmitterApiToken="tok"), "sub-1", "TC", "datafile", tmp_path / "run", root=tmp_path
-        )
+        upload_files_via_cli(_hub(_settings(SubmitterApiToken="tok")), "TC", "datafile", work_dir=tmp_path / "run")
 
 
 def test_upload_expect_validation_errors_returns_unchecked_result(
@@ -346,13 +373,11 @@ def test_upload_expect_validation_errors_returns_unchecked_result(
     _input_folder(tmp_path, "TC", "DataFiles", {"manifest.tsv": "x"})
     monkeypatch.setattr(cli_uploader, "run_uploader", _FakeRun(CliResult(1, "found invalid file(s)")))
     upload = upload_files_via_cli(
-        _settings(SubmitterApiToken="tok"),
-        "sub-1",
+        _hub(_settings(SubmitterApiToken="tok")),
         "TC",
         "datafile",
-        tmp_path / "run",
+        work_dir=tmp_path / "run",
         expect_validation_errors=True,
-        root=tmp_path,
     )
     assert upload.result.exit_code == 1
 
@@ -363,10 +388,10 @@ def test_upload_zip_files_need_archive_manifest(tmp_path: Path, monkeypatch: pyt
     monkeypatch.setattr(cli_uploader, "run_uploader", fake)
     settings = _settings(SubmitterApiToken="tok")
     with pytest.raises(AssertionError, match="zip-archive-manifest.tsv is required"):
-        upload_files_via_cli(settings, "sub-1", "TC", "datafile", tmp_path / "run1", root=tmp_path)
+        upload_files_via_cli(_hub(settings), "TC", "datafile", work_dir=tmp_path / "run1")
 
     (source / "zip-archive-manifest.tsv").write_text("x", encoding="utf-8")
-    upload = upload_files_via_cli(settings, "sub-1", "TC", "datafile", tmp_path / "run2", root=tmp_path)
+    upload = upload_files_via_cli(_hub(settings), "TC", "datafile", work_dir=tmp_path / "run2")
     manifest_dir = tmp_path / "run2" / "manifest"
     assert fake.configs[-1]["archive_manifest"] == str((manifest_dir / "zip-archive-manifest.tsv").resolve())
     assert fake.configs[-1]["data"] == str(source.resolve())
@@ -382,13 +407,11 @@ def test_upload_zip_files_need_archive_manifest_even_when_errors_are_expected(
     monkeypatch.setattr(cli_uploader, "run_uploader", fake)
     with pytest.raises(AssertionError, match="zip-archive-manifest.tsv is required"):
         upload_files_via_cli(
-            _settings(SubmitterApiToken="tok"),
-            "sub-1",
+            _hub(_settings(SubmitterApiToken="tok")),
             "TC",
             "datafile",
-            tmp_path / "run",
+            work_dir=tmp_path / "run",
             expect_validation_errors=True,
-            root=tmp_path,
         )
     assert fake.configs == []  # the CLI was never started
 
@@ -400,26 +423,26 @@ def test_upload_can_leave_out_archive_manifest_when_errors_are_expected(
     fake = _FakeRun(CliResult(1, "No archive manifest found for a.zip"))
     monkeypatch.setattr(cli_uploader, "run_uploader", fake)
     upload_files_via_cli(
-        _settings(SubmitterApiToken="tok"),
-        "sub-1",
+        _hub(_settings(SubmitterApiToken="tok")),
         "TC",
         "datafile",
-        tmp_path / "run",
+        work_dir=tmp_path / "run",
         expect_validation_errors=True,
         omit_archive_manifest=True,
-        root=tmp_path,
     )
     assert "archive_manifest" not in fake.configs[0]
 
 
 def test_upload_missing_token_folder_and_submission_id_raise(tmp_path: Path) -> None:
     with pytest.raises(AssertionError, match="SubmitterApiToken is empty"):
-        upload_files_via_cli(_settings(), "sub-1", "TC", "datafile", tmp_path / "run", root=tmp_path)
+        upload_files_via_cli(_hub(_settings()), "TC", "datafile", work_dir=tmp_path / "run")
     settings = _settings(SubmitterApiToken="tok")
-    with pytest.raises(AssertionError, match="submission id"):
-        upload_files_via_cli(settings, "", "TC", "datafile", tmp_path / "run", root=tmp_path)
+    with pytest.raises(AssertionError, match="submission id in the page URL"):
+        upload_files_via_cli(
+            _hub(settings, url="https://hub/data-submissions"), "TC", "datafile", work_dir=tmp_path / "run"
+        )
     with pytest.raises(AssertionError, match="input folder not found"):
-        upload_files_via_cli(settings, "sub-1", "TC", "datafile", tmp_path / "run", root=tmp_path)
+        upload_files_via_cli(_hub(settings), "TC", "datafile", work_dir=tmp_path / "run")
 
 
 class _FakeInterpreter:

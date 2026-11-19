@@ -6,7 +6,8 @@ ensure_cli_dependencies). This module only builds the YAML config, starts the pr
 output. It does not touch the browser.
 
 The CLI writes its logs, report and md5 cache into ./tmp relative to its working directory, so the
-caller passes a throw-away work_dir (the pytest tmp_path) and the vendored folder stays clean.
+run gets its own throw-away work_dir (a new temporary folder unless the caller passes one) and the
+vendored folder stays clean.
 The data folder in InputFiles is only read. The files the CLI writes beside the manifest
 (<manifest>-final.tsv and the -final files of child tsv/txt files) go to a copy in work_dir.
 The config file holds the API token, so it lives in work_dir and is deleted after the run, and the
@@ -21,6 +22,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -28,7 +30,9 @@ from typing import Any
 import yaml
 
 from crdc_pw.config import Settings
+from crdc_pw.hub import Hub
 from crdc_pw.locators.loader import repo_root
+from crdc_pw.pages.data_submissions_list import parse_submission_id_from_text
 from crdc_pw.utils.validation_results import metadata_dir
 
 log = logging.getLogger("crdc_pw.cli_uploader")
@@ -328,7 +332,7 @@ def require_submitter_token(settings: Settings) -> str:
 
 
 def normalize_upload_type(data_type: str) -> str:
-    """"datafile" or "data file" gives the CLI type "data file", "metadata" gives "metadata" (case-insensitive)."""
+    """ "datafile" or "data file" gives the CLI type "data file", "metadata" gives "metadata" (case-insensitive)."""
     text = (data_type or "").strip().lower()
     if text in ("datafile", "data file"):
         return TYPE_DATA_FILE
@@ -375,59 +379,92 @@ def copy_manifest_folder_files(source: Path, target: Path) -> None:
             shutil.copy2(path, target / path.name)
 
 
+def _input_dir(tc_name: str, upload_type: str) -> Path:
+    """InputFiles/CRDC/MetadataData/<tc>/DataFiles or /Metadata; fails when the folder is missing."""
+    folder = DATA_FILES_FOLDER if upload_type == TYPE_DATA_FILE else METADATA_FOLDER
+    data_dir = metadata_dir(tc_name) / folder
+    if not data_dir.is_dir():
+        raise AssertionError(f"Upload CLI input folder not found or not a directory: {data_dir}")
+    return data_dir
+
+
+def _prepare_manifests(
+    data_dir: Path, work_dir: Path, *, expect_validation_errors: bool, omit_archive_manifest: bool
+) -> tuple[Path, Path | None]:
+    """Copy the manifest folder's tsv and txt files to work_dir/manifest; return (manifest, archive manifest).
+
+    The archive manifest is None without .zip files. With .zip files it is required, except when
+    expect_validation_errors and omit_archive_manifest are both set (the CLI then reports it missing).
+    """
+    manifest_dir = work_dir / "manifest"
+    copy_manifest_folder_files(data_dir, manifest_dir)
+    manifest = manifest_dir / find_manifest(data_dir).name
+    if not has_zip_files(data_dir):
+        return manifest, None
+    if expect_validation_errors and omit_archive_manifest:
+        log.info("Leaving out the archive manifest so the CLI reports it missing")
+        return manifest, None
+    archive_manifest = manifest_dir / ARCHIVE_MANIFEST_NAME
+    if not archive_manifest.is_file():
+        # Katalon fails here too, even with expect_validation_errors: the only way to run zip files
+        # without it is to ask for that (omit_archive_manifest together with expect_validation_errors).
+        raise AssertionError(f"{ARCHIVE_MANIFEST_NAME} is required when uploading .zip files: {data_dir}")
+    return manifest, archive_manifest
+
+
 def upload_files_via_cli(
-    settings: Settings,
-    submission_id: str,
+    hub: Hub,
     tc_name: str,
     data_type: str,
-    work_dir: Path,
     *,
     expect_validation_errors: bool = False,
     omit_archive_manifest: bool = False,
-    root: Path | None = None,
+    work_dir: Path | None = None,
 ) -> CliUpload:
     """Upload a test case's input files with the CLI (Katalon uploadFilesViaCli).
+
+    Like Katalon, the submission is the one the browser is on: its id is read from the current URL,
+    so open the submission (as the test does after creating it) before calling. The API URL, token
+    and CLI options come from hub.settings.
 
     data_type "datafile" uploads InputFiles/CRDC/MetadataData/<tc>/DataFiles with its manifest;
     "metadata" uploads <tc>/Metadata. The CLI reads the data files straight from InputFiles, which
     it never writes to. For a data file upload the manifest folder's tsv and txt files are copied to
-    work_dir/manifest (copy_manifest_folder_files) and the CLI is given that manifest, so its
-    <manifest>-final.tsv lands there and not in InputFiles. Use a new work_dir for each call.
+    <work dir>/manifest (copy_manifest_folder_files) and the CLI is given that manifest, so its
+    <manifest>-final.tsv lands there and not in InputFiles.
+
+    work_dir is where the copy and the CLI's own tmp folder (upload report and log) go. Leave it out
+    and every call gets a new temporary folder, so two uploads in one test never share files. A
+    folder you pass must be new for each call. The returned CliUpload says where everything is.
 
     With .zip files in a data file upload, zip-archive-manifest.tsv is required and passed on, except
     when expect_validation_errors and omit_archive_manifest are both set, which leaves it out so the
-    CLI reports the missing archive manifest.
+    CLI reports the missing archive manifest (see _prepare_manifests).
 
     By default the run must succeed (see cli_output_problems) or this raises AssertionError. With
     expect_validation_errors the CLI output is returned unchecked, for tests that assert the error
     messages themselves (verify_cli_error_messages). Katalon also refreshes the page after the
     upload; callers that look at the UI afterwards should reload it.
     """
+    settings = hub.settings
     upload_type = normalize_upload_type(data_type)
     token = require_submitter_token(settings)
+    submission_id = parse_submission_id_from_text(hub.page.url)
     if not submission_id:
-        raise AssertionError("Upload CLI needs a submission id")
-
-    data_dir = metadata_dir(tc_name, root) / (DATA_FILES_FOLDER if upload_type == TYPE_DATA_FILE else METADATA_FOLDER)
-    if not data_dir.is_dir():
-        raise AssertionError(f"Upload CLI input folder not found or not a directory: {data_dir}")
-    work_dir = Path(work_dir)
+        raise AssertionError(f"Upload CLI needs a submission id in the page URL, got {hub.page.url!r}")
+    log.info("Submission ID: %s", submission_id)
+    data_dir = _input_dir(tc_name, upload_type)
+    work_dir = Path(work_dir) if work_dir else Path(tempfile.mkdtemp(prefix="crdc-cli-"))
 
     manifest: Path | None = None
     archive_manifest: Path | None = None
     if upload_type == TYPE_DATA_FILE:
-        manifest_dir = work_dir / "manifest"
-        copy_manifest_folder_files(data_dir, manifest_dir)
-        manifest = manifest_dir / find_manifest(data_dir).name
-        if has_zip_files(data_dir):
-            if expect_validation_errors and omit_archive_manifest:
-                log.info("Leaving out the archive manifest so the CLI reports it missing")
-            elif (manifest_dir / ARCHIVE_MANIFEST_NAME).is_file():
-                archive_manifest = manifest_dir / ARCHIVE_MANIFEST_NAME
-            else:
-                # Katalon fails here too, even with expect_validation_errors: the only way to run zip files
-                # without it is to ask for that (omit_archive_manifest together with expect_validation_errors).
-                raise AssertionError(f"{ARCHIVE_MANIFEST_NAME} is required when uploading .zip files: {data_dir}")
+        manifest, archive_manifest = _prepare_manifests(
+            data_dir,
+            work_dir,
+            expect_validation_errors=expect_validation_errors,
+            omit_archive_manifest=omit_archive_manifest,
+        )
 
     options = options_from_settings(settings)
     config = build_config(
