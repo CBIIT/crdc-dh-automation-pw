@@ -21,6 +21,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Runtime dependencies of the vendored upload CLI in tools/crdc-datahub-cli-uploader
+# (CRDCDH-1405 TC101). The CLI needs Python 3.13 or newer. Install with: pip install -e ".[cli]"
+cli = [
+    "boto3",
+    "requests",
+    "requests_aws4auth",
+    "rich",
+    "pandas",
+]
 dev = [
     "ruff>=0.8",
     "mypy>=1.13",

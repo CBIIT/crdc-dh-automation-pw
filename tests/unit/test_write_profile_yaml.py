@@ -47,3 +47,21 @@ def test_write_profile_overlays_secrets(tmp_path: Path) -> None:
     settings = load_settings(profile="qa", root=tmp_path)
     assert settings.role("Admin").is_complete()
     assert settings.config_path.name == "qa.yaml"
+
+
+@pytest.mark.unit
+def test_write_profile_overlays_cli_keys(tmp_path: Path) -> None:
+    """ApiUrl and SubmitterApiToken come from env too, so the smoke job can run the upload CLI."""
+    dest = tmp_path / "config"
+    dest.mkdir()
+    (dest / "qa.yaml.example").write_text(
+        "name: qa\nbase_url: https://hub-qa.datacommons.cancer.gov/\nApiUrl: https://old/api/graphql\nSubmitterApiToken:\n",
+        encoding="utf-8",
+    )
+    write_profile_yaml(
+        tmp_path,
+        {"CRDC_PROFILE": "qa", "ApiUrl": "https://new/api/graphql", "SubmitterApiToken": "tok-123"},
+    )
+    settings = load_settings(profile="qa", root=tmp_path)
+    assert settings.api_url == "https://new/api/graphql"
+    assert settings.submitter_api_token == "tok-123"

@@ -51,7 +51,7 @@ Suite description says “GC-focused (no CTDC/ICDC)” but the file **includes C
 | 13 | `DataSubmissions/GC/CRDCDH-1035/TC101_VerifyValidationResultsExportAllRoles` | Submitter, Dcp, Fedlead, Admin | **Done** | — | `tests/DataSubmissions/GC/CRDCDH-1035/test_TC101_CRDCDH-1035_VerifyValidationResultsExportAllRoles.py` (`CRDC_Smoke`, `CRDC_DSFlow`). Submitter creates a GC metadata-only submission, `upload_folder("TC04")`, `click_validate`, then `verify_validation_results_export_enabled` and `export_validation_results_and_verify_filename`; Dcp, Fedlead and Admin each `switch_user`, `open_upload_activity(submission_id)` and check Export is enabled. File name rule is `utils/validation_results.check_export_filename`. Difference from Katalon: the download is caught with Playwright's download event, not by clearing Downloads and reading the newest file after a sleep. Not yet run live or dual-run against Katalon. |
 | 14 | `DataSubmissions/GC/CRDCDH-887/TC101_ColumnRequiredBatchErrors` | Submitter | **Done** | — | `tests/DataSubmissions/GC/CRDCDH-887/test_TC101_CRDCDH-887_ColumnRequiredBatchErrors.py` (`CRDC_Smoke`, `CRDC_DataValidation`, `CRDC_Regression`). Create a GC metadata-only submission, `upload_folder("CRDCDH-887_TC101")`, then `verify_upload_activities_batch_row("Metadata", 5, "Failed")` and `verify_upload_errors_modal`. Input folder copied from Katalon. Run live on QA2 (passes; one transient backend 'Batch loading failed' on a first 2864 run). Not yet dual-run against Katalon. |
 | 15 | `DataSubmissions/GC/CRDCDH-2864/TC102_BatchErrorsCompositeIdRequiredProperty` | Submitter | **Done** | — | `tests/DataSubmissions/GC/CRDCDH-2864/test_TC102_CRDCDH-2864_BatchErrorsCompositeIdRequiredProperty.py` (same markers). Same flow with `CRDCDH-2864_TC102` and 4 files. Run live on QA2 (passes; one transient backend 'Batch loading failed' on a first 2864 run). Not yet dual-run against Katalon. |
-| 16 | `DataSubmissions/GC/CRDCDH-1405/TC101_CLINoFileIdVerifyFinalManifest` | Submitter | **Not ported** | **Very hard** | **`CliUploader.uploadFilesViaCli`**, **`verifyFinalManifest`**, deterministic re-run. **No CLI layer in PW.** |
+| 16 | `DataSubmissions/GC/CRDCDH-1405/TC101_CLINoFileIdVerifyFinalManifest` | Submitter | **Done** | — | `tests/DataSubmissions/GC/CRDCDH-1405/test_TC101_CRDCDH-1405_CLINoFileIdVerifyFinalManifest.py` (`CRDC_Smoke`, `CRDC_DSFlow`). Submitter creates a New GC `both` submission in `autoQA - AutomationQA_Study` and reads its id; `run_uploader` (`utils/cli_uploader.py`) runs the vendored CLI with a manifest that has no `file_id`; `diff_final_manifest` (`utils/cli_manifest.py`) checks the `-final.tsv` (file_id column, valid `dg.4DFC/<uuid>`, same row count); a second run from a fresh copy is compared by `diff_file_ids_between_runs`. The CLI is vendored in `tools/crdc-datahub-cli-uploader/` (see its `VENDORED.md`); API URL and token come from `config/<profile>.yaml` (`ApiUrl` optional, `SubmitterApiToken` required, the test fails with a clear message when it is empty). Needs the `cli` extra (`pip install -e ".[cli]"`) and Python 3.13 or newer. Differences from Katalon: CLI output checks (`Files failed: 0`, `File uploading completed!`, `Files processed:`, `Files copied:`, last "X out of Y file(s) have been validated" line complete) are hard assertions, Katalon only logged a warning; each CLI run works on a copy of `DataFiles` under `tmp_path` (Katalon writes `-final.tsv` into InputFiles and deletes the stale one first); no ValidationReport items. The CLI exits 0 even when it fails, so the output checks are what catch a failed run. Each run leaves a submission (no cleanup, as in Katalon). Not yet run live or dual-run against Katalon. |
 | 17 | `DataSubmissions/GC/CRDCDH-686-Partial/TC03_VerifyInvalidStrPtrn-IncompibleConsCode` | Submitter | **Done** | — | Workbook **`tests/DataValidation/GC/CRDCDH-686-Partial/TC03_....xlsx`** + runner **`verify_validation_results`**. `CRDC_Smoke` via collector allowlist (`_SMOKE_CASE_STEMS`). |
 | 18 | `DataSubmissions/CTDC/.../TC101_...LongFormErrorsCTDC` | Submitter (Excel Settings) | **Done** | — | Workbook under `tests/DataValidation/CTDC/CRDCDH-699-CTDC/`. `CRDC_Smoke` via collector allowlist. On 2026-11-16 the Hub moved to CTDC 4.3.0 before STS had values for it (the nightly MDB promotion and the Hub PV puller had not run), so participant `radiology_report_available` (CDE-linked, no list in the model file) was not value-checked and the participant expected TSV was removed from smoke so the case does not depend on STS. The original `NO1` participant check lives in non-smoke, PW-only `TC104_CRDCDH-699_VerifyCdePermissibleValueErrorsCTDC` (not in Katalon). `Value not permitted` is now asserted on a second specimen record `ctdc_spec_2` with an invalid `specimen_type` (the VR table labels a record with its first issue, so each issue type needs its own record). Katalon's copy of `CRDCDH-699_TC101` needs the same edits. |
 | 19 | `DataSubmissions/ICDC/.../TC36_...RequiredRelatedPropertyMissingICDC` | Submitter (Excel Settings) | **Done** | — | Workbook under `tests/DataValidation/ICDC/CRDCDH-699-ICDC/`. `CRDC_Smoke` via collector allowlist. |
@@ -90,8 +90,8 @@ Use this order for **implementation**, while keeping **Katalon case IDs** in tes
 10. ~~**CRDCDH-1163 TC16**~~ — **Done**.
 10a. ~~**CRDCDH-514 TC06**~~ — **Done**.
 10b. ~~**CRDCDH-1051 TC25**~~ — **Done**.
-10c. ~~**CRDCDH-3026 TC201**~~ — **Done**. Next: **CRDCDH-1405 TC101**.
-11. **CRDCDH-1405 TC101** (CLI + manifest — last; plan is to vendor the CLI source into this repo and read the API token from the gitignored config).
+10c. ~~**CRDCDH-3026 TC201**~~ — **Done**.
+11. ~~**CRDCDH-1405 TC101**~~ — **Done** (CLI vendored into `tools/`, token from the gitignored config). All 20 linked Katalon cases are now ported; next is the close-out (live run of the whole suite, README/onboarding, CI smoke job).
 
 ---
 
@@ -105,7 +105,7 @@ Use this order for **implementation**, while keeping **Katalon case IDs** in tes
 | TC10 | `DataSubmissionsList.*` | **Done** — `DataSubmissionsListPage` filters (name, status multi-select, program, submitter, commons, dbGaP), `read_table_rows`, `reset_filters` |
 | TC12 | `SubmissionRequestList.*` | **Done** — `SubmissionRequestsListPage` filters/reset plus `read_table_rows`, `read_table_headers`, `start_button` |
 
-**Next step:** Wave 4 — CRDCDH-1405 TC101 (CLI upload and final manifest; no CLI layer in PW yet).
+**Next step:** smoke close-out. Run `pytest -m CRDC_Smoke` serially on qa2, dual-run the cases still marked "not yet run live", update `README.md` and `onboarding.md`, and add the CI smoke job (Python 3.13 and the `cli` extra for 1405).
 
 ### Generic table (TC03, TC04) — Done
 
@@ -136,7 +136,7 @@ Playwright: locators `HeaderCell` under **`CRDC/AILocators/GenericTable/`** and 
 
 **Data Explorer (3026 TC201):** `DataExplorerListPage` gained `fill_study_name` and `first_study_link`. New `DataExplorerStudyPage` (`pages/data_explorer_study.py`) has `container`, `column_visibility_button`, `select_node_type`, `check_show_all`, `show_all_columns`, `wait_loading_gone`, `read_headers`, `read_rows` and `verify_node_table` (expected data supplied by the test, per the hybrid POM rule for a one-test heavy compare). Locator `StudyView/NodeType-Option` takes `{node}`. The expected-TSV loader and comparison are `load_expected_data_explorer_table` and `diff_data_explorer_table` in `utils/data_explorer_results.py` (a separate module from `validation_results.py`, which now exposes `read_tsv_lines`).
 
-**Not ported:** CLI.
+**CLI upload (1405 TC101):** `utils/cli_uploader.py` (`build_config`, `write_config_file`, `run_uploader`, `cli_output_problems`, `mask_token`) runs the vendored CLI in a throw-away working directory, because the CLI writes `./tmp` logs and reports relative to it. The config file holds the token, lives in that directory and is deleted after the run; the token is masked in returned output. `utils/cli_manifest.py` holds the pure oracles (`read_manifest`, `final_manifest_path`, `diff_final_manifest`, `diff_file_ids_between_runs`). `Settings.api_url` and `Settings.submitter_api_token` read `ApiUrl` and `SubmitterApiToken` from the profile yaml, and `ci/write_profile_yaml.py` overlays both from env. Other Katalon CLI cases (1405 TC100, TC102, TC107, and the error-message cases) can reuse the runner.
 
 ### Excel vs native pytest for smoke
 
@@ -177,7 +177,7 @@ pytest -m CRDC_Smoke --tracing=retain-on-failure
 | 1 | ~~TC12~~ (done), ~~TC10~~ (done), ~~Excel smoke ×3~~ (done), ~~697~~ (done) | DCA-686 (697); add DCA tasks per wave as needed |
 | 2 | ~~SR332 TC01~~ (done), ~~TC03~~ (done), ~~TC04~~ (done), ~~887~~ (done), ~~2864~~ (done) | |
 | 3 | ~~PBAC TC09~~ (done), ~~1035~~ (done) | DCA-694 (PBAC positives) |
-| 4 | ~~1163~~ (done), ~~514~~ (done), ~~1051~~ (done), ~~3026~~ (done), 1405 | |
+| 4 | ~~1163~~ (done), ~~514~~ (done), ~~1051~~ (done), ~~3026~~ (done), ~~1405~~ (done) | |
 
 Refresh this table when cases land on `develop`.
 

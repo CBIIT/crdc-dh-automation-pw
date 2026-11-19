@@ -24,6 +24,8 @@ Create three Environments on the GitHub repo, named **`qa`**, **`qa2`**, and **`
 
 Leave a role's secrets unset if that environment should skip it.
 
+For the upload CLI case (CRDCDH-1405 TC101) also set **`SubmitterApiToken`** (secret) and, only if the default is wrong, **`ApiUrl`** (variable; defaults to the Hub URL plus `api/graphql`). That test fails, not skips, when the token is empty, so a smoke job without it goes red on purpose. The job also needs Python 3.13 or newer and `pip install -e ".[cli]"`; the unit job stays on 3.11 and does not need either.
+
 ## Smoke job (when you add it)
 
 ```yaml
@@ -34,8 +36,8 @@ smoke:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
       with:
-        python-version: "3.11"
-    - run: pip install -e .
+        python-version: "3.13"   # the upload CLI (1405 TC101) needs 3.13 or newer
+    - run: pip install -e ".[cli]"
     - run: playwright install --with-deps chromium
     - name: Write gitignored profile yaml from secrets
       env:
@@ -59,6 +61,8 @@ smoke:
         MasterEmail: ${{ secrets.MasterEmail }}
         MasterPassword: ${{ secrets.MasterPassword }}
         MasterSecret: ${{ secrets.MasterSecret }}
+        ApiUrl: ${{ vars.ApiUrl }}
+        SubmitterApiToken: ${{ secrets.SubmitterApiToken }}
       run: python ci/write_profile_yaml.py
     - run: pytest -m CRDC_Smoke --tracing=retain-on-failure
       env:

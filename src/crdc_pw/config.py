@@ -62,6 +62,16 @@ class Settings:
             secret=_yaml_str(self.data, f"{key}Secret"),
         )
 
+    @property
+    def api_url(self) -> str:
+        """Hub GraphQL endpoint (Katalon ApiUrl). Defaults to <base_url>api/graphql when the yaml has no ApiUrl."""
+        return _yaml_str(self.data, "ApiUrl") or f"{self.base_url}api/graphql"
+
+    @property
+    def submitter_api_token(self) -> str:
+        """Submitter API token for the upload CLI (Katalon SubmitterApiToken). Empty when not configured."""
+        return _yaml_str(self.data, "SubmitterApiToken")
+
 
 def _yaml_str(data: dict[str, Any], key: str) -> str:
     """YAML value as stripped text. Missing keys become '' so role() does not KeyError."""
@@ -98,6 +108,11 @@ def write_profile_yaml(root: Path, environ: dict[str, str] | None = None) -> Pat
     base_url = (env.get("BASE_URL") or env.get("G_Urlname") or "").strip()
     if base_url:
         data["base_url"] = base_url
+
+    for key in ("ApiUrl", "SubmitterApiToken"):
+        value = env.get(key)
+        if value is not None:
+            data[key] = value
 
     filled = 0
     for role in ROLES:
