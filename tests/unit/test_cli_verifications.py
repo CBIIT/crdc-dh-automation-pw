@@ -5,6 +5,7 @@ Flow (this file):
     1. final_manifest_path and read_manifest
     2. diff_final_manifest: valid, missing column, bad ids, row count, no rows
     3. diff_file_ids_between_runs: same, changed, missing and extra files
+       verify_final_manifest and verify_final_manifest_deterministic: the keywords the test calls
   CLI error messages (Katalon verifyCliErrorMessages)
     4. normalize_error_cell and find_column
     5. load_expected_errors_by_file_name (expected/*.tsv)
@@ -39,6 +40,8 @@ from crdc_pw.utils.cli_verifications import (
     read_upload_report,
     strip_log_prefix,
     verify_cli_error_messages,
+    verify_final_manifest,
+    verify_final_manifest_deterministic,
 )
 
 pytestmark = pytest.mark.unit
@@ -127,6 +130,72 @@ def test_diff_file_ids_between_runs_changed_missing_and_extra() -> None:
 def test_diff_file_ids_between_runs_needs_both_columns() -> None:
     with pytest.raises(ValueError):
         diff_file_ids_between_runs((["file_name"], [["a.txt"]]), _final([]))
+
+
+def _manifest_run(tmp_path: Path, name: str, original: str, final: str | None) -> CliUpload:
+    """A CliUpload whose manifest (and optionally its -final.tsv) are written under tmp_path."""
+    folder = tmp_path / name
+    folder.mkdir()
+    manifest = folder / "manifest.tsv"
+    manifest.write_text(original, encoding="utf-8")
+    if final is not None:
+        final_manifest_path(manifest).write_text(final, encoding="utf-8")
+    return CliUpload(CliResult(0, ""), tmp_path, manifest, folder)
+
+
+_ORIGINAL_TSV = "type\tfile_name\nfile\ta.txt\nfile\tb.csv\n"
+
+
+def _final_tsv(id_a: str = _ID_A, id_b: str = _ID_B) -> str:
+    return f"type\tfile_name\tfile_id\nfile\ta.txt\t{id_a}\nfile\tb.csv\t{id_b}\n"
+
+
+def test_verify_final_manifest_passes(tmp_path: Path) -> None:
+    verify_final_manifest(_manifest_run(tmp_path, "run1", _ORIGINAL_TSV, _final_tsv()))
+
+
+def test_verify_final_manifest_lists_problems(tmp_path: Path) -> None:
+    upload = _manifest_run(tmp_path, "run1", _ORIGINAL_TSV, _final_tsv(id_b="dg.4DFC/nope"))
+    with pytest.raises(AssertionError, match="Row 3: invalid file_id 'dg.4DFC/nope'"):
+        verify_final_manifest(upload)
+
+
+def test_verify_final_manifest_fails_without_final_file(tmp_path: Path) -> None:
+    with pytest.raises(AssertionError, match="final manifest not found"):
+        verify_final_manifest(_manifest_run(tmp_path, "run1", _ORIGINAL_TSV, None))
+
+
+def test_verify_final_manifest_fails_without_manifest(tmp_path: Path) -> None:
+    upload = CliUpload(CliResult(0, ""), tmp_path, None, tmp_path)
+    with pytest.raises(AssertionError, match="no manifest"):
+        verify_final_manifest(upload)
+
+
+def test_verify_final_manifest_deterministic_passes(tmp_path: Path) -> None:
+    first = _manifest_run(tmp_path, "run1", _ORIGINAL_TSV, _final_tsv())
+    second = _manifest_run(tmp_path, "run2", _ORIGINAL_TSV, _final_tsv())
+    verify_final_manifest_deterministic(first, second)
+
+
+def test_verify_final_manifest_deterministic_fails_when_ids_change(tmp_path: Path) -> None:
+    first = _manifest_run(tmp_path, "run1", _ORIGINAL_TSV, _final_tsv())
+    second = _manifest_run(tmp_path, "run2", _ORIGINAL_TSV, _final_tsv(id_a=_ID_B))
+    with pytest.raises(AssertionError, match="file_id differs between runs"):
+        verify_final_manifest_deterministic(first, second)
+
+
+def test_verify_final_manifest_deterministic_fails_without_second_final(tmp_path: Path) -> None:
+    first = _manifest_run(tmp_path, "run1", _ORIGINAL_TSV, _final_tsv())
+    second = _manifest_run(tmp_path, "run2", _ORIGINAL_TSV, None)
+    with pytest.raises(AssertionError, match=r"second run.*final manifest not found"):
+        verify_final_manifest_deterministic(first, second)
+
+
+def test_verify_final_manifest_deterministic_fails_without_file_id_column(tmp_path: Path) -> None:
+    first = _manifest_run(tmp_path, "run1", _ORIGINAL_TSV, _final_tsv())
+    second = _manifest_run(tmp_path, "run2", _ORIGINAL_TSV, "type\tfile_name\nfile\ta.txt\n")
+    with pytest.raises(AssertionError, match="needs a 'file_id' column"):
+        verify_final_manifest_deterministic(first, second)
 
 
 SIZE_ERROR = "Real file size 8442 of file demo1.xlsx does not match with that in manifest 844!"

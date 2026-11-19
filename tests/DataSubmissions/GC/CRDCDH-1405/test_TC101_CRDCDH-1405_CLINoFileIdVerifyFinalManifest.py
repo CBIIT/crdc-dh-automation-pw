@@ -29,12 +29,7 @@ import pytest
 from crdc_pw.hub import Hub
 from crdc_pw.pages.data_submission_details import DS_AUTOMATION_STUDY_CREATE, DataSubmissionDetailPage
 from crdc_pw.pages.data_submissions_list import DataSubmissionsListPage
-from crdc_pw.utils.cli_verifications import (
-    diff_file_ids_between_runs,
-    diff_final_manifest,
-    final_manifest_path,
-    read_manifest,
-)
+from crdc_pw.utils.cli_verifications import verify_final_manifest, verify_final_manifest_deterministic
 from crdc_pw.pages.cli_uploader import require_submitter_token, upload_files_via_cli
 
 log = logging.getLogger("crdc_pw.tc1405_101")
@@ -58,25 +53,10 @@ def test_TC101_CRDCDH_1405_CLINoFileIdVerifyFinalManifest(hub: Hub, tmp_path: Pa
 
     # 2. CLI upload of the data files, manifest without file_id
     first = upload_files_via_cli(hub.settings, submission_id, TC_NAME, "datafile", tmp_path / "run1")
-    assert first.manifest is not None
 
     # 3. Final manifest: file_id column, valid DRS ids, same row count as the original
-    first_final_path = final_manifest_path(first.manifest)
-    assert first_final_path.is_file(), f"Final manifest not found: {first_final_path}"
-    original = read_manifest(first.manifest)
-    first_final = read_manifest(first_final_path)
-    log.info("Original manifest headers %s, %s rows", original[0], len(original[1]))
-    log.info("Final manifest headers %s, %s rows", first_final[0], len(first_final[1]))
-    problems = diff_final_manifest(original, first_final)
-    assert not problems, "Final manifest problems:\n" + "\n".join(problems)
-    log.info("Assert final manifest has valid file_id values for all %s rows", len(first_final[1]))
+    verify_final_manifest(first)
 
     # 4. Same upload from a fresh copy: file_ids must not change
     second = upload_files_via_cli(hub.settings, submission_id, TC_NAME, "datafile", tmp_path / "run2")
-    assert second.manifest is not None
-    second_final_path = final_manifest_path(second.manifest)
-    assert second_final_path.is_file(), f"Final manifest not found after re-upload: {second_final_path}"
-    second_final = read_manifest(second_final_path)
-    problems = diff_file_ids_between_runs(first_final, second_final)
-    assert not problems, "file_id differs between runs:\n" + "\n".join(problems)
-    log.info("Assert file_ids are identical across both runs")
+    verify_final_manifest_deterministic(first, second)

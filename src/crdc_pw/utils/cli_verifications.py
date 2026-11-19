@@ -6,7 +6,8 @@ tables and are unit tested; nothing here runs the CLI or touches Hub.
 
 Final manifest (Katalon verifyFinalManifest and verifyFinalManifestDeterministic): when the original
 manifest has no file_id column the CLI writes <name>-final.tsv with a file_id per row.
-  final_manifest_path, read_manifest, diff_final_manifest, diff_file_ids_between_runs
+  verify_final_manifest and verify_final_manifest_deterministic are the keywords a test calls; they use
+  final_manifest_path, read_manifest, diff_final_manifest and diff_file_ids_between_runs (public for tests).
 
 Error messages (Katalon verifyCliErrorMessages): after a CLI run that is expected to find invalid
 files, the CLI's upload report (tmp/upload-report-*.tsv in its working directory) has one row per
@@ -143,6 +144,40 @@ def diff_file_ids_between_runs(first: Table, second: Table) -> list[str]:
         if name not in first_ids:
             problems.append(f"{name}: missing in first manifest (extra in second)")
     return problems
+
+
+def _read_final_manifest(upload: CliUpload, what: str) -> Table:
+    """Final manifest the CLI wrote for this run; fails when it is missing."""
+    assert upload.manifest is not None, f"{what}: the upload has no manifest (metadata upload?)"
+    path = final_manifest_path(upload.manifest)
+    assert path.is_file(), f"{what}: final manifest not found: {path}"
+    return read_manifest(path)
+
+
+def verify_final_manifest(upload: CliUpload) -> None:
+    """Katalon verifyFinalManifest: the run's -final.tsv has a file_id column, a valid id in every
+    row and the same row count as the manifest the CLI was given. Fails with every problem found."""
+    assert upload.manifest is not None, "verify_final_manifest: the upload has no manifest"
+    original = read_manifest(upload.manifest)
+    final = _read_final_manifest(upload, "verify_final_manifest")
+    log.info("Original manifest headers %s, %s rows", original[0], len(original[1]))
+    log.info("Final manifest headers %s, %s rows", final[0], len(final[1]))
+    problems = diff_final_manifest(original, final)
+    assert not problems, "Final manifest problems:\n" + "\n".join(problems)
+    log.info("Assert final manifest has valid file_id values for all %s rows", len(final[1]))
+
+
+def verify_final_manifest_deterministic(first: CliUpload, second: CliUpload) -> None:
+    """Katalon verifyFinalManifestDeterministic: two uploads of the same files gave every file the
+    same file_id. The caller runs the second upload (Katalon runs it inside the keyword)."""
+    first_final = _read_final_manifest(first, "verify_final_manifest_deterministic (first run)")
+    second_final = _read_final_manifest(second, "verify_final_manifest_deterministic (second run)")
+    try:
+        problems = diff_file_ids_between_runs(first_final, second_final)
+    except ValueError as error:
+        raise AssertionError(f"verify_final_manifest_deterministic: {error}") from error
+    assert not problems, "file_id differs between runs:\n" + "\n".join(problems)
+    log.info("Assert file_ids are identical across both runs")
 
 
 # ---------------------------------------------------------------------------
