@@ -1,10 +1,9 @@
-# Placeholder GitHub Actions workflow (Phase 0).
-# Not wired to a GitHub repo yet.
+# GitHub Actions workflow (workflow_dispatch only for now).
 #
 # config/qa.yaml, qa2.yaml, and stage.yaml are gitignored, so checkout does
 # not include credentials. Unit tests use committed *.yaml.example files.
-# When smoke is added, write the gitignored yaml from GitHub Environment
-# secrets first (see ci/README.md and ci/write_profile_yaml.py).
+# The smoke job writes the gitignored yaml from GitHub Environment secrets
+# first (see ci/README.md and ci/write_profile_yaml.py).
 
 name: ci
 
@@ -12,9 +11,14 @@ on:
   workflow_dispatch:
     inputs:
       profile:
-        description: "Hub profile (qa, qa2, or stage). Used when smoke is added."
+        description: "Hub profile (qa, qa2, or stage). Used by the smoke job."
         required: false
         default: "qa"
+      run_smoke:
+        description: "Also run the live CRDC_Smoke suite against the profile (needs the Environment secrets)."
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   unit:
@@ -28,3 +32,60 @@ jobs:
       - run: ruff check src tests
       - run: mypy src/crdc_pw
       - run: pytest tests/unit -m unit
+
+  smoke:
+    # Live Hub run: serial (PBAC shares permissions; do not add -n). Needs the GitHub Environment
+    # named like the profile, with the Katalon secret names plus SubmitterApiToken for the upload CLI.
+    if: ${{ inputs.run_smoke }}
+    needs: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    environment: ${{ inputs.profile }}
+    env:
+      CRDC_PROFILE: ${{ inputs.profile }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          # The upload CLI (CRDCDH-1405 TC101) needs Python 3.13 or newer. Its requirements are
+          # installed by the test before each CLI run, as Katalon does.
+          python-version: "3.13"
+      - run: pip install -e .
+      - run: playwright install --with-deps chromium
+      - name: Write gitignored profile yaml from secrets
+        env:
+          BASE_URL: ${{ vars.BASE_URL }}
+          AdminEmail: ${{ secrets.AdminEmail }}
+          AdminPassword: ${{ secrets.AdminPassword }}
+          AdminSecret: ${{ secrets.AdminSecret }}
+          FedleadEmail: ${{ secrets.FedleadEmail }}
+          FedleadPassword: ${{ secrets.FedleadPassword }}
+          FedleadSecret: ${{ secrets.FedleadSecret }}
+          DcpEmail: ${{ secrets.DcpEmail }}
+          DcpPassword: ${{ secrets.DcpPassword }}
+          DcpSecret: ${{ secrets.DcpSecret }}
+          SubmitterEmail: ${{ secrets.SubmitterEmail }}
+          SubmitterPassword: ${{ secrets.SubmitterPassword }}
+          SubmitterSecret: ${{ secrets.SubmitterSecret }}
+          UserEmail: ${{ secrets.UserEmail }}
+          UserPassword: ${{ secrets.UserPassword }}
+          UserSecret: ${{ secrets.UserSecret }}
+          MasterEmail: ${{ secrets.MasterEmail }}
+          MasterPassword: ${{ secrets.MasterPassword }}
+          MasterSecret: ${{ secrets.MasterSecret }}
+          ApiUrl: ${{ vars.ApiUrl }}
+          SubmitterApiToken: ${{ secrets.SubmitterApiToken }}
+        run: python ci/write_profile_yaml.py
+      - name: EnableAllPermissions (suite setup)
+        run: pytest -m CRDC_PBAC -k EnableAllPermissions
+      - name: CRDC_Smoke
+        run: pytest -m CRDC_Smoke
+      - name: Keep reports and traces
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-${{ inputs.profile }}
+          path: |
+            reports/
+            test-results/
+          if-no-files-found: ignore

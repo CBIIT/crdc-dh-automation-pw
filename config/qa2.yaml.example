@@ -32,6 +32,12 @@ MasterSecret:
 # SubmitterApiToken is a secret: copy it from the Katalon profile, never commit it.
 ApiUrl: https://hub-qa2.datacommons.cancer.gov/api/graphql
 SubmitterApiToken:
+# Optional CLI settings (Katalon profile names; defaults shown, leave out to use them):
+# CRDC_CLI_RETRIES: 3
+# CRDC_CLI_OVERWRITE: false
+# CRDC_CLI_DRYRUN: false
+# CRDC_MANIFEST_ID_FIELD:      # manifest column that holds the file id
+# CRDC_CLI_PYTHON:             # interpreter for the CLI (needs 3.13+); default is the one running pytest
 
 excel_ds_validation:
   enabled: true

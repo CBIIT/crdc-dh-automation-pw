@@ -42,7 +42,7 @@ Unit tests (no browser, no credentials; they use the committed `*.yaml.example` 
 pytest tests/unit -m unit
 ```
 
-Live Hub tests use the same suite names as Katalon (`CRDC_Auxiliary`, `CRDC_PBAC`, `CRDC_Smoke`). `CRDC_Smoke` includes the auxiliary list cases and PBAC TC09 Submitter positive, among other ported smoke cases. TC18 (six-role login) is Auxiliary. PBAC TC07–TC10 also belong to `CRDC_Regression`. Run any selection containing PBAC tests serially, including Smoke and Regression.
+Live Hub tests use the same suite names as Katalon (`CRDC_Auxiliary`, `CRDC_PBAC`, `CRDC_Smoke`). `CRDC_Smoke` covers all 20 cases linked in Katalon `CRDC_Smoke.ts` (list pages, Submission Request, table UX, PBAC TC09, Data Submission flows, Excel validation cases, Data Explorer, and the upload CLI case CRDCDH-1405 TC101). Port status and the cases still to run live are in [docs/smoke-suite-port-plan.md](docs/smoke-suite-port-plan.md). The CLI case needs `SubmitterApiToken` in your `config/<profile>.yaml` and Python 3.13 or newer; it fails, not skips, without the token. TC18 (six-role login) is Auxiliary. PBAC TC07–TC10 also belong to `CRDC_Regression`. Run any selection containing PBAC tests serially, including Smoke and Regression.
 
 ```bash
 pytest -m CRDC_Auxiliary

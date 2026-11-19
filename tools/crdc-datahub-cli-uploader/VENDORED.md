@@ -15,5 +15,6 @@ Left out: `src/unit_test`, the rest of `src/bento` (tests with sample data, othe
 
 Do not edit these files here. To update, copy the new upstream source over them and keep the list above.
 
-Runs only through `crdc_pw.utils.cli_uploader` (needs Python 3.13 or newer and the `cli` extra:
-`pip install -e ".[cli]"`). API URL and token come from `config/<profile>.yaml`, never from this folder.
+Runs only through `crdc_pw.pages.cli_uploader` (needs Python 3.13 or newer; `requirements.txt` is installed
+before every run, as Katalon does; `pip install -e ".[cli]"` only pre-installs it). API URL and token come
+from `config/<profile>.yaml`, never from this folder.
