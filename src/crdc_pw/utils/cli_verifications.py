@@ -99,7 +99,8 @@ def diff_final_manifest(original: Table, final: Table) -> list[str]:
     if id_index < 0:
         problems.append(f"Final manifest has no {FILE_ID_COLUMN!r} column")
         return problems
-    for number, row in enumerate(final_rows, start=1):
+    # Katalon labels rows by file line number: the header is line 1, so the first data row is "Row 2"
+    for number, row in enumerate(final_rows, start=2):
         value = row[id_index] if id_index < len(row) else ""
         if not value:
             problems.append(f"Row {number}: empty {FILE_ID_COLUMN}")

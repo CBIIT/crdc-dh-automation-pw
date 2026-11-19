@@ -104,8 +104,8 @@ def test_diff_final_manifest_missing_file_id_column() -> None:
 def test_diff_final_manifest_reports_empty_and_invalid_ids() -> None:
     final = _final([["file", "a.txt", "a.txt", ""], ["file", "b.csv", "b.csv", "dg.4DFC/nope"]])
     assert diff_final_manifest(_ORIGINAL, final) == [
-        "Row 1: empty file_id",
-        "Row 2: invalid file_id 'dg.4DFC/nope'",
+        "Row 2: empty file_id",
+        "Row 3: invalid file_id 'dg.4DFC/nope'",
     ]
 
 

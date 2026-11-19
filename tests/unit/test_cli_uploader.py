@@ -373,6 +373,26 @@ def test_upload_zip_files_need_archive_manifest(tmp_path: Path, monkeypatch: pyt
     assert upload.manifest is not None and upload.manifest.name == "manifest.tsv"
 
 
+def test_upload_zip_files_need_archive_manifest_even_when_errors_are_expected(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Katalon fails here too: only omit_archive_manifest (with expect_validation_errors) skips the file."""
+    _input_folder(tmp_path, "TC", "DataFiles", {"manifest.tsv": "x", "a.zip": "z"})
+    fake = _FakeRun(CliResult(1, "found invalid file(s)"))
+    monkeypatch.setattr(cli_uploader, "run_uploader", fake)
+    with pytest.raises(AssertionError, match="zip-archive-manifest.tsv is required"):
+        upload_files_via_cli(
+            _settings(SubmitterApiToken="tok"),
+            "sub-1",
+            "TC",
+            "datafile",
+            tmp_path / "run",
+            expect_validation_errors=True,
+            root=tmp_path,
+        )
+    assert fake.configs == []  # the CLI was never started
+
+
 def test_upload_can_leave_out_archive_manifest_when_errors_are_expected(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

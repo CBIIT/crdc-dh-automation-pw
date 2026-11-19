@@ -424,7 +424,9 @@ def upload_files_via_cli(
                 log.info("Leaving out the archive manifest so the CLI reports it missing")
             elif (manifest_dir / ARCHIVE_MANIFEST_NAME).is_file():
                 archive_manifest = manifest_dir / ARCHIVE_MANIFEST_NAME
-            elif not expect_validation_errors:
+            else:
+                # Katalon fails here too, even with expect_validation_errors: the only way to run zip files
+                # without it is to ask for that (omit_archive_manifest together with expect_validation_errors).
                 raise AssertionError(f"{ARCHIVE_MANIFEST_NAME} is required when uploading .zip files: {data_dir}")
 
     options = options_from_settings(settings)
