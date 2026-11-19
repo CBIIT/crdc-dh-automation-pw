@@ -189,20 +189,18 @@ def run_uploader(
     config: dict[str, Any],
     work_dir: Path,
     *,
-    python: str | None = None,
     timeout_minutes: int = DEFAULT_TIMEOUT_MINUTES,
     root: Path | None = None,
 ) -> CliResult:
     """Run `python src/uploader.py --config <file>` in work_dir and return exit code and output.
 
-    python is the interpreter to use, default the one running pytest (sys.executable); see
-    ensure_cli_dependencies. Raises AssertionError when the CLI folder is missing or the run times out.
+    The interpreter is the one running pytest (sys.executable); see ensure_cli_dependencies. Raises AssertionError when the CLI folder is missing or the run times out.
     """
     cli_root = cli_dir(root)
     script = cli_root / UPLOADER_SCRIPT
     if not script.is_file():
         raise AssertionError(f"Upload CLI not found at {script}. See tools/crdc-datahub-cli-uploader/VENDORED.md")
-    interpreter = python or sys.executable
+    interpreter = sys.executable
     ensure_cli_dependencies(interpreter, root)
     token = str(config.get("Config", {}).get("token", ""))
     work_dir = Path(work_dir)
@@ -270,7 +268,6 @@ class CliOptions:
     overwrite: bool = False
     dryrun: bool = False
     id_field: str | None = None
-    python: str | None = None
 
 
 @dataclass(frozen=True)
@@ -296,11 +293,9 @@ def _as_bool(value: Any) -> bool:
 
 
 def options_from_settings(settings: Settings) -> CliOptions:
-    """Read CRDC_CLI_RETRIES, CRDC_CLI_OVERWRITE, CRDC_CLI_DRYRUN, CRDC_MANIFEST_ID_FIELD and CRDC_CLI_PYTHON.
+    """Read CRDC_CLI_RETRIES, CRDC_CLI_OVERWRITE, CRDC_CLI_DRYRUN and CRDC_MANIFEST_ID_FIELD.
 
-    All are optional. Katalon defaults apply: 3 retries, no overwrite, no dry run, no id field. The
-    interpreter (CRDC_CLI_PYTHON, from the profile yaml or the environment) replaces Katalon's per-OS
-    choice; without it the interpreter running pytest is used.
+    All are optional. Katalon defaults apply: 3 retries, no overwrite, no dry run, no id field.
     """
     data = settings.data
     try:
@@ -313,7 +308,6 @@ def options_from_settings(settings: Settings) -> CliOptions:
         overwrite=_as_bool(data.get("CRDC_CLI_OVERWRITE")),
         dryrun=_as_bool(data.get("CRDC_CLI_DRYRUN")),
         id_field=id_field,
-        python=str(data.get("CRDC_CLI_PYTHON") or os.environ.get("CRDC_CLI_PYTHON") or "").strip() or None,
     )
 
 
@@ -481,7 +475,7 @@ def upload_files_via_cli(
         dryrun=options.dryrun,
     )
     cli_work_dir = work_dir / "cli"
-    result = run_uploader(config, cli_work_dir, python=options.python)
+    result = run_uploader(config, cli_work_dir)
     if not expect_validation_errors:
         problems = cli_output_problems(result)
         assert not problems, "CLI upload problems:\n" + "\n".join(problems) + f"\nOutput:\n{result.output}"

@@ -37,7 +37,6 @@ SubmitterApiToken:
 # CRDC_CLI_OVERWRITE: false
 # CRDC_CLI_DRYRUN: false
 # CRDC_MANIFEST_ID_FIELD:      # manifest column that holds the file id
-# CRDC_CLI_PYTHON:             # interpreter for the CLI (needs 3.13+); default is the one running pytest
 
 # Excel-driven metadata VR cases (tests/DataValidation/**/*.xlsx). See docs/excel-ds-validation.md.
 excel_ds_validation:

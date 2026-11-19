@@ -186,26 +186,18 @@ def test_build_config_leaves_out_archive_manifest_and_id_field_for_metadata(tmp_
     assert "archive_manifest" not in config and "id-field" not in config
 
 
-def test_options_default_and_from_yaml(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("CRDC_CLI_PYTHON", raising=False)
-    assert options_from_settings(_settings()) == CliOptions(3, False, False, None, None)
+def test_options_default_and_from_yaml() -> None:
+    assert options_from_settings(_settings()) == CliOptions(3, False, False, None)
     options = options_from_settings(
         _settings(
             CRDC_CLI_RETRIES="5",
             CRDC_CLI_OVERWRITE="true",
             CRDC_CLI_DRYRUN=True,
             CRDC_MANIFEST_ID_FIELD=" my_id ",
-            CRDC_CLI_PYTHON=" /usr/bin/python3.13 ",
         )
     )
-    assert options == CliOptions(5, True, True, "my_id", "/usr/bin/python3.13")
+    assert options == CliOptions(5, True, True, "my_id")
     assert options_from_settings(_settings(CRDC_CLI_RETRIES="many")).retries == 3
-
-
-def test_options_python_falls_back_to_environment(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("CRDC_CLI_PYTHON", "/opt/py313/bin/python")
-    assert options_from_settings(_settings()).python == "/opt/py313/bin/python"
-    assert options_from_settings(_settings(CRDC_CLI_PYTHON="/yaml/python")).python == "/yaml/python"
 
 
 def test_normalize_upload_type() -> None:
@@ -269,19 +261,16 @@ class _FakeRun:
         self.result = result
         self.configs: list[dict] = []
         self.work_dirs: list[Path] = []
-        self.pythons: list[str | None] = []
 
     def __call__(self, config: dict, work_dir: Path, **kwargs: object) -> CliResult:
         self.configs.append(config["Config"])
         self.work_dirs.append(work_dir)
-        self.pythons.append(kwargs.get("python"))  # type: ignore[arg-type]
         return self.result
 
 
 def test_upload_data_files_leaves_inputs_alone_and_copies_manifest_files(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.delenv("CRDC_CLI_PYTHON", raising=False)
     source = _input_folder(
         tmp_path,
         "TC",
@@ -309,7 +298,7 @@ def test_upload_data_files_leaves_inputs_alone_and_copies_manifest_files(
     assert config["data"] == str(source.resolve())
     assert config["manifest"] == str(upload.manifest.resolve()) and config["id-field"] == "my_id"
     assert "archive_manifest" not in config
-    assert fake.work_dirs == [upload.cli_work_dir] and fake.pythons == [None]
+    assert fake.work_dirs == [upload.cli_work_dir]
     # only tsv and txt files are copied, never an old -final file or a data file
     assert sorted(path.name for path in manifest_dir.iterdir()) == ["child.txt", "manifest.tsv"]
     assert sorted(path.name for path in source.iterdir()) == [
@@ -319,19 +308,6 @@ def test_upload_data_files_leaves_inputs_alone_and_copies_manifest_files(
         "manifest.tsv",
         "old-manifest-final.tsv",
     ]
-
-
-def test_upload_passes_configured_python_to_the_runner(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    _input_folder(tmp_path, "TC", "DataFiles", {"manifest.tsv": "x"})
-    fake = _FakeRun(CliResult(0, _GOOD_OUTPUT))
-    monkeypatch.setattr(cli_uploader, "run_uploader", fake)
-    upload_files_via_cli(
-        _hub(_settings(SubmitterApiToken="tok", CRDC_CLI_PYTHON="/opt/py313/bin/python")),
-        "TC",
-        "datafile",
-        work_dir=tmp_path / "run",
-    )
-    assert fake.pythons == ["/opt/py313/bin/python"]
 
 
 def test_upload_without_work_dir_uses_a_new_temporary_folder_each_call(
