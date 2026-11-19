@@ -17,6 +17,7 @@ import pytest
 
 from crdc_pw.hub import Hub
 from crdc_pw.locators.loader import repo_root
+from crdc_pw.pages.base import BasePage
 from crdc_pw.pages.data_submission_details import DataSubmissionDetailPage
 from crdc_pw.pages.data_explorer_list import DataExplorerListPage
 from crdc_pw.pages.data_submissions_list import DataSubmissionsListPage
@@ -161,7 +162,7 @@ def _pbac_click_home(hub: Hub) -> None:
 
 
 def _wait_ds_loading_gone(hub: Hub) -> None:
-    DataSubmissionDetailPage(hub).wait_loading_spinner_gone()
+    BasePage(hub).wait_loading_spinner_gone()
 
 
 def _open_data_submissions_list_settled(hub: Hub) -> None:

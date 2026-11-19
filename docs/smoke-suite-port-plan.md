@@ -55,7 +55,7 @@ Suite description says “GC-focused (no CTDC/ICDC)” but the file **includes C
 | 17 | `DataSubmissions/GC/CRDCDH-686-Partial/TC03_VerifyInvalidStrPtrn-IncompibleConsCode` | Submitter | **Done** | — | Workbook **`tests/DataValidation/GC/CRDCDH-686-Partial/TC03_....xlsx`** + runner **`verify_validation_results`**. `CRDC_Smoke` via collector allowlist (`_SMOKE_CASE_STEMS`). |
 | 18 | `DataSubmissions/CTDC/.../TC101_...LongFormErrorsCTDC` | Submitter (Excel Settings) | **Done** | — | Workbook under `tests/DataValidation/CTDC/CRDCDH-699-CTDC/`. `CRDC_Smoke` via collector allowlist. On 2026-11-16 the Hub moved to CTDC 4.3.0 before STS had values for it (the nightly MDB promotion and the Hub PV puller had not run), so participant `radiology_report_available` (CDE-linked, no list in the model file) was not value-checked and the participant expected TSV was removed from smoke so the case does not depend on STS. The original `NO1` participant check lives in non-smoke, PW-only `TC104_CRDCDH-699_VerifyCdePermissibleValueErrorsCTDC` (not in Katalon). `Value not permitted` is now asserted on a second specimen record `ctdc_spec_2` with an invalid `specimen_type` (the VR table labels a record with its first issue, so each issue type needs its own record). Katalon's copy of `CRDCDH-699_TC101` needs the same edits. |
 | 19 | `DataSubmissions/ICDC/.../TC36_...RequiredRelatedPropertyMissingICDC` | Submitter (Excel Settings) | **Done** | — | Workbook under `tests/DataValidation/ICDC/CRDCDH-699-ICDC/`. `CRDC_Smoke` via collector allowlist. |
-| 20 | `DataSubmissions/GC/CRDCDH-3026/TC201_VerifyDataExplorerMetadataView` | Submitter | **Not ported** | **Hard** | **Data Explorer** page + TSV oracles; **QA seed** study `automation_CompletedStudy` (manual prereq). New page module. |
+| 20 | `DataSubmissions/GC/CRDCDH-3026/TC201_VerifyDataExplorerMetadataView` | Submitter | **Done** | — | `tests/DataSubmissions/GC/CRDCDH-3026/test_TC201_CRDCDH-3026_VerifyDataExplorerMetadataView.py` (`CRDC_Smoke`, `CRDC_DSFlow`). Submitter opens Data Explorer, filters by `automation_CompletedStudy` (`DataExplorerListPage.fill_study_name`), opens the first study (`first_study_link`), then for program, study, participant and sample: `DataExplorerStudyPage.verify_node_table(node, expected_headers, expected_rows)` (select node, `show_all_columns`, read headers and rows, compare with `diff_data_explorer_table` in `utils/data_explorer_results.py`: row count, headers present, each cell equal or contained). The test loads `CRDCDH-3026/<node>.tsv` with `load_expected_data_explorer_table` and passes it in. **QA seed is still a manual prerequisite** (study released with `InputFiles/CRDC/MetadataData/CRDCDH-3026`). Differences from Katalon: waits for the table to settle instead of fixed delays; an empty expected cell must be empty in the UI (Katalon lets any UI text pass); no ValidationReport items (mismatches fail the test with the full list). Show All uses the inner input when the test id is on the MUI root (not yet seen live). Not yet run live or dual-run against Katalon. |
 
 **Out of scope for Katalon smoke (already noted in suite description):** API token tests CRDCDH-1551/1526.
 
@@ -89,9 +89,9 @@ Use this order for **implementation**, while keeping **Katalon case IDs** in tes
 
 10. ~~**CRDCDH-1163 TC16**~~ — **Done**.
 10a. ~~**CRDCDH-514 TC06**~~ — **Done**.
-10b. ~~**CRDCDH-1051 TC25**~~ — **Done**. Next: **CRDCDH-1405 TC101**, then **CRDCDH-3026 TC201**.
-11. **CRDCDH-1405 TC101** (CLI + manifest — likely last).
-12. **CRDCDH-3026 TC201** Data Explorer (new screen + env seed doc).
+10b. ~~**CRDCDH-1051 TC25**~~ — **Done**.
+10c. ~~**CRDCDH-3026 TC201**~~ — **Done**. Next: **CRDCDH-1405 TC101**.
+11. **CRDCDH-1405 TC101** (CLI + manifest — last; plan is to vendor the CLI source into this repo and read the API token from the gitignored config).
 
 ---
 
@@ -105,7 +105,7 @@ Use this order for **implementation**, while keeping **Katalon case IDs** in tes
 | TC10 | `DataSubmissionsList.*` | **Done** — `DataSubmissionsListPage` filters (name, status multi-select, program, submitter, commons, dbGaP), `read_table_rows`, `reset_filters` |
 | TC12 | `SubmissionRequestList.*` | **Done** — `SubmissionRequestsListPage` filters/reset plus `read_table_rows`, `read_table_headers`, `start_button` |
 
-**Next step:** Wave 4 — CRDCDH-1405 TC101 (CLI upload and final manifest; no CLI layer in PW yet), then CRDCDH-3026 TC201 (Data Explorer).
+**Next step:** Wave 4 — CRDCDH-1405 TC101 (CLI upload and final manifest; no CLI layer in PW yet).
 
 ### Generic table (TC03, TC04) — Done
 
@@ -133,6 +133,8 @@ Playwright: locators `HeaderCell` under **`CRDC/AILocators/GenericTable/`** and 
 **Also on `DataSubmissionDetailPage` (514 TC06):** locator properties `reject_button`, `reject_comment`, `confirm_reject_button`, `cross_validate_button`, `complete_button`, `complete_confirmation_yes`, `full_history_button`, `history_dialog`, `history_close_button`, plus `read_history_statuses()` (rows newest first). The comparison is the pure `diff_history_statuses` in `utils/ui_helpers.py`.
 
 **Also on `DataSubmissionDetailPage` (1035 TC101):** `submission_id_from_url`, `open_upload_activity`, `verify_validation_results_export_enabled`, `export_validation_results_and_verify_filename`.
+
+**Data Explorer (3026 TC201):** `DataExplorerListPage` gained `fill_study_name` and `first_study_link`. New `DataExplorerStudyPage` (`pages/data_explorer_study.py`) has `container`, `column_visibility_button`, `select_node_type`, `check_show_all`, `show_all_columns`, `wait_loading_gone`, `read_headers`, `read_rows` and `verify_node_table` (expected data supplied by the test, per the hybrid POM rule for a one-test heavy compare). Locator `StudyView/NodeType-Option` takes `{node}`. The expected-TSV loader and comparison are `load_expected_data_explorer_table` and `diff_data_explorer_table` in `utils/data_explorer_results.py` (a separate module from `validation_results.py`, which now exposes `read_tsv_lines`).
 
 **Not ported:** CLI.
 
@@ -175,7 +177,7 @@ pytest -m CRDC_Smoke --tracing=retain-on-failure
 | 1 | ~~TC12~~ (done), ~~TC10~~ (done), ~~Excel smoke ×3~~ (done), ~~697~~ (done) | DCA-686 (697); add DCA tasks per wave as needed |
 | 2 | ~~SR332 TC01~~ (done), ~~TC03~~ (done), ~~TC04~~ (done), ~~887~~ (done), ~~2864~~ (done) | |
 | 3 | ~~PBAC TC09~~ (done), ~~1035~~ (done) | DCA-694 (PBAC positives) |
-| 4 | ~~1163~~ (done), ~~514~~ (done), ~~1051~~ (done), 1405, 3026 | |
+| 4 | ~~1163~~ (done), ~~514~~ (done), ~~1051~~ (done), ~~3026~~ (done), 1405 | |
 
 Refresh this table when cases land on `develop`.
 

@@ -142,7 +142,7 @@ def list_nodes_from_expected_validation_results_folder(tc_name: str, root: Path 
     return nodes
 
 
-def _read_tsv_lines(path: Path) -> list[str]:
+def read_tsv_lines(path: Path) -> list[str]:
     """UTF-8 lines with the newline stripped. Empty file is an empty list."""
     return path.read_text(encoding="utf-8").splitlines()
 
@@ -155,7 +155,7 @@ def unique_severity_issue_type_pairs_from_expected_tsv(tsv_path: Path) -> list[t
     out: list[tuple[str, str]] = []
     if not tsv_path.is_file():
         return out
-    lines = _read_tsv_lines(tsv_path)
+    lines = read_tsv_lines(tsv_path)
     if len(lines) < 2:
         return out
     headers = [h.strip() for h in lines[0].split("\t")]
@@ -192,7 +192,7 @@ def load_expected_validation_results_tsv(
     out: list[tuple[str, str, str]] = []
     if not tsv_path.is_file():
         return out
-    lines = _read_tsv_lines(tsv_path)
+    lines = read_tsv_lines(tsv_path)
     if len(lines) < 2:
         return out
     headers = [h.strip() for h in lines[0].split("\t")]
@@ -239,7 +239,7 @@ def load_all_expected_error_detail_rows_from_tsv(
     out: list[tuple[str, str, str, str]] = []
     if not tsv_path.is_file():
         return out
-    lines = _read_tsv_lines(tsv_path)
+    lines = read_tsv_lines(tsv_path)
     if len(lines) < 2:
         return out
     headers = [h.strip() for h in lines[0].split("\t")]
@@ -417,7 +417,7 @@ def load_expected_upload_errors(tc_name: str, root: Path | None = None) -> list[
         raise FileNotFoundError(f"no .tsv files in {folder}")
     errors: list[str] = []
     for path in files:
-        lines = _read_tsv_lines(path)
+        lines = read_tsv_lines(path)
         if len(lines) < 2:
             continue
         headers = [h.strip().lower() for h in lines[0].split("\t")]
@@ -504,7 +504,7 @@ def load_expected_cross_validation_rows(tc_name: str, root: Path | None = None) 
         raise FileNotFoundError(f"no *{_CV_EXPECTED_SUFFIX} files in {folder}")
     rows: list[CrossValidationRow] = []
     for path in files:
-        lines = _read_tsv_lines(path)
+        lines = read_tsv_lines(path)
         headers = [h.strip().lower() for h in lines[0].split("\t")] if lines else []
         missing = [name for name in _CV_COLUMNS if name not in headers]
         if missing:

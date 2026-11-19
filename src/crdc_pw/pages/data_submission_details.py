@@ -69,7 +69,6 @@ CHOOSE_FILES = "CRDC/DataSubmissions/ChooseFiles-Btn"
 UPLOAD = "CRDC/DataSubmissions/Upload-Btn"
 UPLOADING = "CRDC/DataSubmissions/Validation/Uploading-Text"
 VALIDATE = "CRDC/DataSubmissions/Validate-Btn"
-LOADING_ICON = "CRDC/DataSubmissions/Loading-Icon"
 VR_TAB = "CRDC/DataSubmissions/Validation/ValidationResults-Tab"
 VR_EXPANDED = "CRDC/DataSubmissions/Validation/ValidationResults_AggregatedExpanded-Btn"
 VR_NODE = "CRDC/DataSubmissions/Validation/ValidationResults_NodeType-Ddn"
@@ -248,7 +247,7 @@ class DataSubmissionDetailPage(BasePage):
         missing or no row links to the peer.
         """
         self._loc(CV_TAB).first.click()
-        self._wait_loading_gone()
+        self.wait_loading_spinner_gone()
         self._loc(CV_TABLE_ROW).first.wait_for(state="visible", timeout=30_000)
         self.change_rows_per_page(_CV_ROWS_PER_PAGE)
 
@@ -530,7 +529,7 @@ class DataSubmissionDetailPage(BasePage):
     def open_validation_results(self) -> None:
         """Validation Results tab, then aggregated/expanded view with filters visible."""
         self._loc(VR_TAB).click()
-        self._wait_loading_gone()
+        self.wait_loading_spinner_gone()
         self._ensure_validation_results_expanded()
 
     # --- Validation Results export (Katalon CRDCDH-1035) ---
@@ -552,12 +551,12 @@ class DataSubmissionDetailPage(BasePage):
         log.info("Navigating to URL: %s", url)
         self.page.goto(url, wait_until="domcontentloaded")
         self._loc(VR_TAB).wait_for(state="visible")
-        self._wait_loading_gone()
+        self.wait_loading_spinner_gone()
 
     def verify_validation_results_export_enabled(self) -> None:
         """Validation Results tab: the export button is visible and enabled (Katalon verifyButtonEnabled true)."""
         self._loc(VR_TAB).click()
-        self._wait_loading_gone()
+        self.wait_loading_spinner_gone()
         # The table has an export icon above and below it; Katalon used the first match.
         export = self._loc(VR_EXPORT).first
         export.wait_for(state="visible")
@@ -601,7 +600,7 @@ class DataSubmissionDetailPage(BasePage):
                 attempt + 1,
             )
             self._loc(VR_EXPANDED).click()
-            self._wait_loading_gone()
+            self.wait_loading_spinner_gone()
             if self._vr_node_filter_visible():
                 return
         raise RuntimeError(
@@ -611,12 +610,12 @@ class DataSubmissionDetailPage(BasePage):
     def apply_vr_filters(self, node: str, severity: str, issue_type: str) -> None:
         """Set node, severity, and issue type filters and wait for the Validation Results table to settle."""
         display_node = node.replace("datafile", "data file") if node == "datafile" else node
-        self._wait_loading_gone()
+        self.wait_loading_spinner_gone()
         self._select_li(self._loc(VR_NODE), display_node)
         self._select_li(self._loc(VR_SEVERITY), severity)
-        self._wait_loading_gone()
+        self.wait_loading_spinner_gone()
         self._select_li(self._loc(VR_ISSUE), issue_type)
-        self._wait_loading_gone()
+        self.wait_loading_spinner_gone()
         rows = self._loc(VR_ROW)
         self.wait_for_generic_table_settled(rows)
 
@@ -943,7 +942,7 @@ class DataSubmissionDetailPage(BasePage):
                     except PlaywrightTimeoutError:
                         pass
         self._loc(VR_EXPANDED).click()
-        self._wait_loading_gone()
+        self.wait_loading_spinner_gone()
         if errors:
             raise AssertionError(
                 f"verifyErrorDetailsForSubmittedIdForTC: {len(errors)} mismatch(es). See log above."
@@ -955,18 +954,6 @@ class DataSubmissionDetailPage(BasePage):
         option = self.page.locator("//li").filter(has_text=re.compile(rf"^{re.escape(text)}$"))
         option.first.wait_for(state="visible")
         option.first.click()
-
-    def wait_loading_spinner_gone(self) -> None:
-        """Wait until the Hub circular progress overlay hides (lists and detail)."""
-        self._wait_loading_gone()
-
-    def _wait_loading_gone(self) -> None:
-        icon = self._loc(LOADING_ICON).first
-        try:
-            icon.wait_for(state="visible", timeout=self.PROBE_MS)
-        except PlaywrightTimeoutError:
-            pass
-        icon.wait_for(state="hidden", timeout=15_000)
 
     def _cell_text(self, cells: Locator, index: int) -> str:
         if index < 0 or index >= cells.count():
