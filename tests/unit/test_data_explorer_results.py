@@ -96,3 +96,13 @@ def test_diff_truncated_expected_matches_contained_text() -> None:
     expected = [["a", "A long description..."]]
     actual = [["a", "A long description that the table shows in full"]]
     assert diff_data_explorer_table(["id", "text"], expected, ["id", "text"], actual) == []
+
+
+def test_diff_blank_expected_requires_blank_ui_value() -> None:
+    expected = [["a", ""]]
+    problems = diff_data_explorer_table(["id", "acc"], expected, ["id", "acc"], [["a", "PRJNA123"]])
+    assert problems == ["Row 1 column 'acc': expected '', actual 'PRJNA123'"]
+
+
+def test_diff_blank_expected_matches_blank_ui_value() -> None:
+    assert diff_data_explorer_table(["id", "acc"], [["a", ""]], ["id", "acc"], [["a", ""]]) == []

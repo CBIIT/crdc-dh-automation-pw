@@ -82,7 +82,8 @@ def diff_data_explorer_table(
 
     Checks the row count, that every expected header is in the UI, and (when the row count
     matches) every cell by row position. A cell matches when the texts are equal or the UI text
-    contains the expected text with "..." removed (truncated values), as in Katalon.
+    contains the expected text with "..." removed (truncated values), as in Katalon. Unlike Katalon,
+    an empty expected value only matches an empty UI value.
     """
     problems: list[str] = []
     if len(ui_rows) != len(expected_rows):
@@ -97,7 +98,10 @@ def diff_data_explorer_table(
         for c, exp in enumerate(exp_row):
             index = mapping[c] if c < len(mapping) else -1
             act = act_row[index].strip() if 0 <= index < len(act_row) else ""
-            if exp == act or exp.replace("...", "").strip() in act:
+            # Containment only for non-empty text: "" is in every string, so an empty expected value
+            # must equal the UI value (Katalon lets any UI text pass here).
+            cleaned = exp.replace("...", "").strip()
+            if exp == act or (cleaned and cleaned in act):
                 continue
             header = expected_headers[c] if c < len(expected_headers) else str(c + 1)
             problems.append(f"Row {r} column {header!r}: expected {exp!r}, actual {act!r}")
