@@ -2,17 +2,19 @@
 
 Reached from the Data Explorer list by clicking the first study link
 (DataExplorerListPage.first_study_link). Katalon: DataExplorer.verifyDataExplorerMetadataView,
-split here into locator properties, generic actions and readers. The comparison with the
-expected TSV is utils/data_explorer_results.py, and the test owns the steps.
+split here into locator properties, generic actions and readers, plus verify_node_table (one node
+per call, expected data supplied by the test). The expected-TSV loader and the diff are in
+utils/data_explorer_results.py.
 """
 
 from __future__ import annotations
 
 import logging
 
-from playwright.sync_api import Locator
+from playwright.sync_api import Locator, expect
 
 from crdc_pw.pages.base import BasePage
+from crdc_pw.utils.data_explorer_results import diff_data_explorer_table, map_expected_headers_to_ui
 
 log = logging.getLogger("crdc_pw.data_explorer_study")
 
@@ -96,3 +98,47 @@ class DataExplorerStudyPage(BasePage):
     def read_rows(self) -> list[list[str]]:
         """Every data row as a list of cell text (full text for truncated cells)."""
         return self._read_table_rows_full_text(self._loc(_TABLE_ROW))
+
+    def show_all_columns(self) -> None:
+        """Open Column visibility, check Show All, and wait for the table to settle."""
+        self.column_visibility_button.first.click()
+        self.check_show_all()
+        self.wait_loading_gone()
+        expect(self.container.first).to_be_visible()
+
+    def verify_node_table(self, node: str, expected_headers: list[str], expected_rows: list[list[str]]) -> None:
+        """Select the node, show all columns, and assert the table matches the expected data.
+
+        The test supplies the expected headers and rows. The page reads the table and compares.
+        Katalon: DataExplorer.verifyDataExplorerMetadataView, one node per call.
+        """
+        self.select_node_type(node)
+        self.show_all_columns()
+        ui_headers = self.read_headers()
+        ui_rows = self.read_rows()
+        # Show All adds UI-only columns (crdc_id, *_concept_code, ...). Log the actual row narrowed to
+        # the expected columns, in the same order, so the two lines line up cell for cell.
+        mapping = map_expected_headers_to_ui(expected_headers, ui_headers)
+        ui_only = [h for i, h in enumerate(ui_headers) if i not in mapping]
+        log.info("Node %r: expected headers (%s) %s", node, len(expected_headers), expected_headers)
+        log.info("Node %r: UI headers (%s) %s", node, len(ui_headers), ui_headers)
+        log.info("Node %r: UI-only columns, not checked (%s) %s", node, len(ui_only), ui_only)
+        log.info("Node %r: expected %s rows, actual %s rows", node, len(expected_rows), len(ui_rows))
+        if expected_rows and ui_rows:
+            narrowed = [ui_rows[0][i] if 0 <= i < len(ui_rows[0]) else "<missing column>" for i in mapping]
+            log.info("Node %r: first row expected %s", node, expected_rows[0])
+            log.info("Node %r: first row actual   %s (expected columns only)", node, narrowed)
+        problems = diff_data_explorer_table(expected_headers, expected_rows, ui_headers, ui_rows)
+        for problem in problems:
+            log.error("Node %r mismatch: %s", node, problem)
+        assert not problems, (
+            f"Data Explorer node {node!r} mismatch ({len(problems)}):\n"
+            + "\n".join(problems)
+            + f"\nExpected headers: {expected_headers}\nActual headers:   {ui_headers}"
+        )
+        log.info(
+            "Assert Data Explorer %r table matches expected (%s rows x %s columns)",
+            node,
+            len(expected_rows),
+            len(expected_headers),
+        )

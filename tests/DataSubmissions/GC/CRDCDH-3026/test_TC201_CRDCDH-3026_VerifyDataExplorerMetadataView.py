@@ -19,12 +19,11 @@ from __future__ import annotations
 import logging
 
 import pytest
-from playwright.sync_api import expect
 
 from crdc_pw.hub import Hub
 from crdc_pw.pages.data_explorer_list import DataExplorerListPage
 from crdc_pw.pages.data_explorer_study import DataExplorerStudyPage
-from crdc_pw.utils.data_explorer_results import diff_data_explorer_table, load_expected_data_explorer_table
+from crdc_pw.utils.data_explorer_results import load_expected_data_explorer_table
 from crdc_pw.utils.ui_helpers import assert_element_text
 
 log = logging.getLogger("crdc_pw.tc3026_201")
@@ -49,18 +48,7 @@ def test_TC201_CRDCDH_3026_VerifyDataExplorerMetadataView(hub: Hub) -> None:
     assert_element_text(study.title_study_name, STUDY_FILTER)
     log.info("Opened the Data Explorer study %r", STUDY_FILTER)
 
-    # 2. Each node type: show all columns, then compare the table with the expected TSV
+    # 2. Each node type: select it, show all columns, compare the table with the expected TSV
     for node in NODE_TYPES:
-        study.select_node_type(node)
-        study.column_visibility_button.first.click()
-        study.check_show_all()
-        study.wait_loading_gone()
-        expect(study.container.first).to_be_visible()
-
-        ui_headers = study.read_headers()
-        ui_rows = study.read_rows()
         expected_headers, expected_rows = load_expected_data_explorer_table(TC_NAME, node)
-        log.info("Node %r: %s UI rows, %s expected rows", node, len(ui_rows), len(expected_rows))
-        problems = diff_data_explorer_table(expected_headers, expected_rows, ui_headers, ui_rows)
-        assert not problems, f"Data Explorer node {node!r} mismatch:\n" + "\n".join(problems)
-        log.info("Assert Data Explorer %r table matches expected", node)
+        study.verify_node_table(node, expected_headers, expected_rows)
