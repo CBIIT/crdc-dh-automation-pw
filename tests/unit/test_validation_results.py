@@ -371,3 +371,12 @@ def test_diff_cross_validation_rows_prefers_exact_row_and_ignores_unexpected_ids
         ("CDS-1", "program", "Error", "Conflict Data found. See details."),
     ]
     assert diff_cross_validation_rows(_CV_EXPECTED, actual) == []
+
+
+def test_diff_cross_validation_rows_selects_row_with_normalized_issue_match() -> None:
+    """First row for the id is a different row; the second matches only after normalizing."""
+    actual = [
+        ("CDS-1", "study", "Warning", "something else"),
+        ("CDS-1", "Program", "error", "conflict data found. see details"),
+    ]
+    assert diff_cross_validation_rows(_CV_EXPECTED, actual) == []

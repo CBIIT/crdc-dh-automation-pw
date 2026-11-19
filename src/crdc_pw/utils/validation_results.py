@@ -529,6 +529,13 @@ def normalize_cross_validation_issue(text: str | None) -> str:
     return re.sub(r"[.]+$", "", (text or "").strip()).lower()
 
 
+def cross_validation_issue_matches(expected_issue: str, actual_issue: str) -> bool:
+    """True when the normalized issues are equal or the expected text is contained in the actual one."""
+    want = normalize_cross_validation_issue(expected_issue)
+    got = normalize_cross_validation_issue(actual_issue)
+    return got == want or bool(want and want in got)
+
+
 def diff_cross_validation_rows(
     expected: list[CrossValidationRow], actual: list[CrossValidationRow]
 ) -> list[str]:
@@ -536,7 +543,8 @@ def diff_cross_validation_rows(
 
     Rows are matched by submitted identifier. Node type and severity are compared ignoring
     case. The issue matches when the normalized texts are equal or the expected text is
-    contained in the actual one. An exact row is preferred when one id has several UI rows.
+    contained in the actual one. A row that satisfies all three comparisons is preferred
+    when one id has several UI rows (Katalon prefers an exact issue string only).
     UI rows with ids that are not expected are not reported (the UI rows were read for one
     peer submission only), as in Katalon's anchored mode.
     """
@@ -553,16 +561,18 @@ def diff_cross_validation_rows(
             continue
         best = candidates[0]
         for row in candidates:
-            if row[1].lower() == exp_node.lower() and row[2].lower() == exp_sev.lower() and row[3] == exp_issue:
+            if (
+                row[1].lower() == exp_node.lower()
+                and row[2].lower() == exp_sev.lower()
+                and cross_validation_issue_matches(exp_issue, row[3])
+            ):
                 best = row
                 break
         _id, act_node, act_sev, act_issue = best
-        want = normalize_cross_validation_issue(exp_issue)
-        got = normalize_cross_validation_issue(act_issue)
         if act_node.lower() != exp_node.lower():
             problems.append(f"Submitted ID {exp_id!r}: Node Type expected {exp_node!r}, actual {act_node!r}")
         if act_sev.lower() != exp_sev.lower():
             problems.append(f"Submitted ID {exp_id!r}: Severity expected {exp_sev!r}, actual {act_sev!r}")
-        if not (got == want or (want and want in got)):
+        if not cross_validation_issue_matches(exp_issue, act_issue):
             problems.append(f"Submitted ID {exp_id!r}: Issue expected {exp_issue!r}, actual {act_issue!r}")
     return problems
