@@ -46,7 +46,7 @@ Suite description says “GC-focused (no CTDC/ICDC)” but the file **includes C
 | 8 | `Pbac/TC09_CRDC-PbacCheckedPermissions-Submitter` | Admin → Submitter | **Done** | — | `tests/Pbac/test_TC09_CRDC-PbacCheckedPermissions-Submitter.py` (`CRDC_Smoke`); `edit_pbac_permissions` + `verify_permissions_functional` in `pbac_helpers.py`. |
 | 9 | `DataSubmissions/GC/CRDCDH-697/TC01_CRDC-VerifyDataSubmissionHeaders` | Submitter | **Done** | — | `tests/DataSubmissions/GC/CRDCDH-697/test_TC01_CRDC-VerifyDataSubmissionHeaders.py` |
 | 10 | `DataSubmissions/GC/CRDCDH-1163/TC16_...SubmittedMetadata` | Submitter, Dcp | **Done** | — | `tests/DataSubmissions/GC/CRDCDH-1163/test_TC16_CRDCDH-1163_DCPValidationAfterSubmissionSubmittedMetadata.py` (`CRDC_Smoke`, `CRDC_DSFlow`). Submitter creates a GC metadata-only submission in the ATS study, uploads a unique `program.tsv` (`prepare_unique_program_tsv` in `pbac_helpers.py`, now public), validates and submits; Dcp opens it by id and the test runs five separate checks with the shared `ui_helpers` (`assert_element_text` on the status, `assert_button_enabled` on Validate, `assert_button_selected` on Metadata, All Uploaded Data and New Uploaded Data), as Katalon does with `verifyElementText`, `verifyButtonEnabled` and `verifyButtonSelected`. Each run leaves a Submitted submission (no cleanup, as in Katalon). Not yet run live or dual-run against Katalon. |
-| 11 | `DataSubmissions/GC/CRDCDH-1051/TC25_VerifyDcpCrossValidation` | Submitter, Dcp | **Not ported** | **Hard** | **Two** submissions, same study, cross-validate, CV tab TSV, reject. **`switch_user`**, cross-val UI, expected TSV oracles. |
+| 11 | `DataSubmissions/GC/CRDCDH-1051/TC25_VerifyDcpCrossValidation` | Submitter, Dcp | **Done** | — | `tests/DataSubmissions/GC/CRDCDH-1051/test_TC25_CRDCDH-1051_VerifyDcpCrossValidation.py` (`CRDC_Smoke`, `CRDC_DSFlow`, `CRDC_DataValidation`). Submitter creates two GC metadata-only submissions in `autoQA - AutomationQA_CV`, uploads `CRDCDH-1051_TC25` (same `program_acronym`) into both, validates and submits each; Dcp opens submission 2, cross-validates (waits for the button to enable again), reads the Cross Validation Results rows that link to submission 1 with `read_cross_validation_rows_for_peer`, and compares them with the expected TSV (`diff_cross_validation_rows` in `utils/validation_results.py`), then rejects submission 2 and submission 1 (status Rejected each). Expected TSV is in `MetadataData/CRDCDH-1051_TC25/expected-CrossValidationResults/`. Not yet run live or dual-run against Katalon. |
 | 12 | `DataSubmissions/GC/CRDCDH-514/TC06_VerifyFullDataSubmissionHistory` | Submitter, Dcp | **Done** | — | `tests/DataSubmissions/GC/CRDCDH-514/test_TC06_CRDCDH-514_VerifyFullDataSubmissionHistory.py` (`CRDC_Smoke`, `CRDC_DSFlow`). Submitter creates, uploads a unique `program.tsv`, validates (In Progress) and submits; Dcp rejects with a justification; Submitter re-validates, reloads and submits again; Dcp cross-validates, Releases and Completes. Each status is checked with `assert_element_text`, and the Full History dialog is read with `read_history_statuses` and compared (newest first, whitespace and case ignored) by `ui_helpers.diff_history_statuses`. Reject, Complete and Full History steps are separate locator-property actions in the test. Each run consumes one submission (ends Completed). Not yet run live or dual-run against Katalon. |
 | 13 | `DataSubmissions/GC/CRDCDH-1035/TC101_VerifyValidationResultsExportAllRoles` | Submitter, Dcp, Fedlead, Admin | **Done** | — | `tests/DataSubmissions/GC/CRDCDH-1035/test_TC101_CRDCDH-1035_VerifyValidationResultsExportAllRoles.py` (`CRDC_Smoke`, `CRDC_DSFlow`). Submitter creates a GC metadata-only submission, `upload_folder("TC04")`, `click_validate`, then `verify_validation_results_export_enabled` and `export_validation_results_and_verify_filename`; Dcp, Fedlead and Admin each `switch_user`, `open_upload_activity(submission_id)` and check Export is enabled. File name rule is `utils/validation_results.check_export_filename`. Difference from Katalon: the download is caught with Playwright's download event, not by clearing Downloads and reading the newest file after a sleep. Not yet run live or dual-run against Katalon. |
 | 14 | `DataSubmissions/GC/CRDCDH-887/TC101_ColumnRequiredBatchErrors` | Submitter | **Done** | — | `tests/DataSubmissions/GC/CRDCDH-887/test_TC101_CRDCDH-887_ColumnRequiredBatchErrors.py` (`CRDC_Smoke`, `CRDC_DataValidation`, `CRDC_Regression`). Create a GC metadata-only submission, `upload_folder("CRDCDH-887_TC101")`, then `verify_upload_activities_batch_row("Metadata", 5, "Failed")` and `verify_upload_errors_modal`. Input folder copied from Katalon. Run live on QA2 (passes; one transient backend 'Batch loading failed' on a first 2864 run). Not yet dual-run against Katalon. |
@@ -88,7 +88,8 @@ Use this order for **implementation**, while keeping **Katalon case IDs** in tes
 ### Wave 4 — Heavy DS / CLI / Explorer
 
 10. ~~**CRDCDH-1163 TC16**~~ — **Done**.
-10a. ~~**CRDCDH-514 TC06**~~ — **Done**. Next: **CRDCDH-1051 TC25**.
+10a. ~~**CRDCDH-514 TC06**~~ — **Done**.
+10b. ~~**CRDCDH-1051 TC25**~~ — **Done**. Next: **CRDCDH-1405 TC101**, then **CRDCDH-3026 TC201**.
 11. **CRDCDH-1405 TC101** (CLI + manifest — likely last).
 12. **CRDCDH-3026 TC201** Data Explorer (new screen + env seed doc).
 
@@ -104,7 +105,7 @@ Use this order for **implementation**, while keeping **Katalon case IDs** in tes
 | TC10 | `DataSubmissionsList.*` | **Done** — `DataSubmissionsListPage` filters (name, status multi-select, program, submitter, commons, dbGaP), `read_table_rows`, `reset_filters` |
 | TC12 | `SubmissionRequestList.*` | **Done** — `SubmissionRequestsListPage` filters/reset plus `read_table_rows`, `read_table_headers`, `start_button` |
 
-**Next step:** Wave 4 — CRDCDH-1051 TC25 (two submissions, cross-validate, CV tab TSV, reject).
+**Next step:** Wave 4 — CRDCDH-1405 TC101 (CLI upload and final manifest; no CLI layer in PW yet), then CRDCDH-3026 TC201 (Data Explorer).
 
 ### Generic table (TC03, TC04) — Done
 
@@ -127,11 +128,13 @@ Playwright: locators `HeaderCell` under **`CRDC/AILocators/GenericTable/`** and 
 
 **Also on `DataSubmissionDetailPage` (1163 TC16):** locator properties `status_label`, `validate_button`, `validation_type_metadata_radio`, `validation_target_all_radio`, `validation_target_new_radio`. The checks themselves are `assert_element_text` and `assert_button_selected` in `utils/ui_helpers.py` (next to `assert_button_enabled`), reusable by any test.
 
+**Also on `DataSubmissionDetailPage` (1051 TC25):** `DS_AUTOMATION_STUDY_CV` and `read_cross_validation_rows_for_peer(peer_id)`, which opens the Cross Validation Results tab, sets 50 rows per page and returns the rows that link to the peer submission across all pages. Locators `CrossValidation/Table` and `Table-DataRow` are scoped to the table with a Submitted Identifier column. The expected-TSV loader and comparison are `load_expected_cross_validation_rows` and `diff_cross_validation_rows` in `utils/validation_results.py`.
+
 **Also on `DataSubmissionDetailPage` (514 TC06):** locator properties `reject_button`, `reject_comment`, `confirm_reject_button`, `cross_validate_button`, `complete_button`, `complete_confirmation_yes`, `full_history_button`, `history_dialog`, `history_close_button`, plus `read_history_statuses()` (rows newest first). The comparison is the pure `diff_history_statuses` in `utils/ui_helpers.py`.
 
 **Also on `DataSubmissionDetailPage` (1035 TC101):** `submission_id_from_url`, `open_upload_activity`, `verify_validation_results_export_enabled`, `export_validation_results_and_verify_filename`.
 
-**Not ported:** cross-validation tab, CLI.
+**Not ported:** CLI.
 
 ### Excel vs native pytest for smoke
 
@@ -172,7 +175,7 @@ pytest -m CRDC_Smoke --tracing=retain-on-failure
 | 1 | ~~TC12~~ (done), ~~TC10~~ (done), ~~Excel smoke ×3~~ (done), ~~697~~ (done) | DCA-686 (697); add DCA tasks per wave as needed |
 | 2 | ~~SR332 TC01~~ (done), ~~TC03~~ (done), ~~TC04~~ (done), ~~887~~ (done), ~~2864~~ (done) | |
 | 3 | ~~PBAC TC09~~ (done), ~~1035~~ (done) | DCA-694 (PBAC positives) |
-| 4 | ~~1163~~ (done), ~~514~~ (done), 1051, 1405, 3026 | |
+| 4 | ~~1163~~ (done), ~~514~~ (done), ~~1051~~ (done), 1405, 3026 | |
 
 Refresh this table when cases land on `develop`.
 
