@@ -1,0 +1,6 @@
+type	pdx_id	model_id	implantation_type	implantation_site	mouse_strain	sample_type_for_implantation	tumor_not_mus_or_ebv_origin	study.study_id	sample.sample_id
+pdx	auto_pdx_1	2	Orthotopic|Trocar|Injection	muscle	mousestrn	implant	Not Reported	hello1	auto_sample1
+pdx	auto_pdx_5	3	Unknown	muscle	kio	imp3	Yes	hello1	auto_sample5
+pdx	auto_pdx_2	2	Trocar	muscle	mousestrn	implant	Yes	hello1	auto_sample2
+pdx	auto_pdx_4	1	Intravenous	muscle	trt	imp2	Unknown	hello1	auto_sample4
+pdx	auto_pdx_3	4	Orthotopic	muscle	tre	imp1	No	hello1	auto_sample3

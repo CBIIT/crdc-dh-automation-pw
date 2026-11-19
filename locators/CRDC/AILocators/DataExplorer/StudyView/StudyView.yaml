@@ -6,4 +6,8 @@ Container: "//*[@data-testid='study-view-container']"
 DataSubmissionName-Link: '(//*[@data-testid="truncated-text-wrapper"])[1]'
 # Node Type dropdown on Data Explorer study view. Uses same data-testid as Data View when the same MUI Select component is used.
 NodeType-Ddn: '//*[@id="mui-component-select-nodeType"]'
+# Study name in the page title "Data Explorer for Study - <name>" (no Katalon object; used to confirm the right study opened).
+Title-Suffix: "//*[@data-testid='page-container-header-suffix']"
+# Option in the open Node Type dropdown (Katalon DataExplorer.selectNodeType li text match).
+NodeType-Option: "//li[normalize-space(text())='{node}']"
 ShowAll-Chkbx: '//*[@data-testid="toggle-all-checkbox"]'

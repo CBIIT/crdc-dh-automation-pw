@@ -1,0 +1,6 @@
+type	consent_group_id	consent_group_name	consent_group_number	study.study_id
+consent_group	auto_cons_1	auto_gp name1	10	hello1
+consent_group	auto_cons_4	auto_gp name4	11	hello1
+consent_group	auto_cons_5	auto_gp name5	12	hello1
+consent_group	auto_cons_3	auto_gp name3	-2	hello1
+consent_group	auto_cons_2	auto_gp name2	3	hello1
