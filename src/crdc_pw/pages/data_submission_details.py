@@ -18,6 +18,7 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from crdc_pw.locators.loader import repo_root
 from crdc_pw.pages.base import BasePage
 from crdc_pw.utils.validation_results import (
+    CrossValidationRow,
     diff_error_details_dialog_issues,
     diff_upload_errors,
     diff_validation_results,
@@ -37,6 +38,7 @@ log = logging.getLogger("crdc_pw.data_submission_details")
 
 # QA automation DS create + summary header oracles (Katalon utilities.DataSubmissions static defaults)
 DS_AUTOMATION_STUDY_CREATE = "autoQA - AutomationQA_Study"
+DS_AUTOMATION_STUDY_CV = "autoQA - AutomationQA_CV"
 DS_EXPECTED_STUDY_HEADER = "autoQA"
 DS_EXPECTED_PROGRAM = "AUTOPROGRAM"
 DS_EXPECTED_SUBMISSION_TYPE_NEW = "New/Update"
@@ -131,6 +133,11 @@ HISTORY_DIALOG = "CRDC/AILocators/DataSubmissions/HistoryDialog/Dialog"
 HISTORY_CLOSE = "CRDC/AILocators/DataSubmissions/HistoryDialog/Close-Btn"
 HISTORY_ITEM_STATUS = "CRDC/AILocators/DataSubmissions/HistoryDialog/Item-Status"
 HISTORY_ITEM0_STATUS = "CRDC/AILocators/DataSubmissions/HistoryDialog/Item0-Status"
+CV_TAB = "CRDC/AILocators/DataSubmissions/Detail/Tabs/CrossValidation-Tab"
+CV_TABLE = "CRDC/AILocators/DataSubmissions/Detail/CrossValidation/Table"
+CV_TABLE_ROW = "CRDC/AILocators/DataSubmissions/Detail/CrossValidation/Table-DataRow"
+_CV_ROWS_PER_PAGE = 50
+_CV_REQUIRED_COLUMNS = ("Submitted Identifier", "Node Type", "Severity")
 
 
 def _header_index(names: list[str], wanted: str) -> int:
@@ -231,6 +238,53 @@ class DataSubmissionDetailPage(BasePage):
         cells = self._loc(HISTORY_ITEM_STATUS)
         texts = [(cells.nth(i).inner_text() or "").strip() for i in range(cells.count())]
         return [t for t in texts if t]
+
+    def read_cross_validation_rows_for_peer(self, peer_submission_id: str) -> list[CrossValidationRow]:
+        """Open Cross Validation Results and read the rows that link to a peer submission.
+
+        Returns (Submitted Identifier, Node Type, Severity, Issues) for every row, across
+        all pages, whose Conflicting Submission link points at peer_submission_id (Katalon
+        readCrossValidationRowsForConflictingSubmission). Raises if a required column is
+        missing or no row links to the peer.
+        """
+        self._loc(CV_TAB).first.click()
+        self._wait_loading_gone()
+        self._loc(CV_TABLE_ROW).first.wait_for(state="visible", timeout=30_000)
+        self.change_rows_per_page(_CV_ROWS_PER_PAGE)
+
+        headers = self._read_table_headers(self._loc(CV_TABLE))
+        lowered = [h.lower() for h in headers]
+        for name in _CV_REQUIRED_COLUMNS:
+            if name.lower() not in lowered:
+                raise AssertionError(f"Cross Validation table has no {name!r} column; headers are {headers}")
+        id_i, node_i, severity_i = (lowered.index(n.lower()) for n in _CV_REQUIRED_COLUMNS)
+        issues_i = lowered.index("issues") if "issues" in lowered else next(
+            (i for i, h in enumerate(lowered) if "issue" in h), -1
+        )
+
+        peer_link = self.page.locator(f"[data-testid='conflicting-link-{peer_submission_id.strip()}']")
+        peer_rows = self._loc(CV_TABLE_ROW).filter(has=peer_link)
+
+        def cell(cells: list[str], index: int) -> str:
+            return cells[index].strip() if 0 <= index < len(cells) else ""
+
+        matched: list[CrossValidationRow] = []
+        while True:
+            self.wait_for_generic_table_settled()
+            for cells in self._read_table_rows_full_text(peer_rows):
+                matched.append(
+                    (cell(cells, id_i), cell(cells, node_i), cell(cells, severity_i), cell(cells, issues_i))
+                )
+            current, total = self.read_current_page(), self.read_total_pages()
+            if current is None or total is None or current >= total:
+                break
+            self.go_to_next_page()
+        if not matched:
+            raise AssertionError(
+                f"no Cross Validation rows link to peer submission {peer_submission_id!r}"
+            )
+        log.info("Read %s Cross Validation row(s) for peer %s", len(matched), peer_submission_id)
+        return matched
 
     @property
     def submission_name_tooltip_trigger(self) -> Locator:

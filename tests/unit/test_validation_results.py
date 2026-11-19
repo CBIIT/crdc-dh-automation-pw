@@ -14,6 +14,7 @@ from __future__ import annotations
 import pytest
 
 from crdc_pw.utils.validation_results import (
+    diff_cross_validation_rows,
     diff_error_details_dialog_issues,
     diff_upload_errors,
     diff_validation_results,
@@ -24,11 +25,13 @@ from crdc_pw.utils.validation_results import (
     list_nodes_from_expected_validation_results_folder,
     list_tsv_files_and_nodes_for_tc,
     load_all_expected_error_detail_rows_from_tsv,
+    load_expected_cross_validation_rows,
     load_expected_upload_errors,
     load_expected_validation_results_tsv,
     load_validation_results_mappings,
     node_from_expected_validation_results_filename,
     node_from_filename,
+    normalize_cross_validation_issue,
     normalize_quotes,
     normalize_submission_name_for_export,
     parse_expected_errors_cell,
@@ -314,3 +317,57 @@ def test_normalize_submission_name_for_export() -> None:
     assert normalize_submission_name_for_export("  My DS: name_1! ") == "My-DS-name1"
     assert normalize_submission_name_for_export("auto-test_20261117_12edbf") == "auto-test2026111712edbf"
     assert normalize_submission_name_for_export(None) == ""
+
+
+# --- Cross Validation Results (Katalon verifyCrossValidationResultsVsExpected) ---
+
+_CV_EXPECTED = [("CDS-1", "program", "Error", "Conflict Data found. See details.")]
+
+
+def test_load_expected_cross_validation_rows_tc25() -> None:
+    """CRDCDH-1051_TC25 expected TSV: one program conflict row."""
+    rows = load_expected_cross_validation_rows("CRDCDH-1051_TC25")
+    assert rows == [("CDS-59541111111111", "program", "Error", "Conflict Data found. See details.")]
+
+
+def test_load_expected_cross_validation_rows_missing_folder() -> None:
+    with pytest.raises(FileNotFoundError):
+        load_expected_cross_validation_rows("TC_DOES_NOT_EXIST")
+
+
+def test_normalize_cross_validation_issue() -> None:
+    assert normalize_cross_validation_issue("  Conflict Data found. See details. ") == "conflict data found. see details"
+    assert normalize_cross_validation_issue(None) == ""
+
+
+def test_diff_cross_validation_rows_match_ignores_case_and_trailing_dot() -> None:
+    actual = [("CDS-1", "Program", "error", "conflict data found. see details")]
+    assert diff_cross_validation_rows(_CV_EXPECTED, actual) == []
+
+
+def test_diff_cross_validation_rows_issue_contained_in_actual() -> None:
+    actual = [("CDS-1", "program", "Error", "Conflict Data found. See details. More text")]
+    assert diff_cross_validation_rows(_CV_EXPECTED, actual) == []
+
+
+def test_diff_cross_validation_rows_missing_id() -> None:
+    problems = diff_cross_validation_rows(_CV_EXPECTED, [("CDS-2", "program", "Error", "x")])
+    assert problems == ["Submitted ID 'CDS-1': expected in UI but not found"]
+
+
+def test_diff_cross_validation_rows_reports_each_field() -> None:
+    actual = [("CDS-1", "study", "Warning", "Something else")]
+    problems = diff_cross_validation_rows(_CV_EXPECTED, actual)
+    assert len(problems) == 3
+    assert any("Node Type" in p for p in problems)
+    assert any("Severity" in p for p in problems)
+    assert any("Issue" in p for p in problems)
+
+
+def test_diff_cross_validation_rows_prefers_exact_row_and_ignores_unexpected_ids() -> None:
+    actual = [
+        ("CDS-9", "program", "Error", "unrelated"),
+        ("CDS-1", "program", "Warning", "other"),
+        ("CDS-1", "program", "Error", "Conflict Data found. See details."),
+    ]
+    assert diff_cross_validation_rows(_CV_EXPECTED, actual) == []

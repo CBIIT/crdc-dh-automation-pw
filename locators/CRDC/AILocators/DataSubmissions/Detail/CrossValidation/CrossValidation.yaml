@@ -2,3 +2,7 @@
 
 Table-Headers: "//*[starts-with(@data-testid,'generic-table-header-')]"
 Table-Row: "//*[@data-testid='generic-table-row']"
+# Scoped to the table that has a "Submitted Identifier" column (Katalon CV_GENERIC_TABLE_XPATH);
+# the unscoped Table-Row above matches any generic table on the page.
+Table: "//*[@data-testid='generic-table'][.//*[starts-with(@data-testid,'generic-table-header-')][normalize-space()='Submitted Identifier']]"
+Table-DataRow: "//*[@data-testid='generic-table'][.//*[starts-with(@data-testid,'generic-table-header-')][normalize-space()='Submitted Identifier']]//*[@data-testid='generic-table-row']"

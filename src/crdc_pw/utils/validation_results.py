@@ -472,3 +472,97 @@ def check_export_filename(filename: str, expected_submission_name: str | None = 
         if not match.group(1).startswith(expected):
             return f"submission name {match.group(1)!r} in file name does not start with {expected!r}"
     return None
+
+
+# ---------------------------------------------------------------------------
+# Cross Validation Results (Katalon verifyCrossValidationResultsVsExpected)
+# ---------------------------------------------------------------------------
+
+_CV_EXPECTED_SUBFOLDER = "expected-CrossValidationResults"
+_CV_EXPECTED_SUFFIX = "_expected-CrossValidationResults.tsv"
+_CV_COLUMNS = ("submitted_id", "node_type", "severity", "issue")
+
+# One Cross Validation row: (submitted identifier, node type, severity, issue text).
+CrossValidationRow = tuple[str, str, str, str]
+
+
+def expected_cross_validation_dir(tc_name: str, root: Path | None = None) -> Path:
+    """InputFiles/CRDC/MetadataData/<tcName>/expected-CrossValidationResults."""
+    return metadata_dir(tc_name, root) / _CV_EXPECTED_SUBFOLDER
+
+
+def load_expected_cross_validation_rows(tc_name: str, root: Path | None = None) -> list[CrossValidationRow]:
+    """Rows of every *_expected-CrossValidationResults.tsv in the TC folder (empty submitted_id skipped).
+
+    Each TSV needs the columns submitted_id, node_type, severity and issue.
+    """
+    folder = expected_cross_validation_dir(tc_name, root)
+    if not folder.is_dir():
+        raise FileNotFoundError(f"expected-CrossValidationResults folder not found: {folder}")
+    files = sorted(p for p in folder.iterdir() if p.is_file() and p.name.endswith(_CV_EXPECTED_SUFFIX))
+    if not files:
+        raise FileNotFoundError(f"no *{_CV_EXPECTED_SUFFIX} files in {folder}")
+    rows: list[CrossValidationRow] = []
+    for path in files:
+        lines = _read_tsv_lines(path)
+        headers = [h.strip().lower() for h in lines[0].split("\t")] if lines else []
+        missing = [name for name in _CV_COLUMNS if name not in headers]
+        if missing:
+            raise ValueError(f"{path.name}: missing column(s) {missing}; headers are {headers}")
+        index = {name: headers.index(name) for name in _CV_COLUMNS}
+        for line in lines[1:]:
+            if not line.strip():
+                continue
+            cells = line.split("\t")
+
+            def cell(name: str, cells: list[str] = cells) -> str:
+                i = index[name]
+                return cells[i].strip() if i < len(cells) else ""
+
+            if cell("submitted_id"):
+                rows.append((cell("submitted_id"), cell("node_type"), cell("severity"), cell("issue")))
+    return rows
+
+
+def normalize_cross_validation_issue(text: str | None) -> str:
+    """Trim, drop trailing dots and lower-case, so "Conflict Data found." equals "conflict data found"."""
+    return re.sub(r"[.]+$", "", (text or "").strip()).lower()
+
+
+def diff_cross_validation_rows(
+    expected: list[CrossValidationRow], actual: list[CrossValidationRow]
+) -> list[str]:
+    """Mismatch messages; empty means every expected row is in the UI rows.
+
+    Rows are matched by submitted identifier. Node type and severity are compared ignoring
+    case. The issue matches when the normalized texts are equal or the expected text is
+    contained in the actual one. An exact row is preferred when one id has several UI rows.
+    UI rows with ids that are not expected are not reported (the UI rows were read for one
+    peer submission only), as in Katalon's anchored mode.
+    """
+    by_id: dict[str, list[CrossValidationRow]] = {}
+    for row in actual:
+        if row[0].strip():
+            by_id.setdefault(row[0].strip(), []).append(row)
+
+    problems: list[str] = []
+    for exp_id, exp_node, exp_sev, exp_issue in expected:
+        candidates = by_id.get(exp_id)
+        if not candidates:
+            problems.append(f"Submitted ID {exp_id!r}: expected in UI but not found")
+            continue
+        best = candidates[0]
+        for row in candidates:
+            if row[1].lower() == exp_node.lower() and row[2].lower() == exp_sev.lower() and row[3] == exp_issue:
+                best = row
+                break
+        _id, act_node, act_sev, act_issue = best
+        want = normalize_cross_validation_issue(exp_issue)
+        got = normalize_cross_validation_issue(act_issue)
+        if act_node.lower() != exp_node.lower():
+            problems.append(f"Submitted ID {exp_id!r}: Node Type expected {exp_node!r}, actual {act_node!r}")
+        if act_sev.lower() != exp_sev.lower():
+            problems.append(f"Submitted ID {exp_id!r}: Severity expected {exp_sev!r}, actual {act_sev!r}")
+        if not (got == want or (want and want in got)):
+            problems.append(f"Submitted ID {exp_id!r}: Issue expected {exp_issue!r}, actual {act_issue!r}")
+    return problems
