@@ -49,7 +49,13 @@ TYPE_DATA_FILE = "data file"
 TYPE_METADATA = "metadata"
 
 # The CLI can exit 0 and still log one of these (Katalon: "treat output as source of truth").
-FAILURE_MARKERS = ("Failed to upload files", "can't get data file config")
+FAILURE_MARKERS = (
+    "Failed to upload files",
+    "can't get data file config",
+    "Failed to update batch",
+    "Failed process the manifest",
+    "Failed to add file id to the pre-manifest",
+)
 
 # A good run prints all of these (Katalon verifyCliUploadOutput, which only warned).
 REQUIRED_OUTPUT = ("Files failed: 0", "File uploading completed!", "Files processed:", "Files copied:")
