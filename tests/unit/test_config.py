@@ -35,8 +35,8 @@ def test_qa_profile_base_url() -> None:
 @pytest.mark.unit
 def test_dev_and_qa2_urls() -> None:
     """CRDC_PROFILE=dev / qa2 must not silently keep using QA."""
-    assert load_settings(profile="dev").base_url.endswith("hub-dev.datacommons.cancer.gov/")
-    assert load_settings(profile="qa2").base_url.endswith("hub-qa2.datacommons.cancer.gov/")
+    assert load_settings(profile="dev").base_url == "https://hub-dev.datacommons.cancer.gov/"
+    assert load_settings(profile="qa2").base_url == "https://hub-qa2.datacommons.cancer.gov/"
 
 @pytest.mark.unit
 def test_example_files_are_committed() -> None:
