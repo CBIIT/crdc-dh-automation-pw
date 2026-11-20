@@ -23,11 +23,13 @@ import pytest
 
 from crdc_pw.pages.cli_uploader import CliResult, CliUpload
 from crdc_pw.utils.cli_verifications import (
+    MISSING_FROM_REPORT,
     ErrorCheck,
     compare_cli_errors,
     diff_file_ids_between_runs,
     diff_final_manifest,
     extract_error_from_log,
+    file_ids_by_name,
     final_manifest_path,
     find_cli_log,
     find_column,
@@ -198,6 +200,26 @@ def test_verify_final_manifest_deterministic_fails_without_file_id_column(tmp_pa
         verify_final_manifest_deterministic(first, second)
 
 
+def _final_with_internal(rows: list[list[str]]) -> tuple[list[str], list[list[str]]]:
+    """Final manifest as the CLI writes it: basename in file_name, flattened path in internal_file_name."""
+    return ["type", "file_name", "internal_file_name", "file_id"], rows
+
+
+def test_file_ids_by_name_tells_apart_same_basename_in_different_folders() -> None:
+    table = _final_with_internal([["file", "a.txt", "dirA_a.txt", _ID_A], ["file", "a.txt", "dirB_a.txt", _ID_B]])
+    assert file_ids_by_name(table) == {"dirA_a.txt": _ID_A, "dirB_a.txt": _ID_B}
+
+
+def test_file_ids_by_name_falls_back_to_file_name_without_internal_column() -> None:
+    assert file_ids_by_name((["file_name", "file_id"], [["a.txt", _ID_A]])) == {"a.txt": _ID_A}
+
+
+def test_diff_file_ids_between_runs_sees_a_changed_id_for_a_same_basename_file() -> None:
+    first = _final_with_internal([["file", "a.txt", "dirA_a.txt", _ID_A], ["file", "a.txt", "dirB_a.txt", _ID_B]])
+    second = _final_with_internal([["file", "a.txt", "dirA_a.txt", _ID_A], ["file", "a.txt", "dirB_a.txt", _ID_A]])
+    assert diff_file_ids_between_runs(first, second) == [f"dirB_a.txt: first={_ID_B}, second={_ID_A}"]
+
+
 SIZE_ERROR = "Real file size 8442 of file demo1.xlsx does not match with that in manifest 844!"
 MD5_ERROR = "Real file md5 12bc of file demo2.pdf does not match with that in manifest 112bc!"
 
@@ -296,7 +318,9 @@ def test_extract_error_from_log_by_file_name_then_single_file_fallback() -> None
     assert "demo2.pdf" in extract_error_from_log("demo2.pdf", log_text)
     assert "demo2" in extract_error_from_log("demo2.csv", log_text)  # name without extension
     assert extract_error_from_log("nothing.zip", log_text) == ""
-    assert extract_error_from_log("nothing.zip", log_text, single_file_fallback=True).startswith("ERROR Real file size 1")
+    assert extract_error_from_log("nothing.zip", log_text, single_file_fallback=True).startswith(
+        "ERROR Real file size 1"
+    )
     assert extract_error_from_log("", log_text) == "" and extract_error_from_log("a", "") == ""
 
 
@@ -328,6 +352,19 @@ def test_compare_cli_errors_fails_a_flagged_file_nobody_expected() -> None:
     assert not checks[0].ok and checks[0].expected == ""
 
 
+def test_compare_cli_errors_fails_a_file_with_expected_errors_that_is_not_in_the_report() -> None:
+    rows = [("demo3.txt", "")]
+    expected = {"demo1.xlsx": f"['{SIZE_ERROR}']", "demo3.txt": ""}
+    checks = compare_cli_errors(rows, expected)
+    assert [check.ok for check in checks] == [True, False]
+    assert checks[1] == ErrorCheck("demo1.xlsx", MISSING_FROM_REPORT, SIZE_ERROR)
+
+
+def test_compare_cli_errors_ignores_a_missing_file_that_expects_no_errors() -> None:
+    checks = compare_cli_errors([("demo1.xlsx", "")], {"demo1.xlsx": "", "demo3.txt": "[]"})
+    assert [check.file_name for check in checks] == ["demo1.xlsx"] and checks[0].ok
+
+
 def test_compare_cli_errors_takes_an_empty_cell_from_the_log() -> None:
     log_text = f"<14>1 2026-03-04T17:05:03Z - - 1 - - ERROR: (File_Validator) {MD5_ERROR}"
     checks = compare_cli_errors([("demo2.pdf", "")], {"demo2.pdf": f"['{MD5_ERROR}']"}, log_text)
@@ -344,9 +381,7 @@ def test_format_checks_tsv() -> None:
 
 
 def _upload(tmp_path: Path) -> CliUpload:
-    return CliUpload(
-        result=CliResult(1, ""), data_dir=tmp_path / "data", manifest=None, cli_work_dir=tmp_path / "cli"
-    )
+    return CliUpload(result=CliResult(1, ""), data_dir=tmp_path / "data", manifest=None, cli_work_dir=tmp_path / "cli")
 
 
 def _expected_folder(root: Path, tc: str, text: str) -> None:
@@ -357,9 +392,7 @@ def _expected_folder(root: Path, tc: str, text: str) -> None:
 
 def test_verify_cli_error_messages_passes_and_writes_a_report(tmp_path: Path) -> None:
     _write_report(tmp_path / "cli")
-    _expected_folder(
-        tmp_path, "TC", f"expected_errors\tfile_name\n['{SIZE_ERROR}']\tdemo1.xlsx\n\tdemo3.txt\n"
-    )
+    _expected_folder(tmp_path, "TC", f"expected_errors\tfile_name\n['{SIZE_ERROR}']\tdemo1.xlsx\n\tdemo3.txt\n")
     out = tmp_path / "out"
     checks = verify_cli_error_messages(_upload(tmp_path), "TC", root=tmp_path, report_dir=out)
     assert [check.ok for check in checks] == [True, True]
@@ -371,6 +404,17 @@ def test_verify_cli_error_messages_fails_on_a_mismatch_with_both_values(tmp_path
     _write_report(tmp_path / "cli")
     _expected_folder(tmp_path, "TC", "expected_errors\tfile_name\n['different']\tdemo1.xlsx\n")
     with pytest.raises(AssertionError, match=r"(?s)mismatch.*demo1\.xlsx.*different"):
+        verify_cli_error_messages(_upload(tmp_path), "TC", root=tmp_path, report_dir=tmp_path / "out")
+
+
+def test_verify_cli_error_messages_fails_when_an_expected_file_is_missing_from_the_report(tmp_path: Path) -> None:
+    _write_report(tmp_path / "cli")  # rows: demo1.xlsx, demo3.txt
+    _expected_folder(
+        tmp_path,
+        "TC",
+        f"expected_errors\tfile_name\n['{SIZE_ERROR}']\tdemo1.xlsx\n['{MD5_ERROR}']\tdemo2.pdf\n",
+    )
+    with pytest.raises(AssertionError, match=r"(?s)demo2\.pdf.*not in upload report"):
         verify_cli_error_messages(_upload(tmp_path), "TC", root=tmp_path, report_dir=tmp_path / "out")
 
 

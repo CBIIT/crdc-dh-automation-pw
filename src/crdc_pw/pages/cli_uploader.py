@@ -209,7 +209,8 @@ def run_uploader(
     interpreter = sys.executable
     ensure_cli_dependencies(interpreter, root)
     token = str(config.get("Config", {}).get("token", ""))
-    work_dir = Path(work_dir)
+    # Absolute: the config path is passed to a process that runs with work_dir as its working directory.
+    work_dir = Path(work_dir).resolve()
     work_dir.mkdir(parents=True, exist_ok=True)
     config_path = write_config_file(config, work_dir)
     env = {**os.environ, "PYTHONIOENCODING": "utf-8"}

@@ -38,6 +38,9 @@ log = logging.getLogger("crdc_pw.cli_verifications")
 
 # Column that names the file, first one present wins (Katalon FILE_NAME_COLUMN_CANDIDATES).
 FILE_NAME_COLUMNS = ("file_name", "internal_file_name", "fileName")
+# The CLI's final manifest keeps only the basename in file_name and the full path (with / turned into _)
+# in internal_file_name, so to tell dirA/a.txt from dirB/a.txt that column comes first.
+FILE_IDENTITY_COLUMNS = ("internal_file_name", *FILE_NAME_COLUMNS)
 
 
 def find_column(headers: list[str], candidates: tuple[str, ...]) -> int:
@@ -111,12 +114,16 @@ def diff_final_manifest(original: Table, final: Table) -> list[str]:
 
 
 def file_ids_by_name(table: Table) -> dict[str, str]:
-    """file name -> file_id for every row with a file name. Raises ValueError without both columns."""
+    """file name -> file_id for every row with a file name. Raises ValueError without both columns.
+
+    The name is internal_file_name when the manifest has that column (see FILE_IDENTITY_COLUMNS),
+    so files with the same basename in different folders are not merged into one.
+    """
     headers, rows = table
     id_index = find_column(headers, (FILE_ID_COLUMN,))
-    name_index = find_column(headers, FILE_NAME_COLUMNS)
+    name_index = find_column(headers, FILE_IDENTITY_COLUMNS)
     if id_index < 0 or name_index < 0:
-        raise ValueError(f"Manifest needs a {FILE_ID_COLUMN!r} column and one of {FILE_NAME_COLUMNS}")
+        raise ValueError(f"Manifest needs a {FILE_ID_COLUMN!r} column and one of {FILE_IDENTITY_COLUMNS}")
     ids: dict[str, str] = {}
     for row in rows:
         name = row[name_index] if name_index < len(row) else ""
@@ -200,6 +207,8 @@ CLI_ERROR_LINE_SUBSTRINGS = (
 _MAX_LOG_LINE_CHARS = 500
 _MAX_CELL_CHARS = 200
 REPORT_SUBFOLDER = "CLI_ErrorVerification"
+# Shown as the actual errors of a file that has expected errors but is not in the upload report.
+MISSING_FROM_REPORT = "(file not in upload report)"
 
 
 @dataclass(frozen=True)
@@ -338,7 +347,8 @@ def compare_cli_errors(
 
     Where a row's errors cell is empty the error line for the file is taken from log_text. A file
     that is not in expected_by_file is expected to have no errors, so a row the CLI flagged that
-    nobody expected fails.
+    nobody expected fails. The other way round also fails: a file with expected errors that has no
+    row in the report was not checked, so it gets a failing check (MISSING_FROM_REPORT).
     """
     checks: list[ErrorCheck] = []
     single = len(report_rows) == 1
@@ -354,6 +364,11 @@ def compare_cli_errors(
                 expected=normalize_error_cell(expected_by_file.get(file_name, "")),
             )
         )
+    reported = {file_name for file_name, _ in report_rows}
+    for file_name, expected_raw in expected_by_file.items():
+        expected = normalize_error_cell(expected_raw)
+        if expected and file_name not in reported:
+            checks.append(ErrorCheck(file_name=file_name, actual=MISSING_FROM_REPORT, expected=expected))
     return checks
 
 

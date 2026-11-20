@@ -120,6 +120,19 @@ def test_exit_code_and_failure_line_are_reported() -> None:
     assert 'CLI output contains "can\'t get data file config"' in problems
 
 
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Failed to update batch, 1234!",
+        "Failed process the manifest and final metadata files, ['manifest-final.tsv'].",
+        "Failed to add file id to the pre-manifest, manifest.tsv.",
+    ],
+)
+def test_batch_and_manifest_failures_after_a_good_transfer_are_reported(line: str) -> None:
+    problems = cli_output_problems(CliResult(0, _GOOD_OUTPUT + line + "\n"))
+    assert len(problems) == 1 and problems[0].startswith("CLI output contains")
+
+
 def test_missing_success_lines_are_reported() -> None:
     problems = cli_output_problems(CliResult(0, "Files processed: 3\n"))
     assert "CLI output does not contain 'Files failed: 0'" in problems
@@ -138,6 +151,29 @@ def test_last_validation_progress_must_be_complete() -> None:
 
 def test_vendored_cli_is_present() -> None:
     assert (cli_dir() / "src" / "uploader.py").is_file()
+
+
+def test_run_uploader_gives_the_cli_an_absolute_config_path_for_a_relative_work_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    script = tmp_path / "tools" / "crdc-datahub-cli-uploader" / "src" / "uploader.py"
+    script.parent.mkdir(parents=True)
+    script.write_text("", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(cli_uploader, "ensure_cli_dependencies", lambda *args, **kwargs: None)
+    seen: dict[str, object] = {}
+
+    def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        config_path = Path(command[-1])
+        seen.update(config_path=config_path, cwd=kwargs["cwd"], exists=config_path.is_file())
+        return subprocess.CompletedProcess(command, 0, stdout="ok")
+
+    monkeypatch.setattr(cli_uploader.subprocess, "run", fake_run)
+    result = run_uploader({"Config": {"token": "t"}}, Path("runs/cli"), root=tmp_path)
+    config_path = seen["config_path"]
+    assert isinstance(config_path, Path) and config_path.is_absolute() and seen["exists"] is True
+    assert Path(str(seen["cwd"])) == tmp_path / "runs" / "cli" and config_path.parent == seen["cwd"]
+    assert result.output == "ok"
 
 
 def test_run_uploader_without_cli_raises(tmp_path: Path) -> None:
