@@ -188,10 +188,25 @@ class DataSubmissionsListPage(BasePage):
         log.info("Apply Data Submissions filters: completed")
 
     def _select_list_option(self, dropdown_path: str, label: str) -> None:
-        """Open a single-select filter dropdown and click the option whose text is label."""
+        """Open a single-select filter dropdown and click the option whose text is label.
+
+        On QA the Program menu (id menu-organization) is open and shows the option, but a
+        Playwright click on it is refused for the full timeout: Playwright reports the menu's own
+        invisible backdrop as covering the option (seen in the TC10 trace, 20 Nov 2026). Selenium
+        in Katalon does not hit this. If the real click is refused, send the click event to the
+        option instead. React's menu item handles it the same way, so the filter is still set.
+        Afterwards wait for the menu to close, so the next dropdown does not open while this
+        menu's backdrop is still fading out.
+        """
         self._loc(dropdown_path).first.click()
-        option = self.page.locator(f"xpath=//li[normalize-space(text())={_xpath_literal(label)}]")
-        option.first.click()
+        option = self.page.locator(f"xpath=//li[normalize-space(text())={_xpath_literal(label)}]").first
+        option.wait_for(state="visible")
+        try:
+            option.click(timeout=self.PROBE_MS)
+        except PlaywrightTimeoutError:
+            log.info("Option %r click was blocked by the menu backdrop; dispatching click", label)
+            option.dispatch_event("click")
+        self.page.locator("[role='listbox']").first.wait_for(state="hidden")
 
     def _select_status_filter(self, status_csv: str) -> None:
         """Multi-select Status: clear every selected option, pick each label, then close."""
