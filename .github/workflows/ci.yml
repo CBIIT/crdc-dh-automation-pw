@@ -1,17 +1,22 @@
 # GitHub Actions workflow (workflow_dispatch only for now).
 #
-# config/qa.yaml, qa2.yaml, and stage.yaml are gitignored, so checkout does
+# config/dev.yaml, qa.yaml, and qa2.yaml are gitignored, so checkout does
 # not include credentials. Unit tests use committed *.yaml.example files.
 # The smoke job writes the gitignored yaml from GitHub Environment secrets
 # first (see ci/README.md and ci/write_profile_yaml.py).
 
 name: ci
 
+# Least privilege for GITHUB_TOKEN (CodeQL: workflow does not contain permissions). Both jobs only
+# check out the code and upload artifacts, so read access to contents is enough.
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
     inputs:
       profile:
-        description: "Hub profile (qa, qa2, or stage). Used by the smoke job."
+        description: "Hub profile (dev, qa, or qa2). Used by the smoke job."
         required: false
         default: "qa"
       run_smoke:
@@ -76,16 +81,16 @@ jobs:
           ApiUrl: ${{ vars.ApiUrl }}
           SubmitterApiToken: ${{ secrets.SubmitterApiToken }}
         run: python ci/write_profile_yaml.py
-      - name: EnableAllPermissions (suite setup)
-        run: pytest -m CRDC_PBAC -k EnableAllPermissions
-      - name: CRDC_Smoke
-        run: pytest -m CRDC_Smoke
-      - name: Keep reports and traces
+      # run_suite.sh runs EnableAllPermissions, the suite, then EnableAllPermissions again, serially, with --tracing=off. A
+      # Playwright trace records the Hub tab's network requests (including request headers), and
+      # this repo is public, so anyone signed in to GitHub can download its artifacts. Do not
+      # upload traces from CI.
+      - name: CRDC_Smoke (EnableAllPermissions first)
+        run: bash ci/run_suite.sh CRDC_Smoke
+      - name: Keep reports
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: smoke-${{ inputs.profile }}
-          path: |
-            reports/
-            test-results/
+          path: reports/
           if-no-files-found: ignore

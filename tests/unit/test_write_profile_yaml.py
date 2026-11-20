@@ -50,6 +50,31 @@ def test_write_profile_overlays_secrets(tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
+def test_base_url_override_derives_api_url_unless_api_url_is_given(tmp_path: Path) -> None:
+    """A BASE_URL override must not leave the example's ApiUrl pointing at the old host."""
+    dest = tmp_path / "config"
+    dest.mkdir()
+    (dest / "qa.yaml.example").write_text(
+        "name: qa\nbase_url: https://hub-qa.datacommons.cancer.gov/\nApiUrl: https://hub-qa.datacommons.cancer.gov/api/graphql\n",
+        encoding="utf-8",
+    )
+    override = {"CRDC_PROFILE": "qa", "BASE_URL": "https://other.example.gov/"}
+
+    write_profile_yaml(tmp_path, override)
+    assert load_settings(profile="qa", root=tmp_path).api_url == "https://other.example.gov/api/graphql"
+
+    write_profile_yaml(tmp_path, {**override, "ApiUrl": ""})  # an unset Actions variable is ""
+    assert load_settings(profile="qa", root=tmp_path).api_url == "https://other.example.gov/api/graphql"
+
+    write_profile_yaml(tmp_path, {**override, "ApiUrl": "https://api.example.gov/graphql"})
+    assert load_settings(profile="qa", root=tmp_path).api_url == "https://api.example.gov/graphql"
+
+    # no BASE_URL override: the example's own ApiUrl stays
+    write_profile_yaml(tmp_path, {"CRDC_PROFILE": "qa"})
+    assert load_settings(profile="qa", root=tmp_path).api_url == "https://hub-qa.datacommons.cancer.gov/api/graphql"
+
+
+@pytest.mark.unit
 def test_write_profile_overlays_cli_keys(tmp_path: Path) -> None:
     """ApiUrl and SubmitterApiToken come from env too, so the smoke job can run the upload CLI."""
     dest = tmp_path / "config"

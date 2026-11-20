@@ -4,7 +4,7 @@ CI is **GitHub Actions**, not Jenkins. The workflow is [`.github/workflows/ci.ym
 
 ## Gitignored yaml vs checkout
 
-`config/qa.yaml`, `qa2.yaml`, and `stage.yaml` are **not in git** (passwords and TOTP seeds). `actions/checkout` therefore does not give the runner those files.
+`config/dev.yaml`, `qa.yaml`, and `qa2.yaml` are **not in git** (passwords and TOTP seeds). `actions/checkout` therefore does not give the runner those files.
 
 | Job | What it uses |
 |---|---|
@@ -15,7 +15,7 @@ The app does **not** read GitHub secrets itself. Secrets become a yaml file on t
 
 ## GitHub Environments
 
-Create three Environments on the GitHub repo, named **`qa`**, **`qa2`**, and **`stage`**. In each one:
+Create the Environments on the GitHub repo, named **`dev`**, **`qa`**, and **`qa2`** (only the ones you run). In each one:
 
 - **Variable** (optional): `BASE_URL` — only if you need to override the URL already in the example file.
 - **Secrets**, Katalon names (same keys as the yaml):
@@ -28,12 +28,18 @@ For the upload CLI case (CRDCDH-1405 TC101) also set **`SubmitterApiToken`** (se
 
 ## Smoke job
 
-The `smoke` job in `ci.yml` is this, in order: write the yaml, run `pytest -m CRDC_PBAC -k EnableAllPermissions` (suite setup), run `pytest -m CRDC_Smoke` serially (PBAC shares permissions, so no `-n`), and upload `reports/` and `test-results/` (traces). One prerequisite is not automated: Data Explorer TC201 needs the `automation_CompletedStudy` study seeded on the environment (see the smoke plan).
+The `smoke` job in `ci.yml` is this, in order: write the yaml, run `bash ci/run_suite.sh CRDC_Smoke`, and upload `reports/` (HTML report, JUnit XML and failure screenshots). [`ci/run_suite.sh`](run_suite.sh) is the one command a pipeline needs: it runs `pytest -m CRDC_PBAC -k EnableAllPermissions` (the Katalon suite setup), then `pytest -m <marker>`, then EnableAllPermissions again. The marker defaults to `CRDC_Smoke`; extra arguments go to the suite run only.
+- **Setup must really run.** pytest exits 0 when the only test is skipped (for example Master credentials missing in the yaml), so the script reads `reports/junit-setup.xml` and requires exactly one test case that was not skipped and did not fail. Otherwise it stops before the suite.
+- **Restore after the suite.** Some suites (`CRDC_Regression`: PBAC TC11 to TC15) leave shared users' permissions unchecked, so the restore runs after the suite even when the suite failed (it adds a few minutes). The one exception is a plain `bash ci/run_suite.sh CRDC_PBAC` with no extra arguments, which already ends with EnableAllPermissions. Any extra argument brings the restore back: `-k TC11` does not collect EnableAllPermissions and `-x` can stop the run before it. Katalon does not restore after `CRDC_Regression`; this is an addition.
+- **Serial, no traces and the JUnit path cannot be overridden.** `--tracing=off -n 0` (and `--junitxml=reports/junit.xml` for the suite) come after the caller's arguments and after `PYTEST_ADDOPTS`, in all three runs. PBAC shares permissions, so no parallel runs.
+- **Output and exit code.** `reports/junit-setup.xml`, `junit.xml` and `junit-restore.xml`. The exit code is the suite's when that is not 0; otherwise 1 if the restore failed (reported on stderr); otherwise 0.
+
+`test-results/` is not uploaded: a trace holds the Hub tab's network requests, and this repo is public, so its artifacts are downloadable by anyone signed in to GitHub. The workflow sets `permissions: contents: read`. One prerequisite is not automated: Data Explorer TC201 needs the `automation_CompletedStudy` study seeded on the environment (see the smoke plan).
 
 ```yaml
 smoke:
   runs-on: ubuntu-latest
-  environment: ${{ inputs.profile }}   # qa, qa2, or stage
+  environment: ${{ inputs.profile }}   # dev, qa, or qa2
   steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
@@ -66,10 +72,7 @@ smoke:
         ApiUrl: ${{ vars.ApiUrl }}
         SubmitterApiToken: ${{ secrets.SubmitterApiToken }}
       run: python ci/write_profile_yaml.py
-    - run: pytest -m CRDC_PBAC -k EnableAllPermissions
-      env:
-        CRDC_PROFILE: ${{ inputs.profile }}
-    - run: pytest -m CRDC_Smoke
+    - run: bash ci/run_suite.sh CRDC_Smoke   # EnableAllPermissions, then the suite, serial, no traces
       env:
         CRDC_PROFILE: ${{ inputs.profile }}
 ```
@@ -77,6 +80,31 @@ smoke:
 `write_profile_yaml.py` copies `config/<profile>.yaml.example` and overlays any of those env vars that are set. It prints how many roles were filled; it never prints secret values.
 
 Do not commit filled yaml files or bake them into an image.
+
+## Running from another pipeline (ctos-ghr-katalon-test)
+
+The workflow in this repo is a standalone placeholder. The shared pipeline repo (`ctos-ghr-katalon-test`) will run these tests by checking this repo out. Its Katalon workflow keeps one secret per profile (`EXECUTION_PROFILE_<PROFILE>`, the whole `.glbl`) and writes it to `Profiles/`; this repo can be run the same way. The pipeline must:
+
+1. Check out `CBIIT/crdc-dh-automation-pw` (a ref input). The upload CLI cases need **Python 3.13 or newer**; on an older Python those two tests fail with a clear message.
+2. `pip install -r requirements.txt` (it contains `-e .`, so the same install step the Playwright workflow uses for `commons-automation` works) and `playwright install --with-deps chromium`.
+3. Provide the credentials as `config/<profile>.yaml`, for `CRDC_PROFILE` = `dev`, `qa` or `qa2` (map it from the pipeline's environment choice), in one of two ways:
+
+   - **One secret per profile (recommended, like Katalon).** The secret holds the whole filled yaml, copied from `config/<profile>.yaml.example`. The pipeline writes it with `printf '%s' "$SECRET" > config/<profile>.yaml`. That is one secret per environment (for example `CRDC_PW_PROFILE_QA`, the name is the pipeline's choice) instead of 19 each.
+   - **One secret per key.** Set these as environment variables and run `python ci/write_profile_yaml.py`, which fills the example and writes the same file:
+
+     | Name | Kind | Needed for |
+     |---|---|---|
+     | `<Role>Email`, `<Role>Password`, `<Role>Secret` for `Admin`, `Fedlead`, `Dcp`, `Submitter`, `User`, `Master` | secrets | login (Login.gov plus TOTP seed) |
+     | `SubmitterApiToken` | secret | upload CLI cases (the test fails without it) |
+     | `BASE_URL` | variable, optional | overrides the Hub URL in the example file. Unless `ApiUrl` is also set, the API URL is derived from it (`<base url>api/graphql`), so the browser and the CLI use the same host. |
+     | `ApiUrl` | variable, optional | only if the API host differs from `<base url>api/graphql`. Without a `BASE_URL` override, an unset `ApiUrl` keeps the example's own value. |
+
+   Either way the file is gitignored and the app reads only that file. Delete it after the run if the runner is not thrown away.
+4. Run `CRDC_PROFILE=<profile> bash ci/run_suite.sh <marker>` (marker defaults to `CRDC_Smoke`; extra arguments go to the suite run). It runs EnableAllPermissions (and fails if it was skipped), then the suite **serially** (never `-n`: PBAC shares permissions), then EnableAllPermissions again, with `--tracing=off` forced on every run, and writes `reports/junit.xml` (plus `junit-setup.xml` and `junit-restore.xml`). Its exit code is the suite's, or 1 if only the restore failed. The pipeline's own `--junitxml` or `PYTEST_ADDOPTS` is overridden for the suite, so read `reports/junit.xml`.
+5. Upload `reports/` (lower case, which differs from the `Reports/` folder `commons-automation` writes). Do not upload `test-results/`: it holds traces, and public-repo artifacts are downloadable by anyone signed in to GitHub.
+6. Give the job `permissions: contents: read`.
+
+Environment prerequisites that no pipeline sets up: Data Explorer TC201 needs the `automation_CompletedStudy` study seeded on the environment, and the Release Notes test (CRDCDH-4006) reads the release notes from a GitHub branch named like the profile, so a `dev` profile needs a `dev` branch there.
 
 ## Local vs Actions
 
