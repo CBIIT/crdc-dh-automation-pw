@@ -1,0 +1,3 @@
+# For pipelines that install with `pip install -r requirements.txt` (the ctos Playwright workflow does).
+# The dependency list lives in pyproject.toml; this installs the repo and those dependencies.
+-e .

@@ -20,7 +20,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from crdc_pw.config import ROLES, load_settings, profile_paths
+from crdc_pw.config import PROFILES, ROLES, load_settings, profile_paths
 from crdc_pw.locators.loader import repo_root
 
 
@@ -33,8 +33,9 @@ def test_qa_profile_base_url() -> None:
 
 
 @pytest.mark.unit
-def test_qa2_and_stage_urls() -> None:
-    """CRDC_PROFILE=qa2 / stage must not silently keep using QA."""
+def test_dev_qa2_and_stage_urls() -> None:
+    """CRDC_PROFILE=dev / qa2 / stage must not silently keep using QA."""
+    assert load_settings(profile="dev").base_url.endswith("hub-dev.datacommons.cancer.gov/")
     assert load_settings(profile="qa2").base_url.endswith("hub-qa2.datacommons.cancer.gov/")
     assert load_settings(profile="stage").base_url.endswith("hub-stage.datacommons.cancer.gov/")
 
@@ -47,7 +48,7 @@ def test_example_files_are_committed() -> None:
     (values may be blank).
     """
     root = repo_root()
-    for name in ("qa", "qa2", "stage"):
+    for name in PROFILES:
         _dest, example = profile_paths(root, name)
         assert example.is_file(), example
         with example.open(encoding="utf-8") as handle:
@@ -110,7 +111,7 @@ def test_api_url_defaults_from_base_url_and_token_is_blank_in_examples(tmp_path:
     """ApiUrl falls back to <base_url>api/graphql, and the committed examples carry no token."""
     # Read the committed examples only: a local config/<profile>.yaml may hold a real token.
     (tmp_path / "config").mkdir()
-    for name in ("qa", "qa2", "stage"):
+    for name in PROFILES:
         _real, example = profile_paths(repo_root(), name)
         (tmp_path / "config" / example.name).write_bytes(example.read_bytes())
         settings = load_settings(profile=name, root=tmp_path)

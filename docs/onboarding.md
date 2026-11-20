@@ -185,7 +185,7 @@ crdc-dh-automation-pw/
 │   └── utils/              # pbac_sheet, validation_results, static_content, otp
 ├── locators/CRDC/          # YAML catalog (was Object Repository/*.rs)
 ├── InputFiles/CRDC/        # PBAC Excel, MetadataData/TC08, DSV_ValidationResults-mappings.xlsx
-├── config/                 # qa / qa2 / stage (was Profiles/*.glbl)
+├── config/                 # dev / qa / qa2 / stage (was Profiles/*.glbl)
 ├── auth/                   # saved Login.gov cookies (gitignored)
 ├── reports/                # HTML + failure screenshots (gitignored)
 └── docs/onboarding.md
@@ -393,6 +393,7 @@ One gitignored YAML file per Hub environment, same idea as a Katalon profile:
 
 | File | Katalon profile | Hub |
 |---|---|---|
+| `config/dev.yaml` | `CRDC_Dev` | https://hub-dev.datacommons.cancer.gov/ |
 | `config/qa.yaml` | `CRDC_QA` | https://hub-qa.datacommons.cancer.gov/ |
 | `config/qa2.yaml` | `CRDC_QA2` | https://hub-qa2.datacommons.cancer.gov/ |
 | `config/stage.yaml` | `CRDC_STAGE` | https://hub-stage.datacommons.cancer.gov/ |
@@ -401,11 +402,12 @@ Each file holds **`base_url` plus the six role accounts** (`AdminEmail` / `Admin
 
 Committed templates (URLs filled, secrets blank):
 
+- `config/dev.yaml.example`
 - `config/qa.yaml.example`
 - `config/qa2.yaml.example`
 - `config/stage.yaml.example`
 
-**How the framework picks an environment:** the shell variable `CRDC_PROFILE`. Allowed values: `qa`, `qa2`, `stage`. If you do not set it, it defaults to **`qa`**.
+**How the framework picks an environment:** the shell variable `CRDC_PROFILE`. Allowed values: `dev`, `qa`, `qa2`, `stage`. If you do not set it, it defaults to **`qa`**.
 
 ```bash
 # uses config/qa.yaml
@@ -417,7 +419,7 @@ CRDC_PROFILE=qa2 pytest -m CRDC_Auxiliary
 
 Editing `qa2.yaml` does nothing unless `CRDC_PROFILE=qa2`. There is no pytest `--profile` flag yet.
 
-Do **not** commit `config/qa.yaml` (or qa2/stage). They contain passwords and TOTP seeds.
+Do **not** commit `config/qa.yaml` (or dev/qa2/stage). They contain passwords and TOTP seeds.
 
 ---
 
@@ -578,7 +580,7 @@ CI is **GitHub Actions**, not Jenkins. The workflow is still `workflow_dispatch`
 Because `qa.yaml` is gitignored, a checkout does **not** contain passwords.
 
 - **Unit job:** uses `*.yaml.example` (URLs only). No secrets needed.
-- **Smoke job:** run the workflow by hand and tick `run_smoke`. GitHub Environments named `qa` / `qa2` / `stage` hold the same Katalon secret names (plus `SubmitterApiToken` for the upload CLI). A step runs `python ci/write_profile_yaml.py` to write `config/<profile>.yaml` on the runner, then the job runs EnableAllPermissions and `pytest -m CRDC_Smoke` serially with `--tracing=off`, and uploads the reports (no traces).
+- **Smoke job:** run the workflow by hand and tick `run_smoke`. GitHub Environments named `dev` / `qa` / `qa2` / `stage` hold the same Katalon secret names (plus `SubmitterApiToken` for the upload CLI). A step runs `python ci/write_profile_yaml.py` to write `config/<profile>.yaml` on the runner, then `bash ci/run_suite.sh CRDC_Smoke` runs EnableAllPermissions and the suite serially with `--tracing=off`, and the job uploads the reports (no traces). `ci/run_suite.sh` is also the command another pipeline should call; see "Running from another pipeline" in `ci/README.md`.
 
 Details: [ci/README.md](../ci/README.md).
 
@@ -592,7 +594,7 @@ Details: [ci/README.md](../ci/README.md).
 | Tests hit QA2 by accident | `CRDC_PROFILE` still set in the shell | `echo $CRDC_PROFILE`; unset it or set `qa` |
 | Timeout on OTP / Grant | Login.gov or Hub slow; OTP window | Rerun; Grant can take 30s+. Do not start a second login for the same user |
 | Username empty / still on login.gov | Session expired or login failed | `rm auth/<profile>/<Role>.json` and rerun `--headed` |
-| `Profile config not found` | Typo in `CRDC_PROFILE` | Must be exactly `qa`, `qa2`, or `stage` |
+| `Profile config not found` | Typo in `CRDC_PROFILE` | Must be exactly `dev`, `qa`, `qa2`, or `stage` |
 | Unit tests fail on locators | Incomplete clone | `locators/CRDC/` must be present |
 | `playwright` / browser missing | Step 3 skipped | `pip install -e .` then `playwright install chromium` |
 | Wrong Python | venv not active | `source .venv/bin/activate` |
@@ -601,7 +603,7 @@ Details: [ci/README.md](../ci/README.md).
 
 ## What not to commit
 
-- `config/qa.yaml`, `qa2.yaml`, `stage.yaml`
+- `config/dev.yaml`, `qa.yaml`, `qa2.yaml`, `stage.yaml`
 - `.env` (leftover; this project does not use it anymore)
 - `auth/**` session JSON
 - `.venv/`
