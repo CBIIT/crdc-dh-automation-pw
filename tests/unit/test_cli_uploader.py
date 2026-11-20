@@ -190,7 +190,7 @@ def _settings(**data: object) -> Settings:
     )
 
 
-def test_build_config_adds_archive_manifest_and_id_field_for_data_file(tmp_path: Path) -> None:
+def test_build_config_adds_archive_manifest_for_data_file(tmp_path: Path) -> None:
     config = build_config(
         api_url="u",
         token="t",
@@ -199,17 +199,16 @@ def test_build_config_adds_archive_manifest_and_id_field_for_data_file(tmp_path:
         data_dir=tmp_path,
         manifest=tmp_path / "manifest.tsv",
         archive_manifest=tmp_path / "zip-archive-manifest.tsv",
-        id_field="my_id",
         retries=5,
         overwrite=True,
         dryrun=True,
     )["Config"]
     assert config["archive_manifest"] == str((tmp_path / "zip-archive-manifest.tsv").resolve())
-    assert config["id-field"] == "my_id"
+    assert "id-field" not in config
     assert (config["retries"], config["overwrite"], config["dryrun"]) == (5, True, True)
 
 
-def test_build_config_leaves_out_archive_manifest_and_id_field_for_metadata(tmp_path: Path) -> None:
+def test_build_config_leaves_out_archive_manifest_for_metadata(tmp_path: Path) -> None:
     config = build_config(
         api_url="u",
         token="t",
@@ -217,22 +216,20 @@ def test_build_config_leaves_out_archive_manifest_and_id_field_for_metadata(tmp_
         upload_type=TYPE_METADATA,
         data_dir=tmp_path,
         archive_manifest=tmp_path / "zip-archive-manifest.tsv",
-        id_field="my_id",
     )["Config"]
-    assert "archive_manifest" not in config and "id-field" not in config
+    assert "archive_manifest" not in config
 
 
 def test_options_default_and_from_yaml() -> None:
-    assert options_from_settings(_settings()) == CliOptions(3, False, False, None)
+    assert options_from_settings(_settings()) == CliOptions(3, False, False)
     options = options_from_settings(
         _settings(
             CRDC_CLI_RETRIES="5",
             CRDC_CLI_OVERWRITE="true",
             CRDC_CLI_DRYRUN=True,
-            CRDC_MANIFEST_ID_FIELD=" my_id ",
         )
     )
-    assert options == CliOptions(5, True, True, "my_id")
+    assert options == CliOptions(5, True, True)
     assert options_from_settings(_settings(CRDC_CLI_RETRIES="many")).retries == 3
 
 
@@ -321,7 +318,7 @@ def test_upload_data_files_leaves_inputs_alone_and_copies_manifest_files(
     )
     fake = _FakeRun(CliResult(0, _GOOD_OUTPUT))
     monkeypatch.setattr(cli_uploader, "run_uploader", fake)
-    settings = _settings(SubmitterApiToken="tok", ApiUrl="https://hub/api/graphql", CRDC_MANIFEST_ID_FIELD="my_id")
+    settings = _settings(SubmitterApiToken="tok", ApiUrl="https://hub/api/graphql")
 
     upload = upload_files_via_cli(_hub(settings), "TC", "datafile", work_dir=tmp_path / "run")
 
@@ -332,7 +329,7 @@ def test_upload_data_files_leaves_inputs_alone_and_copies_manifest_files(
     assert config["api-url"] == "https://hub/api/graphql" and config["token"] == "tok"
     assert config["submission"] == _SUBMISSION_ID and config["type"] == "data file"
     assert config["data"] == str(source.resolve())
-    assert config["manifest"] == str(upload.manifest.resolve()) and config["id-field"] == "my_id"
+    assert config["manifest"] == str(upload.manifest.resolve()) and "id-field" not in config
     assert "archive_manifest" not in config
     assert fake.work_dirs == [upload.cli_work_dir]
     # only tsv and txt files are copied, never an old -final file or a data file

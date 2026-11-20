@@ -36,7 +36,6 @@ SubmitterApiToken:
 # CRDC_CLI_RETRIES: 3
 # CRDC_CLI_OVERWRITE: false
 # CRDC_CLI_DRYRUN: false
-# CRDC_MANIFEST_ID_FIELD:      # manifest column that holds the file id
 
 excel_ds_validation:
   enabled: true

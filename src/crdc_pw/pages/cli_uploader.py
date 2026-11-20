@@ -91,15 +91,14 @@ def build_config(
     data_dir: Path,
     manifest: Path | None = None,
     archive_manifest: Path | None = None,
-    id_field: str | None = None,
     retries: int = 3,
     overwrite: bool = False,
     dryrun: bool = False,
 ) -> dict[str, Any]:
     """CLI config as a dict with the top-level Config key the CLI reads.
 
-    upload_type is "data file" or "metadata". The manifest, archive_manifest (zip files) and
-    id_field (manifest column that holds the file id) are only used for "data file".
+    upload_type is "data file" or "metadata". The manifest and archive_manifest (zip files) are only
+    used for "data file".
     """
     if upload_type not in (TYPE_DATA_FILE, TYPE_METADATA):
         raise ValueError(f"upload_type must be {TYPE_DATA_FILE!r} or {TYPE_METADATA!r}, got {upload_type!r}")
@@ -116,8 +115,6 @@ def build_config(
         config["manifest"] = str(Path(manifest).resolve())
         if archive_manifest is not None:
             config["archive_manifest"] = str(Path(archive_manifest).resolve())
-        if id_field:
-            config["id-field"] = id_field
     config["retries"] = retries
     config["overwrite"] = overwrite
     config["dryrun"] = dryrun
@@ -269,12 +266,11 @@ def cli_output_problems(result: CliResult) -> list[str]:
 
 @dataclass(frozen=True)
 class CliOptions:
-    """Optional CLI settings from the profile yaml (Katalon CRDC_CLI_* and CRDC_MANIFEST_ID_FIELD)."""
+    """Optional CLI settings from the profile yaml (Katalon CRDC_CLI_*)."""
 
     retries: int = 3
     overwrite: bool = False
     dryrun: bool = False
-    id_field: str | None = None
 
 
 @dataclass(frozen=True)
@@ -300,21 +296,19 @@ def _as_bool(value: Any) -> bool:
 
 
 def options_from_settings(settings: Settings) -> CliOptions:
-    """Read CRDC_CLI_RETRIES, CRDC_CLI_OVERWRITE, CRDC_CLI_DRYRUN and CRDC_MANIFEST_ID_FIELD.
+    """Read CRDC_CLI_RETRIES, CRDC_CLI_OVERWRITE and CRDC_CLI_DRYRUN.
 
-    All are optional. Katalon defaults apply: 3 retries, no overwrite, no dry run, no id field.
+    All are optional. Katalon defaults apply: 3 retries, no overwrite, no dry run.
     """
     data = settings.data
     try:
         retries = int(str(data.get("CRDC_CLI_RETRIES") or "3").strip())
     except ValueError:
         retries = 3
-    id_field = str(data.get("CRDC_MANIFEST_ID_FIELD") or "").strip() or None
     return CliOptions(
         retries=retries,
         overwrite=_as_bool(data.get("CRDC_CLI_OVERWRITE")),
         dryrun=_as_bool(data.get("CRDC_CLI_DRYRUN")),
-        id_field=id_field,
     )
 
 
@@ -476,7 +470,6 @@ def upload_files_via_cli(
         data_dir=data_dir,
         manifest=manifest,
         archive_manifest=archive_manifest,
-        id_field=options.id_field,
         retries=options.retries,
         overwrite=options.overwrite,
         dryrun=options.dryrun,
