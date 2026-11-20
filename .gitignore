@@ -15,9 +15,7 @@ build/
 .env.*
 
 # One file per Katalon profile (URL + Login.gov secrets). Copy from *.yaml.example.
-config/dev.yaml
-config/qa.yaml
-config/qa2.yaml
+config/*.yaml
 
 auth/
 

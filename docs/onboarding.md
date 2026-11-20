@@ -577,7 +577,7 @@ CI is **GitHub Actions**, not Jenkins. The workflow is still `workflow_dispatch`
 Because `qa.yaml` is gitignored, a checkout does **not** contain passwords.
 
 - **Unit job:** uses `*.yaml.example` (URLs only). No secrets needed.
-- **Smoke job:** run the workflow by hand and tick `run_smoke`. GitHub Environments named `dev` / `qa` / `qa2` hold the same Katalon secret names (plus `SubmitterApiToken` for the upload CLI). A step runs `python ci/write_profile_yaml.py` to write `config/<profile>.yaml` on the runner, then `bash ci/run_suite.sh CRDC_Smoke` runs EnableAllPermissions and the suite serially with `--tracing=off`, and the job uploads the reports (no traces). `ci/run_suite.sh` is also the command another pipeline should call; see "Running from another pipeline" in `ci/README.md`.
+- **Smoke job:** run the workflow by hand and tick `run_smoke`. GitHub Environments named `dev` / `qa` / `qa2` hold the same Katalon secret names (plus `SubmitterApiToken` for the upload CLI). A step runs `python ci/write_profile_yaml.py` to write `config/<profile>.yaml` on the runner, then `bash ci/run_suite.sh CRDC_Smoke` runs EnableAllPermissions (checked, so a skipped setup stops the run), the suite, and a restore, serially with `--tracing=off`, and the job uploads the reports (no traces). `ci/run_suite.sh` is also the command another pipeline should call; see "Running from another pipeline" in `ci/README.md`.
 
 Details: [ci/README.md](../ci/README.md).
 

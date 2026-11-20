@@ -81,7 +81,7 @@ jobs:
           ApiUrl: ${{ vars.ApiUrl }}
           SubmitterApiToken: ${{ secrets.SubmitterApiToken }}
         run: python ci/write_profile_yaml.py
-      # run_suite.sh runs EnableAllPermissions, then the suite, serially, with --tracing=off. A
+      # run_suite.sh runs EnableAllPermissions, the suite, then EnableAllPermissions again, serially, with --tracing=off. A
       # Playwright trace records the Hub tab's network requests (including request headers), and
       # this repo is public, so anyone signed in to GitHub can download its artifacts. Do not
       # upload traces from CI.

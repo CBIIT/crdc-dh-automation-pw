@@ -28,7 +28,13 @@ For the upload CLI case (CRDCDH-1405 TC101) also set **`SubmitterApiToken`** (se
 
 ## Smoke job
 
-The `smoke` job in `ci.yml` is this, in order: write the yaml, run `bash ci/run_suite.sh CRDC_Smoke`, and upload `reports/` (HTML report, JUnit XML and failure screenshots). [`ci/run_suite.sh`](run_suite.sh) is the one command a pipeline needs: it runs `pytest -m CRDC_PBAC -k EnableAllPermissions` (the Katalon suite setup; if that fails it stops), then `pytest -m <marker>` serially (PBAC shares permissions, so no `-n`), writes `reports/junit-setup.xml` and `reports/junit.xml`, and exits with the suite's exit code. The marker defaults to `CRDC_Smoke`; extra arguments go to the suite run. Both runs pass `--tracing=off` and `test-results/` is not uploaded: a trace holds the Hub tab's network requests, and this repo is public, so its artifacts are downloadable by anyone signed in to GitHub. The workflow sets `permissions: contents: read`. One prerequisite is not automated: Data Explorer TC201 needs the `automation_CompletedStudy` study seeded on the environment (see the smoke plan).
+The `smoke` job in `ci.yml` is this, in order: write the yaml, run `bash ci/run_suite.sh CRDC_Smoke`, and upload `reports/` (HTML report, JUnit XML and failure screenshots). [`ci/run_suite.sh`](run_suite.sh) is the one command a pipeline needs: it runs `pytest -m CRDC_PBAC -k EnableAllPermissions` (the Katalon suite setup), then `pytest -m <marker>`, then EnableAllPermissions again. The marker defaults to `CRDC_Smoke`; extra arguments go to the suite run only.
+- **Setup must really run.** pytest exits 0 when the only test is skipped (for example Master credentials missing in the yaml), so the script reads `reports/junit-setup.xml` and requires exactly one test case that was not skipped and did not fail. Otherwise it stops before the suite.
+- **Restore after the suite.** Some suites (`CRDC_Regression`: PBAC TC11 to TC15) leave shared users' permissions unchecked, so the restore runs after the suite even when the suite failed (it adds a few minutes). It is skipped for `CRDC_PBAC`, which already ends with that restore. Katalon does not restore after `CRDC_Regression`; this is an addition.
+- **Serial and no traces cannot be overridden.** `--tracing=off -n 0` come after the caller's arguments and after `PYTEST_ADDOPTS`, in all three runs. PBAC shares permissions, so no parallel runs.
+- **Output and exit code.** `reports/junit-setup.xml`, `junit.xml` and `junit-restore.xml`. The exit code is the suite's when that is not 0; otherwise 1 if the restore failed (reported on stderr); otherwise 0.
+
+`test-results/` is not uploaded: a trace holds the Hub tab's network requests, and this repo is public, so its artifacts are downloadable by anyone signed in to GitHub. The workflow sets `permissions: contents: read`. One prerequisite is not automated: Data Explorer TC201 needs the `automation_CompletedStudy` study seeded on the environment (see the smoke plan).
 
 ```yaml
 smoke:
@@ -94,7 +100,7 @@ The workflow in this repo is a standalone placeholder. The shared pipeline repo 
      | `ApiUrl` | variable, optional | only if the API host differs from `<base url>api/graphql`. Without a `BASE_URL` override, an unset `ApiUrl` keeps the example's own value. |
 
    Either way the file is gitignored and the app reads only that file. Delete it after the run if the runner is not thrown away.
-4. Run `CRDC_PROFILE=<profile> bash ci/run_suite.sh <marker>` (marker defaults to `CRDC_Smoke`; extra arguments go to the suite run). It runs EnableAllPermissions, then the suite **serially** (never `-n`: PBAC shares permissions), with `--tracing=off`, and writes `reports/junit.xml`. Its exit code is the suite's.
+4. Run `CRDC_PROFILE=<profile> bash ci/run_suite.sh <marker>` (marker defaults to `CRDC_Smoke`; extra arguments go to the suite run). It runs EnableAllPermissions (and fails if it was skipped), then the suite **serially** (never `-n`: PBAC shares permissions), then EnableAllPermissions again, with `--tracing=off` forced on every run, and writes `reports/junit.xml` (plus `junit-setup.xml` and `junit-restore.xml`). Its exit code is the suite's, or 1 if only the restore failed. The pipeline's own `--junitxml` or `PYTEST_ADDOPTS` is overridden for the suite, so read `reports/junit.xml`.
 5. Upload `reports/` (lower case, which differs from the `Reports/` folder `commons-automation` writes). Do not upload `test-results/`: it holds traces, and public-repo artifacts are downloadable by anyone signed in to GitHub.
 6. Give the job `permissions: contents: read`.
 
