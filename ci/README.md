@@ -1,6 +1,6 @@
-# CI notes (Phase 0)
+# CI notes
 
-CI will be **GitHub Actions**, not Jenkins. The placeholder workflow is [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). It is `workflow_dispatch` only until the repo is on GitHub and we add `pull_request` / scheduled smoke.
+CI is **GitHub Actions**, not Jenkins. The workflow is [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). It is `workflow_dispatch` only: the `unit` job always runs, and the live `smoke` job runs when you tick **run_smoke** (and pick the `profile`). Adding `pull_request` or a schedule is a later step.
 
 ## Gitignored yaml vs checkout
 
@@ -24,7 +24,11 @@ Create three Environments on the GitHub repo, named **`qa`**, **`qa2`**, and **`
 
 Leave a role's secrets unset if that environment should skip it.
 
-## Smoke job (when you add it)
+For the upload CLI case (CRDCDH-1405 TC101) also set **`SubmitterApiToken`** (secret) and, only if the default is wrong, **`ApiUrl`** (variable; defaults to the Hub URL plus `api/graphql`). That test fails, not skips, when the token is empty, so a smoke job without it goes red on purpose. The smoke job needs Python 3.13 or newer (the CLI requires it; the check fails with a clear message otherwise). Like Katalon, every CLI run first runs `pip install -r tools/crdc-datahub-cli-uploader/requirements.txt --quiet` (3 minute timeout), so the job needs no separate install step for the CLI. The unit job stays on 3.11 and needs none of this.
+
+## Smoke job
+
+The `smoke` job in `ci.yml` is this, in order: write the yaml, run `pytest -m CRDC_PBAC -k EnableAllPermissions` (suite setup), run `pytest -m CRDC_Smoke` serially (PBAC shares permissions, so no `-n`), and upload `reports/` and `test-results/` (traces). One prerequisite is not automated: Data Explorer TC201 needs the `automation_CompletedStudy` study seeded on the environment (see the smoke plan).
 
 ```yaml
 smoke:
@@ -34,8 +38,8 @@ smoke:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
       with:
-        python-version: "3.11"
-    - run: pip install -e .
+        python-version: "3.13"   # the upload CLI (1405 TC101) needs 3.13 or newer
+    - run: pip install -e .   # the CLI case installs the CLI's requirements itself, before each run
     - run: playwright install --with-deps chromium
     - name: Write gitignored profile yaml from secrets
       env:
@@ -59,8 +63,13 @@ smoke:
         MasterEmail: ${{ secrets.MasterEmail }}
         MasterPassword: ${{ secrets.MasterPassword }}
         MasterSecret: ${{ secrets.MasterSecret }}
+        ApiUrl: ${{ vars.ApiUrl }}
+        SubmitterApiToken: ${{ secrets.SubmitterApiToken }}
       run: python ci/write_profile_yaml.py
-    - run: pytest -m CRDC_Smoke --tracing=retain-on-failure
+    - run: pytest -m CRDC_PBAC -k EnableAllPermissions
+      env:
+        CRDC_PROFILE: ${{ inputs.profile }}
+    - run: pytest -m CRDC_Smoke
       env:
         CRDC_PROFILE: ${{ inputs.profile }}
 ```

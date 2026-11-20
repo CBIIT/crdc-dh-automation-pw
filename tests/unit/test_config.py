@@ -103,3 +103,22 @@ def test_falls_back_to_example_when_yaml_missing(tmp_path: Path) -> None:
     settings = load_settings(profile="qa", root=tmp_path)
     assert settings.config_path.name == "qa.yaml.example"
     assert settings.base_url.endswith("/")
+
+
+@pytest.mark.unit
+def test_api_url_defaults_from_base_url_and_token_is_blank_in_examples(tmp_path: Path) -> None:
+    """ApiUrl falls back to <base_url>api/graphql, and the committed examples carry no token."""
+    # Read the committed examples only: a local config/<profile>.yaml may hold a real token.
+    (tmp_path / "config").mkdir()
+    for name in ("qa", "qa2", "stage"):
+        _real, example = profile_paths(repo_root(), name)
+        (tmp_path / "config" / example.name).write_bytes(example.read_bytes())
+        settings = load_settings(profile=name, root=tmp_path)
+        assert settings.config_path.name == f"{name}.yaml.example"
+        assert settings.api_url == f"{settings.base_url}api/graphql"
+        assert settings.submitter_api_token == ""
+
+    (tmp_path / "config" / "qa.yaml").write_text(
+        "base_url: https://hub-qa.datacommons.cancer.gov/\n", encoding="utf-8"
+    )
+    assert load_settings(profile="qa", root=tmp_path).api_url == "https://hub-qa.datacommons.cancer.gov/api/graphql"

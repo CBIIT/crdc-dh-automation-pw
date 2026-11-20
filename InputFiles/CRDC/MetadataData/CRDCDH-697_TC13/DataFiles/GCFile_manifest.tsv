@@ -1,0 +1,6 @@
+type	 study.study_id	 participant.study_participant_id	 sample.sample_id	file_name	file_type	file_description	file_size	md5sum	experimental_strategy_and_data_subtypes	submission_version	checksum_value	checksum_algorithm	file_mapping_level	release_datetime	is_supplementary_file
+file	st_id1	Key_1	CDS2007_DNA|CDS2012_DNA|CDS2013_DNA	demo1.xlsx	R File Format	sofia des1	844	8e168e4ca1bfa091c721b92fa382c9bb	LC-MS/MS|Methylation Analysis|DNA Sequencing|Pathology	TEST1	hello1	say1	Sample	test1	TRUE
+file	st_id1	Key_3	CDS2008_DNA	demo2.pdf	Python Script Format	sofia des2	14032	112bc9449f61b60385fcb98ff3d1f7c85	Radiology|RNA Sequencing	TEST2	hello2	say2	Participant	test2	TRUE
+file	st_id1	Key_4	CDS2009_DNA	demo3.txt	SVS	sofia des3	21	a7d4af526e370c1853465f229734335b	Immunofluorescence|DNA Sequencing	TEST3	hello3	say3	Participant	test3	FALSE
+file	st_id1	Key_4	CDS2014_DNA	demo4.csv	TAR	sofia des4	13	ecb7b3574e76b8993f953b7c51ef41c0	Pathology	TEST4	hello4	say4	Participant	test4	FALSE
+file	st_id1	Key_1	CDS2016_DNA	demo5.tsv	VCF	sofia des5	30	c28a24012f6e1b753508eab9644e6ec9	Methylation Analysis	TEST5	hello5	say5	Study	test5	TRUE
