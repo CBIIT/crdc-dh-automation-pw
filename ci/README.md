@@ -90,8 +90,8 @@ The workflow in this repo is a standalone placeholder. The shared pipeline repo 
      |---|---|---|
      | `<Role>Email`, `<Role>Password`, `<Role>Secret` for `Admin`, `Fedlead`, `Dcp`, `Submitter`, `User`, `Master` | secrets | login (Login.gov plus TOTP seed) |
      | `SubmitterApiToken` | secret | upload CLI cases (the test fails without it) |
-     | `BASE_URL` | variable, optional | only to override the URL in the example file |
-     | `ApiUrl` | variable, optional | only if not `<base url>api/graphql` |
+     | `BASE_URL` | variable, optional | overrides the Hub URL in the example file. Unless `ApiUrl` is also set, the API URL is derived from it (`<base url>api/graphql`), so the browser and the CLI use the same host. |
+     | `ApiUrl` | variable, optional | only if the API host differs from `<base url>api/graphql`. Without a `BASE_URL` override, an unset `ApiUrl` keeps the example's own value. |
 
    Either way the file is gitignored and the app reads only that file. Delete it after the run if the runner is not thrown away.
 4. Run `CRDC_PROFILE=<profile> bash ci/run_suite.sh <marker>` (marker defaults to `CRDC_Smoke`; extra arguments go to the suite run). It runs EnableAllPermissions, then the suite **serially** (never `-n`: PBAC shares permissions), with `--tracing=off`, and writes `reports/junit.xml`. Its exit code is the suite's.

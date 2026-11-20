@@ -108,6 +108,10 @@ def write_profile_yaml(root: Path, environ: dict[str, str] | None = None) -> Pat
     base_url = (env.get("BASE_URL") or env.get("G_Urlname") or "").strip()
     if base_url:
         data["base_url"] = base_url
+        if not env.get("ApiUrl"):
+            # The example's ApiUrl points at the profile's own host. Drop it so the API URL is
+            # derived from the overridden base_url (Settings.api_url), not left on another host.
+            data.pop("ApiUrl", None)
 
     for key in ("ApiUrl", "SubmitterApiToken"):
         value = env.get(key)
