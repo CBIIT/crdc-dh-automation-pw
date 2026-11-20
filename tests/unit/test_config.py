@@ -1,12 +1,12 @@
-"""No-browser checks for profile YAML (qa / qa2 / stage URLs and role keys).
+"""No-browser checks for profile YAML (dev / qa / qa2 URLs and role keys).
 
-Katalon stored Hub URL + Login.gov accounts in Profiles/CRDC_QA.glbl (and QA2, STAGE).
+Katalon stored Hub URL + Login.gov accounts in Profiles/CRDC_QA.glbl (and QA2, Dev).
 This repo does the same in config/<profile>.yaml. These tests use committed
 *.yaml.example files (or a temp yaml) — no real passwords.
 
 Flow (this file):
   1. Default qa URL
-  2. qa2 and stage URLs
+  2. dev and qa2 URLs
   3. Example files have every role key (so CI unit jobs work on a fresh clone)
   4. Unknown role name raises
   5. Credentials come from yaml, not leftover env vars
@@ -33,12 +33,10 @@ def test_qa_profile_base_url() -> None:
 
 
 @pytest.mark.unit
-def test_dev_qa2_and_stage_urls() -> None:
-    """CRDC_PROFILE=dev / qa2 / stage must not silently keep using QA."""
+def test_dev_and_qa2_urls() -> None:
+    """CRDC_PROFILE=dev / qa2 must not silently keep using QA."""
     assert load_settings(profile="dev").base_url.endswith("hub-dev.datacommons.cancer.gov/")
     assert load_settings(profile="qa2").base_url.endswith("hub-qa2.datacommons.cancer.gov/")
-    assert load_settings(profile="stage").base_url.endswith("hub-stage.datacommons.cancer.gov/")
-
 
 @pytest.mark.unit
 def test_example_files_are_committed() -> None:

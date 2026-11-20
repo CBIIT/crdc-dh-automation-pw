@@ -4,7 +4,7 @@ CI is **GitHub Actions**, not Jenkins. The workflow is [`.github/workflows/ci.ym
 
 ## Gitignored yaml vs checkout
 
-`config/dev.yaml`, `qa.yaml`, `qa2.yaml`, and `stage.yaml` are **not in git** (passwords and TOTP seeds). `actions/checkout` therefore does not give the runner those files.
+`config/dev.yaml`, `qa.yaml`, and `qa2.yaml` are **not in git** (passwords and TOTP seeds). `actions/checkout` therefore does not give the runner those files.
 
 | Job | What it uses |
 |---|---|
@@ -15,7 +15,7 @@ The app does **not** read GitHub secrets itself. Secrets become a yaml file on t
 
 ## GitHub Environments
 
-Create the Environments on the GitHub repo, named **`dev`**, **`qa`**, **`qa2`**, and **`stage`** (only the ones you run). In each one:
+Create the Environments on the GitHub repo, named **`dev`**, **`qa`**, and **`qa2`** (only the ones you run). In each one:
 
 - **Variable** (optional): `BASE_URL` — only if you need to override the URL already in the example file.
 - **Secrets**, Katalon names (same keys as the yaml):
@@ -33,7 +33,7 @@ The `smoke` job in `ci.yml` is this, in order: write the yaml, run `bash ci/run_
 ```yaml
 smoke:
   runs-on: ubuntu-latest
-  environment: ${{ inputs.profile }}   # dev, qa, qa2, or stage
+  environment: ${{ inputs.profile }}   # dev, qa, or qa2
   steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
@@ -81,7 +81,7 @@ The workflow in this repo is a standalone placeholder. The shared pipeline repo 
 
 1. Check out `CBIIT/crdc-dh-automation-pw` (a ref input). The upload CLI cases need **Python 3.13 or newer**; on an older Python those two tests fail with a clear message.
 2. `pip install -r requirements.txt` (it contains `-e .`, so the same install step the Playwright workflow uses for `commons-automation` works) and `playwright install --with-deps chromium`.
-3. Provide the credentials as `config/<profile>.yaml`, for `CRDC_PROFILE` = `dev`, `qa`, `qa2` or `stage` (map it from the pipeline's environment choice), in one of two ways:
+3. Provide the credentials as `config/<profile>.yaml`, for `CRDC_PROFILE` = `dev`, `qa` or `qa2` (map it from the pipeline's environment choice), in one of two ways:
 
    - **One secret per profile (recommended, like Katalon).** The secret holds the whole filled yaml, copied from `config/<profile>.yaml.example`. The pipeline writes it with `printf '%s' "$SECRET" > config/<profile>.yaml`. That is one secret per environment (for example `CRDC_PW_PROFILE_QA`, the name is the pipeline's choice) instead of 19 each.
    - **One secret per key.** Set these as environment variables and run `python ci/write_profile_yaml.py`, which fills the example and writes the same file:

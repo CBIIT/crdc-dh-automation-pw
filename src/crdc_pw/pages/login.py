@@ -58,7 +58,7 @@ class LoginPage(BasePage):
         return self._locators
 
     def goto(self, base_url: str) -> None:
-        """Open Hub (QA / QA2 / Stage). Does not wait for login to finish."""
+        """Open Hub (Dev / QA / QA2). Does not wait for login to finish."""
         self.page.goto(base_url, wait_until="domcontentloaded")
 
     def _is_visible(self, path: str, timeout_ms: int) -> bool:

@@ -1,6 +1,6 @@
 # GitHub Actions workflow (workflow_dispatch only for now).
 #
-# config/dev.yaml, qa.yaml, qa2.yaml, and stage.yaml are gitignored, so checkout does
+# config/dev.yaml, qa.yaml, and qa2.yaml are gitignored, so checkout does
 # not include credentials. Unit tests use committed *.yaml.example files.
 # The smoke job writes the gitignored yaml from GitHub Environment secrets
 # first (see ci/README.md and ci/write_profile_yaml.py).
@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       profile:
-        description: "Hub profile (dev, qa, qa2, or stage). Used by the smoke job."
+        description: "Hub profile (dev, qa, or qa2). Used by the smoke job."
         required: false
         default: "qa"
       run_smoke:

@@ -7,7 +7,7 @@ alwaysApply: true
 
 ## Project role
 
-Behavior-preserving port of sibling **`crdc-dh-automation`** (Katalon / Groovy / Selenium) for **CRDC Data Hub**. Engine is **Python 3.11+**, **pytest**, **Playwright**. Same Hub environments (QA / QA2 / Stage), Login.gov roles, and Katalon case IDs. Dual-run a suite on QA until it matches, then retire that Katalon suite — not a big-bang rewrite of the product.
+Behavior-preserving port of sibling **`crdc-dh-automation`** (Katalon / Groovy / Selenium) for **CRDC Data Hub**. Engine is **Python 3.11+**, **pytest**, **Playwright**. Same Hub environments (Dev / QA / QA2), Login.gov roles, and Katalon case IDs. Dual-run a suite on QA until it matches, then retire that Katalon suite — not a big-bang rewrite of the product.
 
 Human walkthrough: `docs/onboarding.md` (section **Core pieces** names conftest, auth, config, hub, pages). Canonical example: **TC08** (`tests/AuxiliaryTests/test_TC08_ManageStudiesListAndFilter.py`).
 
@@ -42,10 +42,10 @@ fixture hub  →  test (scenario + oracles)  →  page object  →  YAML locator
 | `src/crdc_pw/auth.py` | Login.gov OTP / Grant (fixture) |
 | `src/crdc_pw/utils/` | Non-page helpers (Excel, GitHub raw, TOTP) |
 | `locators/CRDC/` | YAML object repository (Katalon paths preserved) |
-| `config/*.yaml.example` | Committed templates; gitignored `qa.yaml` / `qa2.yaml` / `stage.yaml` hold secrets |
+| `config/*.yaml.example` | Committed templates; gitignored `dev.yaml` / `qa.yaml` / `qa2.yaml` hold secrets |
 | `auth/` | `storage_state` JSON (gitignored) |
 
-`CRDC_PROFILE=qa|qa2|stage` selects the yaml (default `qa`).
+`CRDC_PROFILE=dev|qa|qa2` selects the yaml (default `qa`).
 
 ## Porting a Katalon case
 

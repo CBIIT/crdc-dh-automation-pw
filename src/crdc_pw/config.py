@@ -1,12 +1,12 @@
 """Load Hub URL and Login.gov accounts from one YAML file per Katalon profile.
 
-Katalon stored URL + secrets together in Profiles/CRDC_QA.glbl (and QA2, STAGE).
-This repo does the same in config/dev.yaml, qa.yaml, qa2.yaml, and stage.yaml.
+Katalon stored URL + secrets together in Profiles/CRDC_QA.glbl (and QA2, Dev).
+This repo does the same in config/dev.yaml, qa.yaml, and qa2.yaml.
 
 Those files are gitignored (they contain passwords and TOTP seeds).
 Committed copies are config/*.yaml.example (URL filled, secrets blank).
 
-Which file to load: CRDC_PROFILE=dev|qa|qa2|stage (shell env, not a .env file).
+Which file to load: CRDC_PROFILE=dev|qa|qa2 (shell env, not a .env file).
 If the real yaml is missing (fresh clone, GitHub Actions unit job), the
 matching .example is used so URL checks still run. Smoke still needs a
 filled yaml — locally you copy the example; in Actions the workflow writes
@@ -26,7 +26,7 @@ from crdc_pw.locators.loader import repo_root
 
 # Same six accounts as Katalon TC18_LoginAllRolesAndSwitchUser.
 ROLES = ("Admin", "Fedlead", "Dcp", "Submitter", "User", "Master")
-PROFILES = ("dev", "qa", "qa2", "stage")
+PROFILES = ("dev", "qa", "qa2")
 
 
 @dataclass(frozen=True)
@@ -45,7 +45,7 @@ class RoleCredentials:
 
 @dataclass(frozen=True)
 class Settings:
-    profile: str  # dev, qa, qa2, or stage
+    profile: str  # dev, qa, or qa2
     base_url: str
     config_path: Path
     data: dict[str, Any] = field(default_factory=dict)

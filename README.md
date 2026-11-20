@@ -26,13 +26,13 @@ cp config/qa.yaml.example config/qa.yaml
 
 Fill `config/qa.yaml` from the matching Katalon profile (`AdminEmail`, `AdminPassword`, `AdminSecret`, plus Fedlead / Dcp / Submitter / User / Master). Same idea as `Profiles/CRDC_QA.glbl`: one file holds the Hub URL and the Login.gov accounts.
 
-Use `dev`, `qa2` or `stage` the same way (`cp config/qa2.yaml.example config/qa2.yaml`). Pick which file with `CRDC_PROFILE` (default `qa`):
+Use `dev` or `qa2` the same way (`cp config/qa2.yaml.example config/qa2.yaml`). Pick which file with `CRDC_PROFILE` (default `qa`):
 
 ```bash
 CRDC_PROFILE=qa pytest -m CRDC_Auxiliary
 ```
 
-`config/dev.yaml`, `qa.yaml`, `qa2.yaml`, and `stage.yaml` are gitignored. Do not commit them.
+`config/dev.yaml`, `qa.yaml`, and `qa2.yaml` are gitignored. Do not commit them.
 
 ## Run tests
 
@@ -72,7 +72,7 @@ mypy src/crdc_pw
 ## Layout
 
 ```
-config/          # *.yaml.example committed; dev.yaml / qa.yaml / qa2.yaml / stage.yaml gitignored
+config/          # *.yaml.example committed; dev.yaml / qa.yaml / qa2.yaml gitignored
 locators/CRDC/   # YAML object repository (Katalon paths preserved)
 src/crdc_pw/     # loader, config, auth, hub, pages, utils
 tests/unit/      # no browser
