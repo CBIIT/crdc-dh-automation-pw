@@ -7,6 +7,11 @@
 
 name: ci
 
+# Least privilege for GITHUB_TOKEN (CodeQL: workflow does not contain permissions). Both jobs only
+# check out the code and upload artifacts, so read access to contents is enough.
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
     inputs:
@@ -76,16 +81,17 @@ jobs:
           ApiUrl: ${{ vars.ApiUrl }}
           SubmitterApiToken: ${{ secrets.SubmitterApiToken }}
         run: python ci/write_profile_yaml.py
+      # --tracing=off overrides pytest.ini. A Playwright trace records the Hub tab's network
+      # requests (including request headers), and this repo is public, so anyone signed in to
+      # GitHub can download its artifacts. Do not upload traces from CI.
       - name: EnableAllPermissions (suite setup)
-        run: pytest -m CRDC_PBAC -k EnableAllPermissions
+        run: pytest -m CRDC_PBAC -k EnableAllPermissions --tracing=off
       - name: CRDC_Smoke
-        run: pytest -m CRDC_Smoke
-      - name: Keep reports and traces
+        run: pytest -m CRDC_Smoke --tracing=off
+      - name: Keep reports
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: smoke-${{ inputs.profile }}
-          path: |
-            reports/
-            test-results/
+          path: reports/
           if-no-files-found: ignore

@@ -28,7 +28,7 @@ For the upload CLI case (CRDCDH-1405 TC101) also set **`SubmitterApiToken`** (se
 
 ## Smoke job
 
-The `smoke` job in `ci.yml` is this, in order: write the yaml, run `pytest -m CRDC_PBAC -k EnableAllPermissions` (suite setup), run `pytest -m CRDC_Smoke` serially (PBAC shares permissions, so no `-n`), and upload `reports/` and `test-results/` (traces). One prerequisite is not automated: Data Explorer TC201 needs the `automation_CompletedStudy` study seeded on the environment (see the smoke plan).
+The `smoke` job in `ci.yml` is this, in order: write the yaml, run `pytest -m CRDC_PBAC -k EnableAllPermissions` (suite setup), run `pytest -m CRDC_Smoke` serially (PBAC shares permissions, so no `-n`), and upload `reports/` (HTML report and failure screenshots). Both pytest steps pass `--tracing=off` and `test-results/` is not uploaded: a trace holds the Hub tab's network requests, and this repo is public, so its artifacts are downloadable by anyone signed in to GitHub. The workflow sets `permissions: contents: read`. One prerequisite is not automated: Data Explorer TC201 needs the `automation_CompletedStudy` study seeded on the environment (see the smoke plan).
 
 ```yaml
 smoke:
@@ -66,10 +66,10 @@ smoke:
         ApiUrl: ${{ vars.ApiUrl }}
         SubmitterApiToken: ${{ secrets.SubmitterApiToken }}
       run: python ci/write_profile_yaml.py
-    - run: pytest -m CRDC_PBAC -k EnableAllPermissions
+    - run: pytest -m CRDC_PBAC -k EnableAllPermissions --tracing=off
       env:
         CRDC_PROFILE: ${{ inputs.profile }}
-    - run: pytest -m CRDC_Smoke
+    - run: pytest -m CRDC_Smoke --tracing=off
       env:
         CRDC_PROFILE: ${{ inputs.profile }}
 ```
@@ -77,6 +77,25 @@ smoke:
 `write_profile_yaml.py` copies `config/<profile>.yaml.example` and overlays any of those env vars that are set. It prints how many roles were filled; it never prints secret values.
 
 Do not commit filled yaml files or bake them into an image.
+
+## Running from another pipeline (ctos-ghr-katalon-test)
+
+The workflow in this repo is a standalone placeholder. The shared pipeline repo (`ctos-ghr-katalon-test`) will run these tests by checking this repo out, so the contract is the same as the `smoke` job above. The pipeline must:
+
+1. Check out `CBIIT/crdc-dh-automation-pw` (a ref input) and use **Python 3.13 or newer** (the upload CLI needs it).
+2. `pip install -e .` and `playwright install --with-deps chromium`.
+3. Set `CRDC_PROFILE` (`qa`, `qa2` or `stage`; map it from the pipeline's environment choice) and these variables from its secret store, then run `python ci/write_profile_yaml.py`. Nothing else reads GitHub secrets; the script writes the gitignored `config/<profile>.yaml` on the runner.
+
+   | Name | Kind | Needed for |
+   |---|---|---|
+   | `<Role>Email`, `<Role>Password`, `<Role>Secret` for `Admin`, `Fedlead`, `Dcp`, `Submitter`, `User`, `Master` | secrets | login (Login.gov plus TOTP seed) |
+   | `SubmitterApiToken` | secret | upload CLI cases (the test fails without it) |
+   | `BASE_URL` | variable, optional | only to override the URL in the example file |
+   | `ApiUrl` | variable, optional | only if not `<base url>api/graphql` |
+
+4. Run `pytest -m CRDC_PBAC -k EnableAllPermissions --tracing=off`, then the suite (for example `pytest -m CRDC_Smoke --tracing=off`) **serially** (no `-n`; PBAC shares permissions). Add `--junitxml=...` if it wants a results summary.
+5. Upload `reports/` only. Do not upload `test-results/`: it holds traces, and public-repo artifacts are downloadable by anyone signed in to GitHub.
+6. Give the job `permissions: contents: read`.
 
 ## Local vs Actions
 
