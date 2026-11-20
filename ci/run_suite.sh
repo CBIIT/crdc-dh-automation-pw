@@ -13,12 +13,14 @@
 # 2. Suite: pytest -m <marker>.
 # 3. Restore: EnableAllPermissions again after the suite, even when the suite failed, because
 #    some suites (CRDC_Regression: PBAC TC11 to TC15) leave shared users' permissions unchecked.
-#    Skipped when the marker is CRDC_PBAC, which already ends with that restore.
+#    It always runs, also for CRDC_PBAC: a filtered run (-k TC11) does not collect
+#    EnableAllPermissions, and -x can stop a full run before it.
 #
-# Every run is serial and has tracing off: those options come after the caller's arguments (and
-# after PYTEST_ADDOPTS) so they cannot be overridden (a trace holds the Hub tab's network
-# requests and this repo is public; PBAC cases share permissions, so no parallel runs). JUnit XML
-# goes under reports/ (junit-setup.xml, junit.xml, junit-restore.xml).
+# Every run is serial, has tracing off and writes its JUnit file to a fixed path: those options
+# come after the caller's arguments (and after PYTEST_ADDOPTS) so they cannot be overridden (a
+# trace holds the Hub tab's network requests and this repo is public; PBAC cases share
+# permissions, so no parallel runs). JUnit XML goes under reports/ (junit-setup.xml, junit.xml,
+# junit-restore.xml).
 #
 # Exit code: the suite's pytest exit code when it is not 0; otherwise 1 if the restore failed;
 # otherwise 0.
@@ -70,16 +72,14 @@ if ! enable_all_permissions junit-setup.xml; then
 fi
 
 echo "== Suite: ${marker} =="
-python -m pytest -m "${marker}" --junitxml=reports/junit.xml "$@" "${FORCED[@]}"
+python -m pytest -m "${marker}" "$@" --junitxml=reports/junit.xml "${FORCED[@]}"
 suite_rc=$?
 
 restore_rc=0
-if [ "${marker}" != "CRDC_PBAC" ]; then
-  echo "== Restore: EnableAllPermissions =="
-  if ! enable_all_permissions junit-restore.xml; then
-    echo "Restoring permissions after the suite FAILED; shared users may be left with unchecked permissions." >&2
-    restore_rc=1
-  fi
+echo "== Restore: EnableAllPermissions =="
+if ! enable_all_permissions junit-restore.xml; then
+  echo "Restoring permissions after the suite FAILED; shared users may be left with unchecked permissions." >&2
+  restore_rc=1
 fi
 
 if [ "${suite_rc}" -ne 0 ]; then
