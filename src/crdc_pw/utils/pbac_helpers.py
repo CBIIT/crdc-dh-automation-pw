@@ -17,6 +17,7 @@ import pytest
 
 from crdc_pw.hub import Hub
 from crdc_pw.locators.loader import repo_root
+from crdc_pw.pages.base import BasePage
 from crdc_pw.pages.data_submission_details import DataSubmissionDetailPage
 from crdc_pw.pages.data_explorer_list import DataExplorerListPage
 from crdc_pw.pages.data_submissions_list import DataSubmissionsListPage
@@ -161,7 +162,7 @@ def _pbac_click_home(hub: Hub) -> None:
 
 
 def _wait_ds_loading_gone(hub: Hub) -> None:
-    DataSubmissionDetailPage(hub).wait_loading_spinner_gone()
+    BasePage(hub).wait_loading_spinner_gone()
 
 
 def _open_data_submissions_list_settled(hub: Hub) -> None:
@@ -201,7 +202,7 @@ def _ds_or_explorer_list_has_positive_rows(rows) -> bool:
     return n > 0
 
 
-def _prepare_unique_program_tsv() -> Path:
+def prepare_unique_program_tsv() -> Path:
     """Same uniqueness idea as Katalon prepareUniqueMetadataAndUpload (program_acronym)."""
     root = repo_root()
     src = root / PROGRAM_TSV
@@ -524,7 +525,7 @@ def _functional_data_submission_review(hub: Hub, _role: str, scenario: str) -> b
         detail = DataSubmissionDetailPage(hub)
         log.info("DS PBAC (review): waiting for detail loading spinner")
         detail.wait_loading_spinner_gone()
-        temp = _prepare_unique_program_tsv()
+        temp = prepare_unique_program_tsv()
         try:
             detail.upload_metadata_file(temp)
         finally:
@@ -585,7 +586,7 @@ def _functional_data_submission_confirm(hub: Hub, user_role: str, scenario: str)
         detail = DataSubmissionDetailPage(hub)
         log.info("DS PBAC (confirm): waiting for detail loading spinner")
         detail.wait_loading_spinner_gone()
-        temp = _prepare_unique_program_tsv()
+        temp = prepare_unique_program_tsv()
         try:
             detail.upload_metadata_file(temp)
         finally:

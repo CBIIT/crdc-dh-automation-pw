@@ -7,12 +7,13 @@ call these methods.
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 from collections.abc import Callable
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
-from playwright.sync_api import Locator, Page
+from playwright.sync_api import Locator, Page, Response
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from crdc_pw.hub import Hub
@@ -30,6 +31,7 @@ log = logging.getLogger("crdc_pw.table")
 _POLL_MS = 150
 
 # Shared by DS list, SR list, Manage Users/Programs/Studies, Data Explorer, VR table, etc.
+_LOADING_ICON = "CRDC/DataSubmissions/Loading-Icon"  # Hub-wide MUI circular progress (every screen)
 _GENERIC_TABLE_LOADING_ROW = "CRDC/AILocators/GenericTable/LoadingRow"
 _GENERIC_TABLE_ROW = "CRDC/AILocators/GenericTable/TableRow"
 _GENERIC_TABLE_HEADER = "CRDC/AILocators/GenericTable/HeaderCell"
@@ -81,6 +83,20 @@ rows => rows.map(row => Array.from(row.querySelectorAll('td')).map(cell => {
     return (cell.innerText || '').trim();
 }))
 """
+
+
+def _is_graphql_op(response: Response, operation: str, variables: dict[str, Any]) -> bool:
+    """True for the Hub GraphQL response of that operation whose request variables include `variables`."""
+    if not response.url.endswith("/api/graphql"):
+        return False
+    try:
+        body = json.loads(response.request.post_data or "")
+    except ValueError:
+        return False
+    if not isinstance(body, dict) or body.get("operationName") != operation:
+        return False
+    sent = body.get("variables") or {}
+    return all(sent.get(key) == value for key, value in variables.items())
 
 
 class BasePage:
@@ -186,6 +202,29 @@ class BasePage:
         """Click a MUI/select dropdown, then the option locator."""
         dropdown.first.click()
         option.first.click()
+
+    def wait_loading_spinner_gone(self) -> None:
+        """Wait until the Hub circular progress overlay hides (lists, detail and explorer pages).
+
+        Probe for it first: waiting for hidden alone succeeds before a debounced spinner appears.
+        """
+        icon = self._loc(_LOADING_ICON).first
+        try:
+            icon.wait_for(state="visible", timeout=self.PROBE_MS)
+        except PlaywrightTimeoutError:
+            pass
+        icon.wait_for(state="hidden", timeout=self.DEFAULT_MS)
+
+    def click_and_wait_for_graphql(self, target: Locator, operation: str, **variables: Any) -> None:
+        """Click target, then wait for the page's own GraphQL response for that operation.
+
+        Every Hub data call goes to /api/graphql, told apart by operationName. Nothing is sent by
+        the test; this only listens. `variables` must match the request variables (for example
+        nodeType="study"). Use it where a click triggers a fetch and the next step must not run
+        before it returns. The click must really send that request, or the wait times out.
+        """
+        with self.page.expect_response(lambda response: _is_graphql_op(response, operation, variables)):
+            target.click()
 
     def _wait_for_snackbar_gone(self, snackbar: Locator) -> None:
         """Probe for the snackbar, then wait until it is gone.

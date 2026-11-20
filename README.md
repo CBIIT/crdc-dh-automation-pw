@@ -26,13 +26,13 @@ cp config/qa.yaml.example config/qa.yaml
 
 Fill `config/qa.yaml` from the matching Katalon profile (`AdminEmail`, `AdminPassword`, `AdminSecret`, plus Fedlead / Dcp / Submitter / User / Master). Same idea as `Profiles/CRDC_QA.glbl`: one file holds the Hub URL and the Login.gov accounts.
 
-Use `qa2` or `stage` the same way (`cp config/qa2.yaml.example config/qa2.yaml`). Pick which file with `CRDC_PROFILE` (default `qa`):
+Use `dev` or `qa2` the same way (`cp config/qa2.yaml.example config/qa2.yaml`). Pick which file with `CRDC_PROFILE` (default `qa`):
 
 ```bash
 CRDC_PROFILE=qa pytest -m CRDC_Auxiliary
 ```
 
-`config/qa.yaml`, `qa2.yaml`, and `stage.yaml` are gitignored. Do not commit them.
+`config/dev.yaml`, `qa.yaml`, and `qa2.yaml` are gitignored. Do not commit them.
 
 ## Run tests
 
@@ -42,7 +42,7 @@ Unit tests (no browser, no credentials; they use the committed `*.yaml.example` 
 pytest tests/unit -m unit
 ```
 
-Live Hub tests use the same suite names as Katalon (`CRDC_Auxiliary`, `CRDC_PBAC`, `CRDC_Smoke`). `CRDC_Smoke` includes the auxiliary list cases and PBAC TC09 Submitter positive, among other ported smoke cases. TC18 (six-role login) is Auxiliary. PBAC TC07–TC10 also belong to `CRDC_Regression`. Run any selection containing PBAC tests serially, including Smoke and Regression.
+Live Hub tests use the same suite names as Katalon (`CRDC_Auxiliary`, `CRDC_PBAC`, `CRDC_Smoke`). `CRDC_Smoke` covers all 20 cases linked in Katalon `CRDC_Smoke.ts` (list pages, Submission Request, table UX, PBAC TC09, Data Submission flows, Excel validation cases, Data Explorer, and the upload CLI case CRDCDH-1405 TC101). Port status and the cases still to run live are in [docs/smoke-suite-port-plan.md](docs/smoke-suite-port-plan.md). The CLI case needs `SubmitterApiToken` in your `config/<profile>.yaml` and Python 3.13 or newer; it fails, not skips, without the token. TC18 (six-role login) is Auxiliary. PBAC TC07–TC10 also belong to `CRDC_Regression`. Run any selection containing PBAC tests serially, including Smoke and Regression.
 
 ```bash
 pytest -m CRDC_Auxiliary
@@ -72,7 +72,7 @@ mypy src/crdc_pw
 ## Layout
 
 ```
-config/          # *.yaml.example committed; qa.yaml / qa2.yaml / stage.yaml gitignored
+config/          # *.yaml.example committed; dev.yaml / qa.yaml / qa2.yaml gitignored
 locators/CRDC/   # YAML object repository (Katalon paths preserved)
 src/crdc_pw/     # loader, config, auth, hub, pages, utils
 tests/unit/      # no browser

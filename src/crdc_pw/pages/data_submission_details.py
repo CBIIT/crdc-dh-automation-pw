@@ -18,6 +18,7 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from crdc_pw.locators.loader import repo_root
 from crdc_pw.pages.base import BasePage
 from crdc_pw.utils.validation_results import (
+    CrossValidationRow,
     diff_error_details_dialog_issues,
     diff_upload_errors,
     diff_validation_results,
@@ -37,6 +38,7 @@ log = logging.getLogger("crdc_pw.data_submission_details")
 
 # QA automation DS create + summary header oracles (Katalon utilities.DataSubmissions static defaults)
 DS_AUTOMATION_STUDY_CREATE = "autoQA - AutomationQA_Study"
+DS_AUTOMATION_STUDY_CV = "autoQA - AutomationQA_CV"
 DS_EXPECTED_STUDY_HEADER = "autoQA"
 DS_EXPECTED_PROGRAM = "AUTOPROGRAM"
 DS_EXPECTED_SUBMISSION_TYPE_NEW = "New/Update"
@@ -67,7 +69,6 @@ CHOOSE_FILES = "CRDC/DataSubmissions/ChooseFiles-Btn"
 UPLOAD = "CRDC/DataSubmissions/Upload-Btn"
 UPLOADING = "CRDC/DataSubmissions/Validation/Uploading-Text"
 VALIDATE = "CRDC/DataSubmissions/Validate-Btn"
-LOADING_ICON = "CRDC/DataSubmissions/Loading-Icon"
 VR_TAB = "CRDC/DataSubmissions/Validation/ValidationResults-Tab"
 VR_EXPANDED = "CRDC/DataSubmissions/Validation/ValidationResults_AggregatedExpanded-Btn"
 VR_NODE = "CRDC/DataSubmissions/Validation/ValidationResults_NodeType-Ddn"
@@ -93,6 +94,17 @@ ERR_SEVERITY = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/IssueSeverity
 ERR_MESSAGE = "CRDC/AILocators/DataSubmissions/ErrorDetailsDialog/IssueMessage-Lbl"
 
 SUMMARY_SUBMISSION_NAME = "CRDC/AILocators/DataSubmissions/Detail/Summary/SubmissionName-Lbl"
+SUMMARY_STATUS = "CRDC/AILocators/DataSubmissions/Detail/Summary/Status-Lbl"
+VALIDATE_CONTROL = "CRDC/AILocators/DataSubmissions/Detail/ValidationControls/Validate-Btn"
+VALIDATION_TYPE_METADATA = (
+    "CRDC/AILocators/DataSubmissions/Detail/ValidationControls/ValidationType-Metadata-RadioBtn"
+)
+VALIDATION_TARGET_ALL = (
+    "CRDC/AILocators/DataSubmissions/Detail/ValidationControls/ValidationTarget-AllUploadedData-RadioBtn"
+)
+VALIDATION_TARGET_NEW = (
+    "CRDC/AILocators/DataSubmissions/Detail/ValidationControls/ValidationTarget-NewUploadedData-RadioBtn"
+)
 SUMMARY_COLLABORATORS_BTN = "CRDC/AILocators/DataSubmissions/Detail/Summary/Collaborators-Btn"
 SUMMARY_HEADER_ROOT = "CRDC/AILocators/DataSubmissions/Detail/Summary/SummaryHeader-Root"
 _TRUNCATED = 15
@@ -112,6 +124,19 @@ _ACTION_REJECT = "CRDC/AILocators/DataSubmissions/Detail/Actions/Reject-Btn"
 _ACTION_WITHDRAW = "CRDC/AILocators/DataSubmissions/Detail/Actions/Withdraw-Btn"
 _ACTION_ADMIN_SUBMIT = "CRDC/AILocators/DataSubmissions/Detail/Actions/AdminSubmit-Btn"
 _ACTION_CANCEL = "CRDC/AILocators/DataSubmissions/Detail/Actions/Cancel-Btn"
+_ACTION_REJECT_COMMENT = "CRDC/AILocators/DataSubmissions/Detail/Actions/RejectDsComment-Txtbx"
+_ACTION_CONFIRM_REJECT = "CRDC/AILocators/DataSubmissions/Detail/Actions/ConfirmToReject-Btn"
+_COMPLETE_CONFIRMATION_YES = "CRDC/AILocators/DataSubmissions/Detail/Actions/CompleteConfirmationYes-Btn"
+SUMMARY_FULL_HISTORY = "CRDC/AILocators/DataSubmissions/Detail/Summary/FullHistory-Btn"
+HISTORY_DIALOG = "CRDC/AILocators/DataSubmissions/HistoryDialog/Dialog"
+HISTORY_CLOSE = "CRDC/AILocators/DataSubmissions/HistoryDialog/Close-Btn"
+HISTORY_ITEM_STATUS = "CRDC/AILocators/DataSubmissions/HistoryDialog/Item-Status"
+HISTORY_ITEM0_STATUS = "CRDC/AILocators/DataSubmissions/HistoryDialog/Item0-Status"
+CV_TAB = "CRDC/AILocators/DataSubmissions/Detail/Tabs/CrossValidation-Tab"
+CV_TABLE = "CRDC/AILocators/DataSubmissions/Detail/CrossValidation/Table"
+CV_TABLE_ROW = "CRDC/AILocators/DataSubmissions/Detail/CrossValidation/Table-DataRow"
+_CV_ROWS_PER_PAGE = 50
+_CV_REQUIRED_COLUMNS = ("Submitted Identifier", "Node Type", "Severity")
 
 
 def _header_index(names: list[str], wanted: str) -> int:
@@ -132,6 +157,133 @@ class DataSubmissionDetailPage(BasePage):
     def collaborators_button(self) -> Locator:
         """Collaborators control on the summary header (tooltip hover target)."""
         return self._loc(SUMMARY_COLLABORATORS_BTN)
+
+    @property
+    def status_label(self) -> Locator:
+        """Submission status in the summary header (Submitted, Rejected, ...)."""
+        return self._loc(SUMMARY_STATUS)
+
+    @property
+    def validate_button(self) -> Locator:
+        """Validate button in the validation controls."""
+        return self._loc(VALIDATE_CONTROL)
+
+    @property
+    def validation_type_metadata_radio(self) -> Locator:
+        """Validation Type: Metadata."""
+        return self._loc(VALIDATION_TYPE_METADATA)
+
+    @property
+    def validation_target_all_radio(self) -> Locator:
+        """Validation Target: All Uploaded Data."""
+        return self._loc(VALIDATION_TARGET_ALL)
+
+    @property
+    def validation_target_new_radio(self) -> Locator:
+        """Validation Target: New Uploaded Data."""
+        return self._loc(VALIDATION_TARGET_NEW)
+
+    @property
+    def reject_button(self) -> Locator:
+        """Reject action (Dcp or Fedlead on a Submitted submission)."""
+        return self._loc(_ACTION_REJECT)
+
+    @property
+    def reject_comment(self) -> Locator:
+        """Reject justification text box in the reject dialog."""
+        return self._loc(_ACTION_REJECT_COMMENT)
+
+    @property
+    def confirm_reject_button(self) -> Locator:
+        """Confirm to Reject button in the reject dialog."""
+        return self._loc(_ACTION_CONFIRM_REJECT)
+
+    @property
+    def cross_validate_button(self) -> Locator:
+        """Cross Validate button in the validation controls."""
+        return self._loc(_CROSS_VALIDATE)
+
+    @property
+    def complete_button(self) -> Locator:
+        """Complete action (after Release)."""
+        return self._loc(_ACTION_COMPLETE)
+
+    @property
+    def complete_confirmation_yes(self) -> Locator:
+        """Yes button on the Complete confirmation dialog."""
+        return self._loc(_COMPLETE_CONFIRMATION_YES)
+
+    @property
+    def full_history_button(self) -> Locator:
+        """Full History button in the summary header."""
+        return self._loc(SUMMARY_FULL_HISTORY)
+
+    @property
+    def history_dialog(self) -> Locator:
+        """Submission History dialog."""
+        return self._loc(HISTORY_DIALOG)
+
+    @property
+    def history_close_button(self) -> Locator:
+        """Close button of the Submission History dialog."""
+        return self._loc(HISTORY_CLOSE)
+
+    def read_history_statuses(self) -> list[str]:
+        """Status text of each Submission History row, newest first (dialog must be open).
+
+        Waits for the first row so the full list is rendered before reading (as Katalon does).
+        """
+        self._loc(HISTORY_ITEM0_STATUS).first.wait_for(state="visible", timeout=10_000)
+        cells = self._loc(HISTORY_ITEM_STATUS)
+        texts = [(cells.nth(i).inner_text() or "").strip() for i in range(cells.count())]
+        return [t for t in texts if t]
+
+    def read_cross_validation_rows_for_peer(self, peer_submission_id: str) -> list[CrossValidationRow]:
+        """Open Cross Validation Results and read the rows that link to a peer submission.
+
+        Returns (Submitted Identifier, Node Type, Severity, Issues) for every row, across
+        all pages, whose Conflicting Submission link points at peer_submission_id (Katalon
+        readCrossValidationRowsForConflictingSubmission). Raises if a required column is
+        missing or no row links to the peer.
+        """
+        self._loc(CV_TAB).first.click()
+        self.wait_loading_spinner_gone()
+        self._loc(CV_TABLE_ROW).first.wait_for(state="visible", timeout=30_000)
+        self.change_rows_per_page(_CV_ROWS_PER_PAGE)
+
+        headers = self._read_table_headers(self._loc(CV_TABLE))
+        lowered = [h.lower() for h in headers]
+        for name in _CV_REQUIRED_COLUMNS:
+            if name.lower() not in lowered:
+                raise AssertionError(f"Cross Validation table has no {name!r} column; headers are {headers}")
+        id_i, node_i, severity_i = (lowered.index(n.lower()) for n in _CV_REQUIRED_COLUMNS)
+        issues_i = lowered.index("issues") if "issues" in lowered else next(
+            (i for i, h in enumerate(lowered) if "issue" in h), -1
+        )
+
+        peer_link = self.page.locator(f"[data-testid='conflicting-link-{peer_submission_id.strip()}']")
+        peer_rows = self._loc(CV_TABLE_ROW).filter(has=peer_link)
+
+        def cell(cells: list[str], index: int) -> str:
+            return cells[index].strip() if 0 <= index < len(cells) else ""
+
+        matched: list[CrossValidationRow] = []
+        while True:
+            self.wait_for_generic_table_settled()
+            for cells in self._read_table_rows_full_text(peer_rows):
+                matched.append(
+                    (cell(cells, id_i), cell(cells, node_i), cell(cells, severity_i), cell(cells, issues_i))
+                )
+            current, total = self.read_current_page(), self.read_total_pages()
+            if current is None or total is None or current >= total:
+                break
+            self.go_to_next_page()
+        if not matched:
+            raise AssertionError(
+                f"no Cross Validation rows link to peer submission {peer_submission_id!r}"
+            )
+        log.info("Read %s Cross Validation row(s) for peer %s", len(matched), peer_submission_id)
+        return matched
 
     @property
     def submission_name_tooltip_trigger(self) -> Locator:
@@ -377,7 +529,7 @@ class DataSubmissionDetailPage(BasePage):
     def open_validation_results(self) -> None:
         """Validation Results tab, then aggregated/expanded view with filters visible."""
         self._loc(VR_TAB).click()
-        self._wait_loading_gone()
+        self.wait_loading_spinner_gone()
         self._ensure_validation_results_expanded()
 
     # --- Validation Results export (Katalon CRDCDH-1035) ---
@@ -399,12 +551,12 @@ class DataSubmissionDetailPage(BasePage):
         log.info("Navigating to URL: %s", url)
         self.page.goto(url, wait_until="domcontentloaded")
         self._loc(VR_TAB).wait_for(state="visible")
-        self._wait_loading_gone()
+        self.wait_loading_spinner_gone()
 
     def verify_validation_results_export_enabled(self) -> None:
         """Validation Results tab: the export button is visible and enabled (Katalon verifyButtonEnabled true)."""
         self._loc(VR_TAB).click()
-        self._wait_loading_gone()
+        self.wait_loading_spinner_gone()
         # The table has an export icon above and below it; Katalon used the first match.
         export = self._loc(VR_EXPORT).first
         export.wait_for(state="visible")
@@ -448,7 +600,7 @@ class DataSubmissionDetailPage(BasePage):
                 attempt + 1,
             )
             self._loc(VR_EXPANDED).click()
-            self._wait_loading_gone()
+            self.wait_loading_spinner_gone()
             if self._vr_node_filter_visible():
                 return
         raise RuntimeError(
@@ -458,12 +610,12 @@ class DataSubmissionDetailPage(BasePage):
     def apply_vr_filters(self, node: str, severity: str, issue_type: str) -> None:
         """Set node, severity, and issue type filters and wait for the Validation Results table to settle."""
         display_node = node.replace("datafile", "data file") if node == "datafile" else node
-        self._wait_loading_gone()
+        self.wait_loading_spinner_gone()
         self._select_li(self._loc(VR_NODE), display_node)
         self._select_li(self._loc(VR_SEVERITY), severity)
-        self._wait_loading_gone()
+        self.wait_loading_spinner_gone()
         self._select_li(self._loc(VR_ISSUE), issue_type)
-        self._wait_loading_gone()
+        self.wait_loading_spinner_gone()
         rows = self._loc(VR_ROW)
         self.wait_for_generic_table_settled(rows)
 
@@ -790,7 +942,7 @@ class DataSubmissionDetailPage(BasePage):
                     except PlaywrightTimeoutError:
                         pass
         self._loc(VR_EXPANDED).click()
-        self._wait_loading_gone()
+        self.wait_loading_spinner_gone()
         if errors:
             raise AssertionError(
                 f"verifyErrorDetailsForSubmittedIdForTC: {len(errors)} mismatch(es). See log above."
@@ -802,18 +954,6 @@ class DataSubmissionDetailPage(BasePage):
         option = self.page.locator("//li").filter(has_text=re.compile(rf"^{re.escape(text)}$"))
         option.first.wait_for(state="visible")
         option.first.click()
-
-    def wait_loading_spinner_gone(self) -> None:
-        """Wait until the Hub circular progress overlay hides (lists and detail)."""
-        self._wait_loading_gone()
-
-    def _wait_loading_gone(self) -> None:
-        icon = self._loc(LOADING_ICON).first
-        try:
-            icon.wait_for(state="visible", timeout=self.PROBE_MS)
-        except PlaywrightTimeoutError:
-            pass
-        icon.wait_for(state="hidden", timeout=15_000)
 
     def _cell_text(self, cells: Locator, index: int) -> str:
         if index < 0 or index >= cells.count():

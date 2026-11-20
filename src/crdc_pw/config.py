@@ -1,12 +1,12 @@
 """Load Hub URL and Login.gov accounts from one YAML file per Katalon profile.
 
-Katalon stored URL + secrets together in Profiles/CRDC_QA.glbl (and QA2, STAGE).
-This repo does the same in config/qa.yaml, qa2.yaml, and stage.yaml.
+Katalon stored URL + secrets together in Profiles/CRDC_QA.glbl (and QA2, Dev).
+This repo does the same in config/dev.yaml, qa.yaml, and qa2.yaml.
 
 Those files are gitignored (they contain passwords and TOTP seeds).
 Committed copies are config/*.yaml.example (URL filled, secrets blank).
 
-Which file to load: CRDC_PROFILE=qa|qa2|stage (shell env, not a .env file).
+Which file to load: CRDC_PROFILE=dev|qa|qa2 (shell env, not a .env file).
 If the real yaml is missing (fresh clone, GitHub Actions unit job), the
 matching .example is used so URL checks still run. Smoke still needs a
 filled yaml — locally you copy the example; in Actions the workflow writes
@@ -26,7 +26,7 @@ from crdc_pw.locators.loader import repo_root
 
 # Same six accounts as Katalon TC18_LoginAllRolesAndSwitchUser.
 ROLES = ("Admin", "Fedlead", "Dcp", "Submitter", "User", "Master")
-PROFILES = ("qa", "qa2", "stage")
+PROFILES = ("dev", "qa", "qa2")
 
 
 @dataclass(frozen=True)
@@ -45,7 +45,7 @@ class RoleCredentials:
 
 @dataclass(frozen=True)
 class Settings:
-    profile: str  # qa, qa2, or stage
+    profile: str  # dev, qa, or qa2
     base_url: str
     config_path: Path
     data: dict[str, Any] = field(default_factory=dict)
@@ -61,6 +61,16 @@ class Settings:
             password=_yaml_str(self.data, f"{key}Password"),
             secret=_yaml_str(self.data, f"{key}Secret"),
         )
+
+    @property
+    def api_url(self) -> str:
+        """Hub GraphQL endpoint (Katalon ApiUrl). Defaults to <base_url>api/graphql when the yaml has no ApiUrl."""
+        return _yaml_str(self.data, "ApiUrl") or f"{self.base_url}api/graphql"
+
+    @property
+    def submitter_api_token(self) -> str:
+        """Submitter API token for the upload CLI (Katalon SubmitterApiToken). Empty when not configured."""
+        return _yaml_str(self.data, "SubmitterApiToken")
 
 
 def _yaml_str(data: dict[str, Any], key: str) -> str:
@@ -98,6 +108,15 @@ def write_profile_yaml(root: Path, environ: dict[str, str] | None = None) -> Pat
     base_url = (env.get("BASE_URL") or env.get("G_Urlname") or "").strip()
     if base_url:
         data["base_url"] = base_url
+        if not env.get("ApiUrl"):
+            # The example's ApiUrl points at the profile's own host. Drop it so the API URL is
+            # derived from the overridden base_url (Settings.api_url), not left on another host.
+            data.pop("ApiUrl", None)
+
+    for key in ("ApiUrl", "SubmitterApiToken"):
+        value = env.get(key)
+        if value is not None:
+            data[key] = value
 
     filled = 0
     for role in ROLES:

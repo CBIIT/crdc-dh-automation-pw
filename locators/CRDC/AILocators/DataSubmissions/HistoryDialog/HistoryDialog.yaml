@@ -3,3 +3,5 @@
 Close-Btn: "//*[@data-testid='history-dialog-close']"
 Dialog: "//*[@data-testid='history-dialog']"
 HeaderRow: "//*[@data-testid='history-dialog-header-row']"
+Item-Status: "//*[@data-testid='history-dialog']//*[contains(@data-testid,'history-item-') and contains(@data-testid,'-status')]"
+Item0-Status: "//*[@data-testid='history-dialog']//*[@data-testid='history-item-0-status']"
