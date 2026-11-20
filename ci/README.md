@@ -24,7 +24,7 @@ Create three Environments on the GitHub repo, named **`qa`**, **`qa2`**, and **`
 
 Leave a role's secrets unset if that environment should skip it.
 
-For the upload CLI case (CRDCDH-1405 TC101) also set **`SubmitterApiToken`** (secret) and, only if the default is wrong, **`ApiUrl`** (variable; defaults to the Hub URL plus `api/graphql`). That test fails, not skips, when the token is empty, so a smoke job without it goes red on purpose. The smoke job needs Python 3.13 or newer (the CLI requires it; the check fails with a clear message otherwise). Like Katalon, every CLI run first runs `pip install -r tools/crdc-datahub-cli-uploader/requirements.txt --quiet` (3 minute timeout), so the job needs no separate install step for the CLI. Optional profile keys with the Katalon names: `CRDC_CLI_RETRIES`, `CRDC_CLI_OVERWRITE`, `CRDC_CLI_DRYRUN`. The unit job stays on 3.11 and needs none of this.
+For the upload CLI case (CRDCDH-1405 TC101) also set **`SubmitterApiToken`** (secret) and, only if the default is wrong, **`ApiUrl`** (variable; defaults to the Hub URL plus `api/graphql`). That test fails, not skips, when the token is empty, so a smoke job without it goes red on purpose. The smoke job needs Python 3.13 or newer (the CLI requires it; the check fails with a clear message otherwise). Like Katalon, every CLI run first runs `pip install -r tools/crdc-datahub-cli-uploader/requirements.txt --quiet` (3 minute timeout), so the job needs no separate install step for the CLI. The unit job stays on 3.11 and needs none of this.
 
 ## Smoke job
 

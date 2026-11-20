@@ -265,15 +265,6 @@ def cli_output_problems(result: CliResult) -> list[str]:
 
 
 @dataclass(frozen=True)
-class CliOptions:
-    """Optional CLI settings from the profile yaml (Katalon CRDC_CLI_*)."""
-
-    retries: int = 3
-    overwrite: bool = False
-    dryrun: bool = False
-
-
-@dataclass(frozen=True)
 class CliUpload:
     """One CLI upload.
 
@@ -286,30 +277,6 @@ class CliUpload:
     data_dir: Path
     manifest: Path | None
     cli_work_dir: Path
-
-
-def _as_bool(value: Any) -> bool:
-    """YAML bool or text such as "true" or "1" (Katalon accepted both)."""
-    if isinstance(value, bool):
-        return value
-    return str(value or "").strip().lower() in ("true", "1")
-
-
-def options_from_settings(settings: Settings) -> CliOptions:
-    """Read CRDC_CLI_RETRIES, CRDC_CLI_OVERWRITE and CRDC_CLI_DRYRUN.
-
-    All are optional. Katalon defaults apply: 3 retries, no overwrite, no dry run.
-    """
-    data = settings.data
-    try:
-        retries = int(str(data.get("CRDC_CLI_RETRIES") or "3").strip())
-    except ValueError:
-        retries = 3
-    return CliOptions(
-        retries=retries,
-        overwrite=_as_bool(data.get("CRDC_CLI_OVERWRITE")),
-        dryrun=_as_bool(data.get("CRDC_CLI_DRYRUN")),
-    )
 
 
 def require_submitter_token(settings: Settings) -> str:
@@ -414,13 +381,19 @@ def upload_files_via_cli(
     *,
     expect_validation_errors: bool = False,
     omit_archive_manifest: bool = False,
+    retries: int = 3,
+    overwrite: bool = False,
+    dryrun: bool = False,
     work_dir: Path | None = None,
 ) -> CliUpload:
     """Upload a test case's input files with the CLI (Katalon uploadFilesViaCli).
 
     Like Katalon, the submission is the one the browser is on: its id is read from the current URL,
-    so open the submission (as the test does after creating it) before calling. The API URL, token
-    and CLI options come from hub.settings.
+    so open the submission (as the test does after creating it) before calling. The API URL and
+    token come from hub.settings.
+
+    retries, overwrite and dryrun are the CLI's own optional settings (defaults 3, False, False,
+    which is what Katalon always ran with). Pass them only in a test that exercises them.
 
     data_type "datafile" uploads InputFiles/CRDC/MetadataData/<tc>/DataFiles with its manifest;
     "metadata" uploads <tc>/Metadata. The CLI reads the data files straight from InputFiles, which
@@ -461,7 +434,6 @@ def upload_files_via_cli(
             omit_archive_manifest=omit_archive_manifest,
         )
 
-    options = options_from_settings(settings)
     config = build_config(
         api_url=settings.api_url,
         token=token,
@@ -470,9 +442,9 @@ def upload_files_via_cli(
         data_dir=data_dir,
         manifest=manifest,
         archive_manifest=archive_manifest,
-        retries=options.retries,
-        overwrite=options.overwrite,
-        dryrun=options.dryrun,
+        retries=retries,
+        overwrite=overwrite,
+        dryrun=dryrun,
     )
     cli_work_dir = work_dir / "cli"
     result = run_uploader(config, cli_work_dir)

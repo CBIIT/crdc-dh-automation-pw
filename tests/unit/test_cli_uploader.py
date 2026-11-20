@@ -29,7 +29,6 @@ from crdc_pw.hub import Hub
 from crdc_pw.pages.cli_uploader import (
     TYPE_DATA_FILE,
     TYPE_METADATA,
-    CliOptions,
     CliResult,
     build_config,
     cli_dir,
@@ -39,7 +38,6 @@ from crdc_pw.pages.cli_uploader import (
     has_zip_files,
     mask_token,
     normalize_upload_type,
-    options_from_settings,
     require_submitter_token,
     run_uploader,
     upload_files_via_cli,
@@ -220,19 +218,6 @@ def test_build_config_leaves_out_archive_manifest_for_metadata(tmp_path: Path) -
     assert "archive_manifest" not in config
 
 
-def test_options_default_and_from_yaml() -> None:
-    assert options_from_settings(_settings()) == CliOptions(3, False, False)
-    options = options_from_settings(
-        _settings(
-            CRDC_CLI_RETRIES="5",
-            CRDC_CLI_OVERWRITE="true",
-            CRDC_CLI_DRYRUN=True,
-        )
-    )
-    assert options == CliOptions(5, True, True)
-    assert options_from_settings(_settings(CRDC_CLI_RETRIES="many")).retries == 3
-
-
 def test_normalize_upload_type() -> None:
     assert normalize_upload_type("datafile") == TYPE_DATA_FILE
     assert normalize_upload_type(" Data File ") == TYPE_DATA_FILE
@@ -341,6 +326,22 @@ def test_upload_data_files_leaves_inputs_alone_and_copies_manifest_files(
         "manifest.tsv",
         "old-manifest-final.tsv",
     ]
+
+
+def test_upload_passes_retries_overwrite_dryrun_to_the_cli_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _input_folder(tmp_path, "TC", "DataFiles", {"manifest.tsv": "x"})
+    fake = _FakeRun(CliResult(0, _GOOD_OUTPUT))
+    monkeypatch.setattr(cli_uploader, "run_uploader", fake)
+    hub = _hub(_settings(SubmitterApiToken="tok"))
+
+    upload_files_via_cli(hub, "TC", "datafile", work_dir=tmp_path / "default")
+    upload_files_via_cli(hub, "TC", "datafile", retries=5, overwrite=True, dryrun=True, work_dir=tmp_path / "custom")
+
+    defaults, custom = fake.configs
+    assert (defaults["retries"], defaults["overwrite"], defaults["dryrun"]) == (3, False, False)
+    assert (custom["retries"], custom["overwrite"], custom["dryrun"]) == (5, True, True)
 
 
 def test_upload_without_work_dir_uses_a_new_temporary_folder_each_call(
