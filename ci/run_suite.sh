@@ -13,8 +13,9 @@
 # 2. Suite: pytest -m <marker>.
 # 3. Restore: EnableAllPermissions again after the suite, even when the suite failed, because
 #    some suites (CRDC_Regression: PBAC TC11 to TC15) leave shared users' permissions unchecked.
-#    It always runs, also for CRDC_PBAC: a filtered run (-k TC11) does not collect
-#    EnableAllPermissions, and -x can stop a full run before it.
+#    The one exception is a plain "CRDC_PBAC" run with no extra arguments: that suite already ends
+#    with EnableAllPermissions. Any extra argument (for example -k TC11, which does not collect
+#    EnableAllPermissions, or -x, which can stop the run before it) brings the restore back.
 #
 # Every run is serial, has tracing off and writes its JUnit file to a fixed path: those options
 # come after the caller's arguments (and after PYTEST_ADDOPTS) so they cannot be overridden (a
@@ -31,6 +32,12 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 marker="${1:-CRDC_Smoke}"
 if [ "$#" -gt 0 ]; then
   shift
+fi
+
+# A plain CRDC_PBAC run already ends with EnableAllPermissions; every other run needs the restore.
+restore_needed=1
+if [ "${marker}" = "CRDC_PBAC" ] && [ "$#" -eq 0 ]; then
+  restore_needed=0
 fi
 
 FORCED=(--tracing=off -n 0)
@@ -76,10 +83,12 @@ python -m pytest -m "${marker}" "$@" --junitxml=reports/junit.xml "${FORCED[@]}"
 suite_rc=$?
 
 restore_rc=0
-echo "== Restore: EnableAllPermissions =="
-if ! enable_all_permissions junit-restore.xml; then
-  echo "Restoring permissions after the suite FAILED; shared users may be left with unchecked permissions." >&2
-  restore_rc=1
+if [ "${restore_needed}" -eq 1 ]; then
+  echo "== Restore: EnableAllPermissions =="
+  if ! enable_all_permissions junit-restore.xml; then
+    echo "Restoring permissions after the suite FAILED; shared users may be left with unchecked permissions." >&2
+    restore_rc=1
+  fi
 fi
 
 if [ "${suite_rc}" -ne 0 ]; then
