@@ -202,8 +202,8 @@ crdc-dh-automation-pw/
 | Data File `CRDC/Pbac/Permissions` | `InputFiles/CRDC/PBACPermissions.xlsx` + `utils/pbac_sheet.py` |
 | Object Repository `CRDC/Login/...` | `locators/CRDC/**/*.yaml` + `LocatorLoader` |
 | `Profiles/CRDC_QA.glbl` / `GlobalVariable` | `config/qa.yaml` |
-| Test Suite `CRDC_Smoke.ts` | `pytest -m CRDC_Smoke` — full port backlog: [smoke-suite-port-plan.md](smoke-suite-port-plan.md) |
-| Test Suite `CRDC_Auxiliary.ts` | `pytest -m CRDC_Auxiliary` |
+| Test Suite `CRDC_Smoke.ts` | `pytest -m CRDC_Smoke` (all 20 linked cases ported) |
+| Test Suite `CRDC_Auxiliary.ts` | `pytest -m CRDC_Auxiliary` — port backlog: [auxiliary-suite-port-plan.md](auxiliary-suite-port-plan.md) |
 | Test Suite `CRDC_PBAC.ts` | `pytest -m CRDC_PBAC` — TC01–TC05 defaults, TC06–TC10 positives, TC11–TC15 negatives, then **EnableAllPermissions** last (conftest order); serial, no `-n` |
 | `Test Cases/CRDC/SuiteSetup/EnableAllPermissions` | `tests/SuiteSetup/test_EnableAllPermissions.py` |
 | Test Suite `CRDC_DataValidation.ts` | `pytest -m CRDC_DataValidation` |
