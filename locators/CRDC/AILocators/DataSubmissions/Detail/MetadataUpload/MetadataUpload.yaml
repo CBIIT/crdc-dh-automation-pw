@@ -2,5 +2,6 @@
 
 ChooseFiles-Btn: "//*[@data-testid='metadata-upload-file-select-button']"
 FileCount-Lbl: "//*[@data-testid='metadata-upload-file-count']"
+ModelVersion-Lbl: "//*[@data-testid='metadata-upload-model-version']"
 FileInput: "//*[@data-testid='metadata-upload-file-input']"
 Upload-Btn: "//*[@data-testid='metadata-upload-file-upload-button']"

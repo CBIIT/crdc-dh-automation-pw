@@ -66,6 +66,7 @@ def normalize_summary_header_value(value: str | None) -> str:
 
 
 CHOOSE_FILES = "CRDC/DataSubmissions/ChooseFiles-Btn"
+UPLOAD_MODEL_VERSION = "CRDC/AILocators/DataSubmissions/Detail/MetadataUpload/ModelVersion-Lbl"
 UPLOAD = "CRDC/DataSubmissions/Upload-Btn"
 UPLOADING = "CRDC/DataSubmissions/Validation/Uploading-Text"
 VALIDATE = "CRDC/DataSubmissions/Validate-Btn"
@@ -152,6 +153,15 @@ class DataSubmissionDetailPage(BasePage):
     """Open submission: metadata upload, Validate, Validation Results table."""
 
     VALIDATE_MS = 300_000
+
+    @property
+    def upload_model_version(self) -> Locator:
+        """Step 1 UPLOAD METADATA line that names the data model and version.
+
+        The page shows it in capitals (for example SDM DATA MODEL: v0.0.3) but the element text
+        is "SDM Data Model: v0.0.3", so an expect on text sees the mixed-case form.
+        """
+        return self._loc(UPLOAD_MODEL_VERSION)
 
     @property
     def collaborators_button(self) -> Locator:

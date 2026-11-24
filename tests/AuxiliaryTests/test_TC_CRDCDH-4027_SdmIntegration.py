@@ -32,8 +32,8 @@ Flow (Admin, one login for the whole test):
   6. Open that zip and expect at least one template .tsv inside. TURNED OFF for now (see
      CHECK_TEMPLATE_ZIP_CONTENTS below): SDM is a skeleton model, so the zip is empty.
 
-The other half of the story, the Create a Data Submission dialog, is in its own file,
-test_TC_CRDCDH-4027_SdmCreateDialog.py, because it needs a Submitter login.
+The other half of the story (Create dialog, new SDM submission, upload) is in its own file,
+test_TC_CRDCDH-4027_SdmCreateAndValidate.py, because it needs a Submitter login.
 
 Not covered: "Example Templates" (SDM sets no loading file, so there is nothing to download, as
 for PSDC) and the Hub hiding SDM (the test cannot edit the manifest; it only checks that models

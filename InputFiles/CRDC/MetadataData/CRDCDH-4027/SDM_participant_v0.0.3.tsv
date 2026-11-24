@@ -1,0 +1,3 @@
+type	particpant_id	ncbi_tax_id	dbgap_subject_id
+participant	SDM_P1	9606	dbgap1
+participant	SDM_P2		dbgap2

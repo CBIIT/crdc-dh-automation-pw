@@ -9,6 +9,23 @@ This guide was updated on 24 Nov 2026 after reading the Hub source (`CBIIT/crdc-
 the model repository (`CBIIT/crdc-datahub-models`, tier branches) and the SDM model repo (`CBIIT/crdc-submission-model`, `main`, 0.0.3).
 Statements marked "not verified" were not checked on a live Hub.
 
+## Phase 2 and 3 status (same branch)
+
+`tests/AuxiliaryTests/test_TC_CRDCDH-4027_SdmCreateAndValidate.py` (Submitter, one test, replaces the Create dialog file) creates an SDM metadata-only submission on QA.
+Live findings on QA, 24 Nov 2026:
+
+- **Create works.** The header shows Data Commons `SDM` and step 1 reads "SDM Data Model: v0.0.3" (shown in capitals, the element text is mixed case). Both are asserted.
+- **The Hub validates against SDM, partly.** A TSV whose `type` is not an SDM node gets a clean error: `SDM_notanode_v0.0.3.tsv: 2": Node type "notanode" is not defined.` The test asserts this
+  with `InputFiles/CRDC/MetadataData/CRDCDH-4027_UnknownNode`. It proves the validator loaded the SDM model.
+- **Real SDM metadata fails in the Hub.** A TSV with a real SDM node (program, study or participant, one at a time or together) ends in a Failed batch with
+  "Batch validation failed - internal error". A bad column name on a real node does the same. This matches the dev team's note that validation may not work yet.
+  The SDM model has no `Key: 'Yes'` property and its only relationship is `of_study`, which may be why.
+- **Flag.** The upload, Validate and Validation Results compare run only when `VERIFY_SDM_DATA_VALIDATION = True` in the test (off now). With it on today, the test fails first on a guard that
+  checks the expected files and the SDM mapping exist (the shared compare, like the Katalon keyword, skips quietly when a folder has no expected files, so the guard stops a silent pass).
+- **Data.** `InputFiles/CRDC/MetadataData/CRDCDH-4027` holds `SDM_program`, `SDM_study` and `SDM_participant` TSVs (the participant file has one row missing required `ncbi_tax_id`).
+  Not added yet, because they cannot be derived until validation works: `expected-ValidationResults` files and an `SDM` sheet in `DSV_ValidationResults-mappings.xlsx`
+  (the Validation Results identifier column per node).
+
 ## Phase 1 status (implemented on branch `feat/crdcdh-4027-sdm-integration`)
 
 Phase 1 (read-only checks) is in `tests/AuxiliaryTests/test_TC_CRDCDH-4027_SdmIntegration.py`, marker `CRDC_Auxiliary`. Phases 2 to 4 below are still to do.

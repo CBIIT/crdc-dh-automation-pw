@@ -1,0 +1,2 @@
+type	study_name	study_short_name	study_description	study_type	funding_agency	grant_number	biospecimen_collection	data_access_level	study_organism
+study	SDM Probe Study	SDMS	desc	observational	NCI	G1	yes	open	Human
