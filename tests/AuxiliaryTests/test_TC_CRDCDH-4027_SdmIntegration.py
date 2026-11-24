@@ -131,6 +131,7 @@ def test_TC_CRDCDH_4027_SdmInModelNavigator(hub: Hub) -> None:
     #    Only the download and the SDM name are checked while the zip is empty (see step 6).
     saved = navigator.download("All Templates", group="Submission Templates")
     assert saved.name.startswith("SDM_Data_Loading_Templates"), saved.name
+    assert saved.suffix == ".zip" and zipfile.is_zipfile(saved), f"{saved.name} is not a valid template zip"
 
     # 6. Open the zip and list the .tsv files in it. A usable SDM zip has one per template node.
     #    Skipped while CHECK_TEMPLATE_ZIP_CONTENTS is False (the skeleton SDM zip is empty).
