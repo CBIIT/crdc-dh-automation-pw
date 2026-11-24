@@ -70,6 +70,26 @@ def test_gc_mappings_include_diagnosis() -> None:
     assert mappings["diagnosis"] == "study_diagnosis_id"
 
 
+def test_sdm_mapping_sheet_exists_and_is_empty() -> None:
+    """The SDM sheet is in the workbook but has no rows yet (like PSDC).
+
+    The SDM model has no key properties, so the Validation Results identifier column per node is
+    unknown until the Hub can validate SDM. Empty is deliberate: the SDM test with
+    VERIFY_SDM_DATA_VALIDATION on fails on "no SDM mapping" instead of guessing. Delete this test
+    when the real mapping rows are added.
+    """
+    from openpyxl import load_workbook
+
+    from crdc_pw.utils.validation_results import mappings_path
+
+    workbook = load_workbook(mappings_path(), read_only=True)
+    try:
+        assert "SDM" in workbook.sheetnames
+    finally:
+        workbook.close()
+    assert load_validation_results_mappings("SDM") == {}
+
+
 def test_tc08_expected_rows_invalid_integer() -> None:
     """TC08 expected TSV has Error / Invalid integer value rows keyed by study_diagnosis_id."""
     nodes = list_nodes_from_expected_validation_results_folder("TC08")

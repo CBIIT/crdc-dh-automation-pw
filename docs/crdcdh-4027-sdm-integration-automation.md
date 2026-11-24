@@ -23,8 +23,20 @@ Live findings on QA, 24 Nov 2026:
 - **Flag.** The upload, Validate and Validation Results compare run only when `VERIFY_SDM_DATA_VALIDATION = True` in the test (off now). With it on today, the test fails first on a guard that
   checks the expected files and the SDM mapping exist (the shared compare, like the Katalon keyword, skips quietly when a folder has no expected files, so the guard stops a silent pass).
 - **Data.** `InputFiles/CRDC/MetadataData/CRDCDH-4027` holds `SDM_program`, `SDM_study` and `SDM_participant` TSVs (the participant file has one row missing required `ncbi_tax_id`).
-  Not added yet, because they cannot be derived until validation works: `expected-ValidationResults` files and an `SDM` sheet in `DSV_ValidationResults-mappings.xlsx`
-  (the Validation Results identifier column per node).
+  Not added yet, because they cannot be derived until validation works: `expected-ValidationResults` files and the rows of the `SDM` sheet in `DSV_ValidationResults-mappings.xlsx`
+  (the Validation Results identifier column per node). The `SDM` sheet itself now exists and is empty, like `PSDC`, and a unit test pins that. With the flag on, the guard fails first on the missing expected files.
+
+## Phase 4 status (Data Explorer, same branch)
+
+`tests/AuxiliaryTests/test_TC_CRDCDH-4027_SdmDataExplorer.py` (Submitter) checks Jira result 7: the Data Commons filter offers SDM, filtering by it lists only rows with SDM in the Data Commons column,
+and the released seed study is among them. It is **skipped** while `RUN_SDM_DATA_EXPLORER_TEST = False`, with the reason in the report, because:
+
+- The filter lists only data commons with released study data. On QA on 24 Nov 2026 it offers `CTDC` and `GC`, not `SDM`.
+- A released SDM study cannot be created through the UI while the Hub fails SDM uploads (see Phase 2 and 3).
+
+To turn it on: create and release an SDM study on the profile by hand, set `SDM_STUDY` to its name, and set the flag to `True`. With the flag on and `SDM_STUDY` empty the test fails on a guard; with the study not released
+it fails with "No released SDM study ... Seed is missing". The new `DataExplorerListPage` methods (`read_data_commons_options`, `apply_data_commons_filter`, `read_table_headers`, `read_table_rows`) were
+checked live with `GC`. One bug found that way: reading the filter before the table loaded returned only "All", so the page now waits for the table first.
 
 ## Phase 1 status (implemented on branch `feat/crdcdh-4027-sdm-integration`)
 

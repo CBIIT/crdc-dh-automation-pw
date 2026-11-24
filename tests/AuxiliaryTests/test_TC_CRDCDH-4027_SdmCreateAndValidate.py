@@ -70,9 +70,9 @@ TC_SDM_DATA = "CRDCDH-4027"
 # TSV whose type is a real SDM node (program, study or participant, alone or together) ends in a
 # Failed batch with "Batch validation failed - internal error", and the dev team says validation
 # may not work as expected for now. Set this to True once it works. Still to add at that point:
-# expected-ValidationResults files under InputFiles/CRDC/MetadataData/CRDCDH-4027 and an SDM
-# sheet in DSV_ValidationResults-mappings.xlsx (node, then the identifier column the Validation
-# Results table shows). The shared compare (verify_validation_results_vs_expected_for_tc, same as
+# expected-ValidationResults files under InputFiles/CRDC/MetadataData/CRDCDH-4027 and rows in the
+# SDM sheet of DSV_ValidationResults-mappings.xlsx (node, then the identifier column the Validation
+# Results table shows). The SDM sheet exists but is empty on purpose, like the PSDC sheet. The shared compare (verify_validation_results_vs_expected_for_tc, same as
 # Katalon) logs a skip and passes when a folder has no expected files, so step 6 checks first that
 # the expected files and the SDM mapping exist and fails with a message if they do not. Turning the
 # flag on without adding that data therefore cannot pass quietly.
