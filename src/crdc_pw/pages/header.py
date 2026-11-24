@@ -25,6 +25,9 @@ _DATA_SUBMISSIONS = "CRDC/AILocators/Global/Header/Desktop/DataSubmissions-Tab"
 _DATA_EXPLORER = "CRDC/AILocators/Global/Header/Desktop/DataExplorer-Tab"
 _SUBMISSION_REQUESTS = "CRDC/AILocators/Global/Header/Desktop/SubmissionRequests-Tab"
 _API_TOKEN = "CRDC/AILocators/Global/Header/Desktop/APIToken-Btn"
+_MODEL_NAVIGATOR = "CRDC/AILocators/Global/Header/Desktop/ModelNavigator-Tab"
+_MODEL_NAVIGATOR_ITEM = "CRDC/AILocators/Global/Header/Desktop/ModelNavigator-Item"
+_MODEL_NAVIGATOR_ITEMS = "CRDC/AILocators/Global/Header/Desktop/ModelNavigator-Items"
 
 
 class HeaderPage(BasePage):
@@ -106,6 +109,28 @@ class HeaderPage(BasePage):
         tab = self._loc(_DATA_EXPLORER)
         tab.wait_for(state="visible")
         tab.click()
+
+    def open_model_navigator_menu(self) -> None:
+        """Click the Model Navigator nav item and wait for the model list (it opens on click, not hover)."""
+        tab = self._loc(_MODEL_NAVIGATOR)
+        tab.wait_for(state="visible")
+        tab.click()
+        self._loc(_MODEL_NAVIGATOR_ITEMS).first.wait_for(state="visible")
+
+    def read_model_navigator_items(self) -> list[str]:
+        """Text of each model in the open Model Navigator menu, in order (for example 'GC Model', 'SDM Model')."""
+        items = self._loc(_MODEL_NAVIGATOR_ITEMS)
+        return [" ".join(text.split()) for text in items.all_inner_texts()]
+
+    def open_model_navigator_for(self, model: str) -> None:
+        """Click one model in the open Model Navigator menu and wait for its page to load.
+
+        model is the manifest handle the Hub uses in the item id (CDS for GC, SDM for SDM).
+        """
+        item = self._loc(_MODEL_NAVIGATOR_ITEM, name=model)
+        item.wait_for(state="visible")
+        item.click()
+        self.page.wait_for_url("**/model-navigator/**")
 
     def open_submission_requests(self) -> None:
         """Nav bar Submission Requests. Katalon clickTab SubmissionRequest-Tab."""
