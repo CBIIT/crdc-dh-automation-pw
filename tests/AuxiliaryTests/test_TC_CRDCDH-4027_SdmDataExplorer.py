@@ -88,7 +88,8 @@ def test_TC_CRDCDH_4027_SdmInDataExplorer(hub: Hub) -> None:
     # 5. The released seed study is one of the rows. The Study Name column is looked up by header.
     assert "Study Name" in headers, f"No Study Name column in {headers}"
     name_column = headers.index("Study Name")
-    names = [row[name_column] for row in rows]
+    explorer.fill_study_name(SDM_STUDY)
+    names = [row[name_column] for row in explorer.read_table_rows()]
     assert SDM_STUDY in names, f"Seed study {SDM_STUDY!r} not in the SDM rows {names}"
 
     log.info(
