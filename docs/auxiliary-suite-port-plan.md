@@ -33,6 +33,7 @@ Goal: **`pytest -m CRDC_Auxiliary`** should cover the same Hub checks as Katalon
 
 - `test_TC18_LoginAllRolesAndSwitchUser.py`: Katalon `TC18` exists in the AuxiliaryTests folder but is not linked in `CRDC_Auxiliary.ts`.
 - `test_TC_CRDCDH-4006_ReleaseNotesPage.py`: PW-only (Xray CRDCDH-4006).
+- `test_TC_CRDCDH-4027_SdmIntegration.py` and `test_TC_CRDCDH-4027_SdmCreateDialog.py` (one test per file): PW-only (Xray CRDCDH-4027, story CRDCDH-3921, SDM model in the Hub). Phase 1 (read-only checks: Model Navigator menu and downloads, Create dialog Data Commons list) is done. Phases 2 to 4 (create, validate and release an SDM submission, Data Explorer) are still to do. See `docs/crdcdh-4027-sdm-integration-automation.md`.
 
 **Status:** 6 of 13 runnable cases done (all six are the Smoke overlap). 7 to port.
 

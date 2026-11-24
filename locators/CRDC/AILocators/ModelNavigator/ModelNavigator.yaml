@@ -1,0 +1,9 @@
+# CRDC/AILocators/ModelNavigator
+# Model Navigator route /model-navigator/<model>/<version>. The page has no data-testid on these controls (checked on QA, 24 Nov 2026).
+
+# Only h2 on the page; text is the model's pageTitle ("SDM Data Model").
+Title: "//h2"
+# Opens a menu of groups (Data Dictionary, Submission Templates) and direct downloads.
+Downloads-Btn: "//button[.//text()[normalize-space()='Available Downloads']]"
+# Every row of the open downloads menu, groups and files. The page filters by text.
+Downloads-MenuItem: "//li[@role='menuitem']"
