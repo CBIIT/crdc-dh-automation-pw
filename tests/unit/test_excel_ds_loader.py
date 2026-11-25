@@ -52,7 +52,8 @@ def _discover_committed_excel_cases() -> list[Path]:
     root = repo_root()
     paths = sorted(
         p
-        for p in root.glob("tests/DataValidation/**/TC*.xlsx")
+        for suffix in ("xlsx", "tsv")
+        for p in root.glob(f"tests/DataValidation/**/TC*.{suffix}")
         if p.is_file()
         and not p.name.startswith("~$")
         and not p.name.startswith("TC_Template")
@@ -61,7 +62,7 @@ def _discover_committed_excel_cases() -> list[Path]:
 
 
 def _validate_case_workbook(path: Path) -> None:
-    """Offline checks for committed TC*.xlsx (same Params/Model rules as step_runner)."""
+    """Offline checks for committed TC*.xlsx or TC*.tsv (same Params/Model rules as step_runner)."""
     read_settings_role(path)
     input_root, steps = load_steps(path)
     if not steps:
@@ -180,7 +181,7 @@ def test_excel_collection_applies_settings_role_to_hub_fixture() -> None:
     """Excel File collector must expand @parametrize(hub) — otherwise hub defaults to Admin."""
     case = (
         repo_root()
-        / "tests/DataValidation/GC/CRDCDH-686-Partial/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx"
+        / "tests/DataValidation/GC/CRDCDH-686-Partial/TC08_CRDCDH-686_VerifyInvalidIntegerValue.tsv"
     )
     env = {**os.environ, "CRDC_EXCEL_DS_VALIDATION": "1"}
     proc = subprocess.run(
@@ -204,7 +205,7 @@ def test_excel_collection_applies_settings_role_to_hub_fixture() -> None:
 
 @pytest.mark.unit
 def test_excel_smoke_allowlist_matches_committed_workbooks() -> None:
-    """Each smoke stem must be a committed TC*.xlsx, so a rename cannot drop a smoke case."""
+    """Each smoke stem must be a committed TC*.xlsx or TC*.tsv, so a rename cannot drop a smoke case."""
     from crdc_pw.utils.excel_ds_test_runner.test_collector import _SMOKE_CASE_STEMS
 
     committed = {p.stem for p in _discover_committed_excel_cases()}
@@ -239,7 +240,7 @@ def test_excel_collection_smoke_marker() -> None:
     collected = {
         line.split("::", 1)[1].split("[", 1)[0]
         for line in proc.stdout.splitlines()
-        if ".xlsx::" in line
+        if ".xlsx::" in line or ".tsv::" in line
     }
     assert collected == set(_SMOKE_CASE_STEMS), proc.stdout
 
@@ -280,7 +281,7 @@ def test_ctdc_no1_case_is_committed_but_not_smoke() -> None:
     collected = {
         line.split("::", 1)[1].split("[", 1)[0]
         for line in proc.stdout.splitlines()
-        if ".xlsx::" in line
+        if ".xlsx::" in line or ".tsv::" in line
     }
     assert _CTDC_NO1_CASE_STEM in collected, proc.stdout
 
@@ -490,6 +491,17 @@ def test_excel_ds_enabled_from_example_yaml(
 
 
 @pytest.mark.unit
+def test_default_cases_glob_is_a_valid_glob_matching_committed_cases() -> None:
+    """The default glob is a real pattern (no 'and') and finds the committed TSV cases."""
+    from crdc_pw.utils.excel_ds_test_runner.config_helpers import _DEFAULT_GLOB
+
+    assert " and " not in _DEFAULT_GLOB
+    matched = {p for p in repo_root().glob(_DEFAULT_GLOB) if p.is_file()}
+    committed = {p for p in _discover_committed_excel_cases() if p.suffix == ".tsv"}
+    assert matched and matched == committed
+
+
+@pytest.mark.unit
 def test_excel_ds_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     settings = Settings(
         profile="qa",
@@ -499,3 +511,125 @@ def test_excel_ds_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     monkeypatch.setenv("CRDC_EXCEL_DS_VALIDATION", "1")
     assert excel_ds_enabled(settings) is True
+
+
+# TSV case files.
+
+_TSV_STEPS = (
+    "Input Excel\tAction\tParams\tModel\n"
+    "InputFiles/CRDC/MetadataData/TC08\t\t\t\n"
+    "\topen_data_submissions\t\t\n"
+    "\tcreate_data_submission\tNew|metadata only|GC|autoQA - Study\t\n"
+    "\tupload_metadata_folder\tTC08\t\n"
+    "\tclick_validate\t\t\n"
+    "\tverify_validation_results\tTC08\tGC\n"
+)
+
+
+def _write_tsv_case(path: Path, *, settings: str = "# role\tSubmitter\n# enabled\tY\n", steps: str = _TSV_STEPS) -> Path:
+    path.write_text(settings + steps, encoding="utf-8")
+    return path
+
+
+@pytest.mark.unit
+def test_tsv_case_loads_settings_and_steps(tmp_path: Path) -> None:
+    from crdc_pw.utils.excel_ds_test_runner.loader import read_settings
+
+    path = _write_tsv_case(tmp_path / "TC99_tsv.tsv")
+    assert read_settings(path) == {"role": "Submitter", "enabled": "Y"}
+    assert read_settings_role(path) == "Submitter"
+    input_root, steps = load_steps(path)
+    assert input_root == "InputFiles/CRDC/MetadataData/TC08"
+    assert [s.action for s in steps] == [
+        "open_data_submissions",
+        "create_data_submission",
+        "upload_metadata_folder",
+        "click_validate",
+        "verify_validation_results",
+    ]
+    assert steps[1].params == "New|metadata only|GC|autoQA - Study"
+    assert steps[-1].model == "GC"
+    assert steps[0].excel_row == 3
+
+
+@pytest.mark.unit
+def test_tsv_case_tolerates_bom_short_rows_and_trailing_blank_lines(tmp_path: Path) -> None:
+    path = tmp_path / "TC99_tsv_bom.tsv"
+    body = (
+        "# role\tSubmitter\n"
+        "Input Excel\tAction\tParams\tModel\n"
+        "InputFiles/CRDC/MetadataData/TC08\n"
+        "\topen_data_submissions\n"
+        "\n\n"
+    )
+    path.write_text(body, encoding="utf-8-sig")
+    _, steps = load_steps(path)
+    assert [(s.action, s.params, s.model) for s in steps] == [("open_data_submissions", "", "")]
+
+
+@pytest.mark.unit
+def test_tsv_case_errors(tmp_path: Path) -> None:
+    bad_role = _write_tsv_case(tmp_path / "TC99_badrole.tsv", settings="# role\tNope\n")
+    with pytest.raises(ExcelLoadError, match="Invalid Settings role"):
+        read_settings_role(bad_role)
+
+    no_role = _write_tsv_case(tmp_path / "TC99_norole.tsv", settings="# enabled\tY\n")
+    with pytest.raises(ExcelLoadError, match="must include role"):
+        read_settings_role(no_role)
+
+    bad_header = _write_tsv_case(tmp_path / "TC99_header.tsv", steps="Wrong\tAction\tParams\tModel\nx\n")
+    with pytest.raises(ExcelLoadError, match="Steps row 1"):
+        load_steps(bad_header)
+
+    with pytest.raises(ExcelLoadError, match="not found"):
+        load_steps(tmp_path / "TC99_missing.tsv")
+
+
+@pytest.mark.unit
+def test_collector_accepts_tsv_and_rejects_duplicate_formats(tmp_path: Path) -> None:
+    from crdc_pw.utils.excel_ds_test_runner.test_collector import (
+        _duplicate_format_error,
+        _is_excel_case_path,
+    )
+
+    dv = repo_root() / "tests" / "DataValidation"
+    assert _is_excel_case_path(dv / "GC" / "TC01_example.tsv")
+    assert _is_excel_case_path(dv / "GC" / "TC01_example.xlsx")
+    assert not _is_excel_case_path(dv / "GC" / "TC_Template.tsv")
+    assert not _is_excel_case_path(dv / "GC" / "notes.tsv")
+    assert not _is_excel_case_path(dv / "GC" / "TC01_example.csv")
+
+    tsv = _write_tsv_case(tmp_path / "TC99_dup.tsv")
+    assert _duplicate_format_error(tsv) is None
+    (tmp_path / "TC99_dup.xlsx").write_bytes(b"")
+    assert "more than one format" in (_duplicate_format_error(tsv) or "")
+
+
+@pytest.mark.unit
+def test_tsv_case_is_collected_with_role_and_smoke_marker() -> None:
+    """A committed TSV smoke case is collected with its role param under -m CRDC_Smoke."""
+    smoke_stem = "TC36_CRDCDH-699_RequiredRelatedPropertyMissingICDC"
+    source = next(p for p in _discover_committed_excel_cases() if p.stem == smoke_stem)
+    assert source.suffix == ".tsv"
+    env = {**os.environ, "CRDC_EXCEL_DS_VALIDATION": "1"}
+    proc = subprocess.run(
+        [sys.executable, "-m", "pytest", str(source), "-m", "CRDC_Smoke", "--collect-only", "-q"],
+        cwd=repo_root(),
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert f"{smoke_stem}.tsv::{smoke_stem}[Submitter]" in proc.stdout, proc.stdout
+
+
+@pytest.mark.unit
+def test_duplicate_format_detected_with_mixed_case_suffix(tmp_path: Path) -> None:
+    """A TC01.TSV next to TC01.xlsx is a duplicate even on a case-sensitive filesystem."""
+    from crdc_pw.utils.excel_ds_test_runner.test_collector import _duplicate_format_error
+
+    tsv = _write_tsv_case(tmp_path / "TC98_mixed.TSV")
+    assert _duplicate_format_error(tsv) is None
+    (tmp_path / "TC98_mixed.xlsx").write_bytes(b"")
+    assert "more than one format" in (_duplicate_format_error(tsv) or "")

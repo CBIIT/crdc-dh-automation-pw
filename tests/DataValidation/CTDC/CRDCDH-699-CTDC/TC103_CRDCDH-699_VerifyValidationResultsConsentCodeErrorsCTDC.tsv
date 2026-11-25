@@ -1,0 +1,10 @@
+# role	Submitter
+# enabled	Y
+Input Excel	Action	Params	Model
+InputFiles/CRDC/MetadataData/CRDCDH-699_TC103			
+	open_data_submissions		
+	create_data_submission	New|metadata only|CTDC|autoQA - AutomationQA_Study	
+	upload_metadata_folder	CRDCDH-699_TC103	
+	click_validate		
+	verify_error_details	CRDCDH-699_TC103	CTDC
+	verify_validation_results	CRDCDH-699_TC103	CTDC

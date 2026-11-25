@@ -1,10 +1,10 @@
 # Excel-driven Data Submission validation
 
-This framework allows Excel-driven test cases for Data Submission validation. Each case is one Excel workbook under `tests/DataValidation/` that creates submission, uploads TSVs, validates, and compares Validation Results to expected files—**without writing Groovy or Python test code**.
+This framework allows Excel-driven test cases for Data Submission validation. Each case is one TSV file (or Excel workbook) under `tests/DataValidation/` that creates submission, uploads TSVs, validates, and compares Validation Results to expected files—**without writing Groovy or Python test code**.
 
 It is aimed at **QA engineers**: you supply **different datasets** (another **data commons** (GC, ICDC, CTDC, …), another **study**, upload TSVs + expected Validation Results) and the **Steps** sheet; automation handles login (from Settings `role`), navigation, and comparison.
 
-`tests/DataValidation/` — Excel-driven data validation cases only. Layout mirrors Katalon: `tests/DataValidation/<GC|ICDC|CTDC>/<ticket-folder>/TC##_....xlsx` (e.g. `GC/CRDCDH-686-Partial/TC08_...`).
+`tests/DataValidation/` — Excel-driven data validation cases only. Layout mirrors Katalon: `tests/DataValidation/<GC|ICDC|CTDC>/<ticket-folder>/TC##_....tsv` (e.g. `GC/CRDCDH-686-Partial/TC08_...`).
 `tests/DataSubmissions/` — Other DS lifecycle tests.
 
 ---
@@ -23,17 +23,17 @@ Add `--headed` to watch the browser. Create step assigns a **25-character** name
 
 ## Add a new test case
 
-1. **Copy** `tests/DataValidation/GC/CRDCDH-686-Partial/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx` → `tests/DataValidation/<model>/<ticket-folder>/TC09_CRDCDH-###_<Scenario>.xlsx` (mirror Katalon `Test Cases/CRDC/DataSubmissions/...`; name must start with **TC**).
+1. **Copy** `tests/DataValidation/GC/CRDCDH-686-Partial/TC08_CRDCDH-686_VerifyInvalidIntegerValue.tsv` → `tests/DataValidation/<model>/<ticket-folder>/TC09_CRDCDH-###_<Scenario>.tsv` (mirror Katalon `Test Cases/CRDC/DataSubmissions/...`; name must start with **TC**).
 2. **Copy** `InputFiles/CRDC/MetadataData/TC08/` → `MetadataData/TC09/` (or your case id). Replace upload `*.tsv` and files under `expected-ValidationResults/` and update the data as needed.
-3. In the test case, edit **Settings** (2nd tab): `role` = e.g. **Submitter**; `enabled` = **Y** (or **N** while drafting).
-4. Edit **Steps** (1st tab): row 2 = input root e.g. `InputFiles/CRDC/MetadataData/TC09`; update create/upload/verify rows for your **study**, **model**, and folder name (see [Workbook format](#workbook-format)).
-5. Save all workbook changes and run the test case.
+3. In the test case, edit **Settings** (the leading `#` lines; see [TSV case files](#tsv-case-files)): `role` = e.g. **Submitter**; `enabled` = **Y** (or **N** while drafting).
+4. Edit **Steps** (the table below the `#` lines): row 2 = input root e.g. `InputFiles/CRDC/MetadataData/TC09`; update create/upload/verify rows for your **study**, **model**, and folder name (see [Workbook format](#workbook-format)).
+5. Save the file (tabs, not spaces) and run the test case.
 
 ---
 
 ## Workbook format
 
-**Steps** (tab 1) — row 1 header: `Input Excel | Action | Params | Model`
+**Steps** (table; tab 1 in Excel) — row 1 header: `Input Excel | Action | Params | Model`
 
 | Row | Content |
 |-----|---------|
@@ -53,13 +53,40 @@ Add `--headed` to watch the browser. Create step assigns a **25-character** name
 - **verify_error_details:** (optional) same **Params** / **Model** as `verify_validation_results`. Opens **See details** on Validation Results rows and checks the error-details dialog against `Expected_Issues` (or `Issue_Type`) in the same `expected-ValidationResults/*.tsv` files. **CRDCDH-686-Partial** workbooks omit this step (Katalon table-only).
 - **verify_validation_results:** case id in **Params**, commons in **Model** (GC, ICDC, CTDC). Compares the aggregated Validation Results table to expected TSVs.
 
-**Settings** (tab 2): `role`, `enabled` (Y/N). Workbook run settings—not `config/qa.yaml`.
+**Settings** (`#` lines; tab 2 in Excel): `role`, `enabled` (Y/N). Workbook run settings—not `config/qa.yaml`.
 
-**Smoke membership:** Workbooks that are in the Katalon `CRDC_Smoke` suite also get the `CRDC_Smoke` marker. The list is `_SMOKE_CASE_STEMS` in `src/crdc_pw/utils/excel_ds_test_runner/test_collector.py` (file name without `.xlsx`). Today: 686-Partial TC03, 699 CTDC TC101, 699 ICDC TC36. To add a workbook, add its stem to that set; a unit test fails if a stem has no committed workbook. Run them with `pytest -m "CRDC_Smoke and CRDC_DataValidation_Excel"`.
+**Smoke membership:** Cases that are in the Katalon `CRDC_Smoke` suite also get the `CRDC_Smoke` marker. The list is `_SMOKE_CASE_STEMS` in `src/crdc_pw/utils/excel_ds_test_runner/test_collector.py` (file name without the extension). Today: 686-Partial TC03, 699 CTDC TC101, 699 ICDC TC36. To add a case, add its stem to that set; a unit test fails if a stem has no committed case file. Run them with `pytest -m "CRDC_Smoke and CRDC_DataValidation_Excel"`.
 
 **PW-only case, not smoke:** `TC104_CRDCDH-699_VerifyCdePermissibleValueErrorsCTDC` (input `InputFiles/CRDC/MetadataData/CRDCDH-699_TC104/`) is the original CTDC TC101 data. It expects `Value not permitted` for participant `radiology_report_available = NO1`. That property is linked to a CDE and has no list in the model file, so its values come from STS. The case fails whenever STS does not yet have values for the Hub's current CTDC model version (for example the day a new version is merged to `develop`, before the nightly MDB promotion and the Hub's PV puller). Katalon has no TC104. Run it with `pytest -k TC104_CRDCDH-699`.
 
 **TSV naming (upload + expected):** Put upload files in the case folder root (not under `expected-ValidationResults/`). Use the same pattern as TC08—`<model>_<node>_v<version>.tsv` (example: `GC_diagnosis_v11.0.3.tsv`). For each node you assert in Validation Results, add a matching file under `expected-ValidationResults/` named `<model>_<node>_v<version>_expected-ValidationResults.tsv` (example: `GC_diagnosis_v11.0.3_expected-ValidationResults.tsv`). When adding a case, copy an existing folder for your model and change file contents only; keep upload and expected names paired the same way TC08 does.
+
+---
+
+## TSV case files
+
+All committed cases are `TC*.tsv`. A case can also be a `TC*.xlsx` workbook (tab 1 Steps, tab 2 Settings). Both formats are collected from `tests/DataValidation/`, use the same markers (`CRDC_DataValidation_Excel`, and `CRDC_Smoke` by stem) and run the same steps. TSV files diff cleanly in git, so use them when a case changes often.
+
+One TSV holds both sheets. Leading lines that start with `#` are Settings (`# key<TAB>value`). The first line without `#` is the Steps header, then row 2 is the input root and rows 3+ are actions. Separate columns with a tab.
+
+```
+# role	Submitter
+# enabled	Y
+Input Excel	Action	Params	Model
+InputFiles/CRDC/MetadataData/TC36
+	open_data_submissions		
+	create_data_submission	New|metadata only|ICDC|autoQA - AutomationQA_Study	
+	upload_metadata_folder	TC36	
+	click_validate		
+	verify_error_details	TC36	ICDC
+	verify_validation_results	TC36	ICDC
+```
+
+- Rows in an error message are the row of the Steps table (the `#` lines are not counted), so they match the Excel version.
+- A case stem must exist in only one format. If `TC36_x.xlsx` and `TC36_x.tsv` are in the same folder, collection fails with a clear error. Keep only one.
+- `DSV_ValidationResults-mappings.xlsx` is still Excel.
+
+---
 
 A test is available to check your test cases are written in the right format **(Steps/Settings are correct)**:
 
@@ -71,7 +98,7 @@ pytest tests/unit/test_excel_ds_loader.py -m unit
 
 ## How it works
 
-Each `TC*.xlsx` has **Steps** (Hub actions) and **Settings** (`role`, `enabled`).
+Each `TC*.tsv` (or `TC*.xlsx`) has **Steps** (Hub actions) and **Settings** (`role`, `enabled`).
 
 ```
                          ┌──────────────────────┐
@@ -80,7 +107,7 @@ Each `TC*.xlsx` has **Steps** (Hub actions) and **Settings** (`role`, `enabled`)
                                     │
               ┌─────────────────────┴─────────────────────┐
               │               test_collector              │
-              │     tests/DataValidation/**/TC*.xlsx      │
+              │     tests/DataValidation/**/TC*.xlsx|tsv  │
               └─────────────────────┬─────────────────────┘
                                     │
                          ┌──────────▼────────────┐

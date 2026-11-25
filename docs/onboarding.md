@@ -170,8 +170,8 @@ crdc-dh-automation-pw/
 │   ├── AuxiliaryTests/     # TC08 studies, TC09, TC18, CRDCDH-4006
 │   ├── Pbac/               # TC01–TC05 defaults; TC06–TC10 positives; TC11–TC15 UncheckedPermissions (orchestration in src/crdc_pw/utils/pbac_helpers.py)
 │   ├── SuiteSetup/         # EnableAllPermissions (CRDC_PBAC restore, Master)
-│   ├── DataSubmissions/    # DS flow (e.g. CRDCDH-697 summary headers); metadata VR is Excel under DataValidation/
-│   ├── DataValidation/     # Excel VR: GC|ICDC|CTDC/<ticket>/TC*.xlsx (mirrors Katalon DataSubmissions tree)
+│   ├── DataSubmissions/    # DS flow (e.g. CRDCDH-697 summary headers); metadata VR cases are under DataValidation/
+│   ├── DataValidation/     # TSV VR cases (Excel also supported): GC|ICDC|CTDC/<ticket>/TC*.tsv (mirrors Katalon DataSubmissions tree)
 │   ├── SubmissionRequest/
 │   │   ├── CRDCDH-3948/    # TC01–TC04 SRF Save / import / Fed Lead (mirrors Katalon folder)
 │   │   └── CRDCDH-3952/    # TC01 Section D date tooltips (may fail until CRDCDH-3978 on QA)
@@ -207,7 +207,7 @@ crdc-dh-automation-pw/
 | Test Suite `CRDC_PBAC.ts` | `pytest -m CRDC_PBAC` — TC01–TC05 defaults, TC06–TC10 positives, TC11–TC15 negatives, then **EnableAllPermissions** last (conftest order); serial, no `-n` |
 | `Test Cases/CRDC/SuiteSetup/EnableAllPermissions` | `tests/SuiteSetup/test_EnableAllPermissions.py` |
 | Test Suite `CRDC_DataValidation.ts` | `pytest -m CRDC_DataValidation` |
-| `Test Cases/CRDC/DataSubmissions/GC/CRDCDH-686-Partial/TC08_...` | Excel: `tests/DataValidation/GC/CRDCDH-686-Partial/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx` |
+| `Test Cases/CRDC/DataSubmissions/GC/CRDCDH-686-Partial/TC08_...` | TSV: `tests/DataValidation/GC/CRDCDH-686-Partial/TC08_CRDCDH-686_VerifyInvalidIntegerValue.tsv` |
 | `Test Cases/CRDC/DataSubmissions/GC/CRDCDH-697/TC01_...` | `tests/DataSubmissions/GC/CRDCDH-697/test_TC01_CRDC-VerifyDataSubmissionHeaders.py` |
 
 ### Fixture, page, test (no keyword layer)

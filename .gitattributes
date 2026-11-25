@@ -1,0 +1,2 @@
+# Case files are tab separated text; keep them diffable and never rewrite line endings.
+tests/DataValidation/**/*.tsv text eol=lf
