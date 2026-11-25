@@ -7,7 +7,9 @@ from typing import Any
 
 from crdc_pw.config import Settings
 
-_DEFAULT_GLOB = "tests/DataValidation/**/TC*.xlsx and tests/DataValidation/**/TC*.tsv"
+# One valid glob. Cases are TSV; a glob cannot express "xlsx or tsv", and the collector
+# accepts both formats regardless of this value.
+_DEFAULT_GLOB = "tests/DataValidation/**/TC*.tsv"
 _ENV_ENABLE = "CRDC_EXCEL_DS_VALIDATION"
 
 

@@ -491,6 +491,17 @@ def test_excel_ds_enabled_from_example_yaml(
 
 
 @pytest.mark.unit
+def test_default_cases_glob_is_a_valid_glob_matching_committed_cases() -> None:
+    """The default glob is a real pattern (no 'and') and finds the committed TSV cases."""
+    from crdc_pw.utils.excel_ds_test_runner.config_helpers import _DEFAULT_GLOB
+
+    assert " and " not in _DEFAULT_GLOB
+    matched = {p for p in repo_root().glob(_DEFAULT_GLOB) if p.is_file()}
+    committed = {p for p in _discover_committed_excel_cases() if p.suffix == ".tsv"}
+    assert matched and matched == committed
+
+
+@pytest.mark.unit
 def test_excel_ds_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     settings = Settings(
         profile="qa",
@@ -611,3 +622,14 @@ def test_tsv_case_is_collected_with_role_and_smoke_marker() -> None:
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert f"{smoke_stem}.tsv::{smoke_stem}[Submitter]" in proc.stdout, proc.stdout
+
+
+@pytest.mark.unit
+def test_duplicate_format_detected_with_mixed_case_suffix(tmp_path: Path) -> None:
+    """A TC01.TSV next to TC01.xlsx is a duplicate even on a case-sensitive filesystem."""
+    from crdc_pw.utils.excel_ds_test_runner.test_collector import _duplicate_format_error
+
+    tsv = _write_tsv_case(tmp_path / "TC98_mixed.TSV")
+    assert _duplicate_format_error(tsv) is None
+    (tmp_path / "TC98_mixed.xlsx").write_bytes(b"")
+    assert "more than one format" in (_duplicate_format_error(tsv) or "")
