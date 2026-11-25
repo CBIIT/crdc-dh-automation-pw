@@ -83,15 +83,7 @@ InputFiles/CRDC/MetadataData/TC36
 ```
 
 - Rows in an error message are the row of the Steps table (the `#` lines are not counted), so they match the Excel version.
-- A case stem must exist in only one format. If `TC36_x.xlsx` and `TC36_x.tsv` are in the same folder, collection fails with a clear error. Delete the workbook when you switch a case to TSV.
-- Convert a workbook if you still have one (the workbook is not changed):
-
-```bash
-python -m crdc_pw.utils.excel_ds_test_runner.convert tests/DataValidation/ICDC/<folder>/TC36_....xlsx
-python -m crdc_pw.utils.excel_ds_test_runner.convert --all --out-dir /tmp/tsv-cases   # every workbook under tests/DataValidation
-```
-
-- A unit test converts a sample workbook and checks the TSV loads to identical Settings and Steps.
+- A case stem must exist in only one format. If `TC36_x.xlsx` and `TC36_x.tsv` are in the same folder, collection fails with a clear error. Keep only one.
 - `DSV_ValidationResults-mappings.xlsx` is still Excel.
 
 ---

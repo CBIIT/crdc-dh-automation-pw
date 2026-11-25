@@ -502,7 +502,7 @@ def test_excel_ds_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     assert excel_ds_enabled(settings) is True
 
 
-# TSV case files and the xlsx converter.
+# TSV case files.
 
 _TSV_STEPS = (
     "Input Excel\tAction\tParams\tModel\n"
@@ -572,33 +572,6 @@ def test_tsv_case_errors(tmp_path: Path) -> None:
 
     with pytest.raises(ExcelLoadError, match="not found"):
         load_steps(tmp_path / "TC99_missing.tsv")
-
-
-@pytest.mark.unit
-def test_tsv_conversion_matches_workbook(tmp_path: Path) -> None:
-    """Converting a workbook to TSV loads to identical settings and steps."""
-    from crdc_pw.utils.excel_ds_test_runner.convert import convert_workbook
-    from crdc_pw.utils.excel_ds_test_runner.loader import read_settings
-
-    workbook = tmp_path / "TC99_parity.xlsx"
-    _write_minimal_excel_case(
-        workbook,
-        role="Submitter",
-        input_root="InputFiles/CRDC/MetadataData/TC08",
-        steps=[
-            ("open_data_submissions", "", ""),
-            ("create_data_submission", "New|metadata only|GC|autoQA - Study", ""),
-            ("upload_metadata_folder", "TC08", ""),
-            ("click_validate", "", ""),
-            ("verify_error_details", "TC08", "GC"),
-            ("verify_validation_results", "TC08", "GC"),
-        ],
-    )
-    out_dir = tmp_path / "out"
-    tsv = convert_workbook(workbook, out_dir)
-    assert tsv.suffix == ".tsv" and tsv.stem == workbook.stem
-    assert read_settings(tsv) == read_settings(workbook)
-    assert load_steps(tsv) == load_steps(workbook)
 
 
 @pytest.mark.unit
