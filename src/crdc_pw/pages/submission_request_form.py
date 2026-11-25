@@ -580,10 +580,19 @@ class SubmissionRequestFormPage(BasePage):
         self._fill(_B_PLANNED_PUB_TITLE, _s(row.get("pland-publictn-title")))
 
         # The planned publication date always uses the shared future date, never the Excel cell.
-        self._fill(_B_PLANNED_PUB_DATE, SR_QUESTIONNAIRE_FUTURE_DATE)
+        # The field is a sectioned MM/DD/YYYY date input. fill() made it reset to today, and
+        # typing the slashes shifted the sections (05/12/2036 became 12/01/2036). Click the
+        # month section, clear, then type the digits only so each section advances by itself.
+        log.info("SR fill: %s", _field_label(_B_PLANNED_PUB_DATE))
+        date_field = self._loc(_B_PLANNED_PUB_DATE).first
+        date_field.wait_for(state="visible", timeout=20_000)
+        date_field.click(position={"x": 5, "y": 5})
+        self.page.keyboard.press("ControlOrMeta+A")
+        self.page.keyboard.press("Backspace")
+        date_field.press_sequentially(SR_QUESTIONNAIRE_FUTURE_DATE.replace("/", ""), delay=50)
         log.info(
-            "SR Section B: planned publication date after fill %r",
-            self._loc(_B_PLANNED_PUB_DATE).first.input_value(),
+            "SR Section B: planned publication date after typing %r",
+            date_field.input_value(),
         )
         self.page.keyboard.press("Tab")
         actual = self._loc(_B_PLANNED_PUB_DATE).first.input_value().strip()

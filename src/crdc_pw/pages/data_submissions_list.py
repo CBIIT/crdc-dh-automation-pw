@@ -50,6 +50,7 @@ STUDY_OPTION = "CRDC/DataSubmissions/Create/StudyDdn-Option"
 SUBMISSION_NAME = "CRDC/AILocators/DataSubmissions/CreateDialog/SubmissionName-TxtBx"
 DIALOG_CREATE = "CRDC/AILocators/DataSubmissions/CreateDialog/Create-Btn"
 DIALOG = "CRDC/AILocators/DataSubmissions/CreateDialog/Dialog"
+DIALOG_CLOSE = "CRDC/AILocators/DataSubmissions/CreateDialog/Close-Btn"
 
 _UUID = re.compile(
     r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
@@ -302,6 +303,23 @@ class DataSubmissionsListPage(BasePage):
         self._loc(CREATE_BTN).wait_for(state="visible")
         self._open_created_submission(submission_name)
         return submission_name
+
+    def read_create_dialog_data_commons_options(self) -> list[str]:
+        """Open Create a Data Submission, return the Data Commons options in the order shown, then close it.
+
+        Does not create anything. The dropdown lists the models the Hub shows (the manifest
+        without hidden models), so the test compares this list with what it expects.
+        """
+        self._loc(CREATE_BTN).click()
+        self._loc(DATA_COMMONS_DDN).click()
+        options = self._loc(DATA_COMMONS_OPTION)
+        options.first.wait_for(state="visible")
+        names = [_inner_text(options.nth(i)).strip() for i in range(options.count())]
+        # Escape closes the open dropdown; the dialog's own Close button then closes the dialog.
+        self.page.keyboard.press("Escape")
+        self._loc(DIALOG_CLOSE).click()
+        self._loc(DIALOG).wait_for(state="hidden")
+        return names
 
     def _click_option_exact(self, options: Locator, text: str) -> None:
         """Click the option whose innerText equals text. Used for Data Commons (GC)."""
