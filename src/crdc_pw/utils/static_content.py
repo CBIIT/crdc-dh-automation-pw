@@ -4,7 +4,7 @@ ReleaseNotesPage only reads Hub DOM. This module is the content oracle: GET
 the published file on CBIIT/crdc-datahub-static-content, drop YAML frontmatter,
 and pick normalized lines from the first release section the Hub page should contain.
 
-Hub profile qa / qa2 / stage maps to the same git branch name on
+Hub profile qa / qa2 maps to the same git branch name on
 CBIIT/crdc-datahub-static-content (file under content/).
 """
 
@@ -30,7 +30,7 @@ RAW_HOST = "https://raw.githubusercontent.com"
 def raw_notes_url(branch: str) -> str:
     """Build the raw.githubusercontent.com URL for the notes file on a tier branch.
 
-    branch is the Hub profile name (qa, qa2, stage). That is also the git branch
+    branch is the Hub profile name (qa, qa2). That is also the git branch
     static-content uses to publish each env.
     """
     return f"{RAW_HOST}/{REPO}/{branch}/{NOTES_FILE}"
@@ -57,8 +57,13 @@ def strip_yaml_frontmatter(raw: str) -> str:
 
 
 def _oracle_line_from_markdown(line: str) -> str | None:
-    """Map one markdown source line to plain text Hub should contain, or skip."""
+    """Map one markdown source line to plain text Hub should contain, or skip.
+
+    A trailing backslash is a markdown hard line break, so Hub does not show it.
+    """
     stripped = line.strip()
+    if stripped.endswith("\\"):
+        stripped = stripped[:-1].rstrip()
     if not stripped or stripped == "---":
         return None
     if stripped.startswith("#"):

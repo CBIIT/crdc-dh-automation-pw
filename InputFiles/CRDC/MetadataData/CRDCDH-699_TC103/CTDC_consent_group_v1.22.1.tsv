@@ -1,0 +1,6 @@
+type	 study.study_short_name	consent_group_id	consent_group_name	consent_group_number
+consent_group	autoQA	grp id1	gp name	5
+consent_group	autoQA	grp id2	gp name	6
+consent_group	autoQA	grp id3	gp name	-1
+consent_group	autoQA	grp id4	gp name	7
+consent_group	autoQA	grp id5	gp name	8

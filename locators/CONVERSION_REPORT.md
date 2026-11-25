@@ -53,7 +53,8 @@ Not removed because tests may use each name. Review if you want to merge them.
 | `CRDC/AILocators/Institutions/Detail/Cancel-Btn`<br>`CRDC/AILocators/Studies/Detail/Cancel-Btn` | `//*[@data-testid='cancel-button']` |
 | `CRDC/AILocators/Institutions/Detail/Save-Btn`<br>`CRDC/AILocators/Studies/Detail/Save-Btn` | `//*[@data-testid='save-button']` |
 | `CRDC/AILocators/Login/LoginPageContent`<br>`CRDC/AILocators/Login/RulesOfUseContent` | `//main[@id='main-content']` |
-| `CRDC/AILocators/Organizations/Detail/Save-Btn`<br>`CRDC/AILocators/SubmissionRequests/UnsavedChangesDialog/Save-Btn`<br>`CRDC/AILocators/Users/Profile/Save-Btn` | `//button[.='Save']` |
+| `CRDC/AILocators/Organizations/Detail/Save-Btn`<br>`CRDC/AILocators/Users/Profile/Save-Btn` | `//button[.='Save']` |
+| `CRDC/AILocators/SubmissionRequests/UnsavedChangesDialog/Save-Btn` | `//*[@role='dialog']//button[normalize-space(.)='Save']` |
 | `CRDC/AILocators/Organizations/List/AddProgram-Btn`<br>`CRDC/AILocators/Programs/List/AddProgram-Btn` | `//a[.='Add Program']` |
 | `CRDC/AILocators/Organizations/List/ProgramFilter-TxtBx`<br>`CRDC/AILocators/Programs/List/Filters/ProgramName-TxtBx` | `//*[@id='organization-filter']` |
 | `CRDC/AILocators/Organizations/List/StatusFilter-Ddn`<br>`CRDC/AILocators/Users/List/StatusFilter-Ddn` | `//*[@id='status-filter']` |

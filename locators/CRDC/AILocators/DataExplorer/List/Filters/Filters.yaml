@@ -5,3 +5,7 @@ DbGaPID-TxtBx: "//*[@data-testid='dbGaPID-input']"
 Filters-Container: "//*[@data-testid='data-explorer-filters']"
 ResetFilters-Btn: "//*[@data-testid='reset-filters-button']"
 StudyName-TxtBx: "//*[@data-testid='name-input']"
+# One Data Commons option in the open dropdown, by display name (for example SDM). Only data commons with released study data are listed.
+DataCommons-Option: "//*[@data-testid='data-commons-display-names-option-{name}']"
+# Every Data Commons option in the open dropdown, including All.
+DataCommons-Options: "//*[starts-with(@data-testid,'data-commons-display-names-option-')]"

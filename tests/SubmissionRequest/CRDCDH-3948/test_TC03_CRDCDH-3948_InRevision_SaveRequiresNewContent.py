@@ -28,8 +28,6 @@ pytestmark = pytest.mark.CRDC_SubmissionRequests
 
 @pytest.mark.parametrize("hub", ["Submitter"], indirect=True)
 def test_TC03_CRDCDH_3948_InRevision_SaveRequiresNewContent(hub: Hub) -> None:
-    hub.page.set_viewport_size({"width": 1920, "height": 1080})
-
     sr_list = SubmissionRequestsListPage(hub)
     form = SubmissionRequestFormPage(hub)
 

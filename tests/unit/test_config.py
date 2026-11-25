@@ -1,12 +1,12 @@
-"""No-browser checks for profile YAML (qa / qa2 / stage URLs and role keys).
+"""No-browser checks for profile YAML (dev / qa / qa2 URLs and role keys).
 
-Katalon stored Hub URL + Login.gov accounts in Profiles/CRDC_QA.glbl (and QA2, STAGE).
+Katalon stored Hub URL + Login.gov accounts in Profiles/CRDC_QA.glbl (and QA2, Dev).
 This repo does the same in config/<profile>.yaml. These tests use committed
 *.yaml.example files (or a temp yaml) — no real passwords.
 
 Flow (this file):
   1. Default qa URL
-  2. qa2 and stage URLs
+  2. dev and qa2 URLs
   3. Example files have every role key (so CI unit jobs work on a fresh clone)
   4. Unknown role name raises
   5. Credentials come from yaml, not leftover env vars
@@ -20,7 +20,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from crdc_pw.config import ROLES, load_settings, profile_paths
+from crdc_pw.config import PROFILES, ROLES, load_settings, profile_paths
 from crdc_pw.locators.loader import repo_root
 
 
@@ -33,11 +33,10 @@ def test_qa_profile_base_url() -> None:
 
 
 @pytest.mark.unit
-def test_qa2_and_stage_urls() -> None:
-    """CRDC_PROFILE=qa2 / stage must not silently keep using QA."""
-    assert load_settings(profile="qa2").base_url.endswith("hub-qa2.datacommons.cancer.gov/")
-    assert load_settings(profile="stage").base_url.endswith("hub-stage.datacommons.cancer.gov/")
-
+def test_dev_and_qa2_urls() -> None:
+    """CRDC_PROFILE=dev / qa2 must not silently keep using QA."""
+    assert load_settings(profile="dev").base_url == "https://hub-dev.datacommons.cancer.gov/"
+    assert load_settings(profile="qa2").base_url == "https://hub-qa2.datacommons.cancer.gov/"
 
 @pytest.mark.unit
 def test_example_files_are_committed() -> None:
@@ -47,7 +46,7 @@ def test_example_files_are_committed() -> None:
     (values may be blank).
     """
     root = repo_root()
-    for name in ("qa", "qa2", "stage"):
+    for name in PROFILES:
         _dest, example = profile_paths(root, name)
         assert example.is_file(), example
         with example.open(encoding="utf-8") as handle:
@@ -103,3 +102,22 @@ def test_falls_back_to_example_when_yaml_missing(tmp_path: Path) -> None:
     settings = load_settings(profile="qa", root=tmp_path)
     assert settings.config_path.name == "qa.yaml.example"
     assert settings.base_url.endswith("/")
+
+
+@pytest.mark.unit
+def test_api_url_defaults_from_base_url_and_token_is_blank_in_examples(tmp_path: Path) -> None:
+    """ApiUrl falls back to <base_url>api/graphql, and the committed examples carry no token."""
+    # Read the committed examples only: a local config/<profile>.yaml may hold a real token.
+    (tmp_path / "config").mkdir()
+    for name in PROFILES:
+        _real, example = profile_paths(repo_root(), name)
+        (tmp_path / "config" / example.name).write_bytes(example.read_bytes())
+        settings = load_settings(profile=name, root=tmp_path)
+        assert settings.config_path.name == f"{name}.yaml.example"
+        assert settings.api_url == f"{settings.base_url}api/graphql"
+        assert settings.submitter_api_token == ""
+
+    (tmp_path / "config" / "qa.yaml").write_text(
+        "base_url: https://hub-qa.datacommons.cancer.gov/\n", encoding="utf-8"
+    )
+    assert load_settings(profile="qa", root=tmp_path).api_url == "https://hub-qa.datacommons.cancer.gov/api/graphql"

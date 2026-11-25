@@ -12,17 +12,31 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from crdc_pw.pages.base import BasePage
 
+_HOME_LOGO = "CRDC/NavBar/Home-Btn"
 _USERNAME = "CRDC/AILocators/Global/Header/Desktop/UserName-Btn"
 _LOGOUT = "CRDC/AILocators/Global/Header/Desktop/Logout-Btn"
 _MANAGE_STUDIES = "CRDC/AILocators/Global/Header/Desktop/ManageStudies-Link"
 _MANAGE_PROGRAMS = "CRDC/AILocators/Global/Header/Desktop/ManagePrograms-Link"
+_MANAGE_INSTITUTIONS = "CRDC/AILocators/Global/Header/Desktop/ManageInstitutions-Link"
 _MANAGE_USERS = "CRDC/AILocators/Global/Header/Desktop/ManageUsers-Link"
+_OPERATION_DASHBOARD = "CRDC/AILocators/Global/Header/Desktop/OperationDashboard-Link"
 _USER_PROFILE = "CRDC/AILocators/Global/Header/Desktop/UserProfile-Link"
 _DATA_SUBMISSIONS = "CRDC/AILocators/Global/Header/Desktop/DataSubmissions-Tab"
+_DATA_EXPLORER = "CRDC/AILocators/Global/Header/Desktop/DataExplorer-Tab"
 _SUBMISSION_REQUESTS = "CRDC/AILocators/Global/Header/Desktop/SubmissionRequests-Tab"
+_API_TOKEN = "CRDC/AILocators/Global/Header/Desktop/APIToken-Btn"
+_MODEL_NAVIGATOR = "CRDC/AILocators/Global/Header/Desktop/ModelNavigator-Tab"
+_MODEL_NAVIGATOR_ITEM = "CRDC/AILocators/Global/Header/Desktop/ModelNavigator-Item"
+_MODEL_NAVIGATOR_ITEMS = "CRDC/AILocators/Global/Header/Desktop/ModelNavigator-Items"
 
 
 class HeaderPage(BasePage):
+    def go_home(self) -> None:
+        """Click the header logo to return home (Katalon SubmissionRequest.clickHome)."""
+        btn = self._loc(_HOME_LOGO)
+        btn.wait_for(state="visible")
+        btn.click()
+
     @property
     def username_btn(self) -> Locator:
         """The clickable signed-in name in the desktop header."""
@@ -90,8 +104,71 @@ class HeaderPage(BasePage):
         tab.wait_for(state="visible")
         tab.click()
 
+    def open_data_explorer(self) -> None:
+        """Nav bar Data Explorer. Katalon clickTab DataExplorer-Tab (same chrome as Data Submissions)."""
+        tab = self._loc(_DATA_EXPLORER)
+        tab.wait_for(state="visible")
+        tab.click()
+
+    def open_model_navigator_menu(self) -> None:
+        """Click the Model Navigator nav item and wait for the model list (it opens on click, not hover)."""
+        tab = self._loc(_MODEL_NAVIGATOR)
+        tab.wait_for(state="visible")
+        tab.click()
+        self._loc(_MODEL_NAVIGATOR_ITEMS).first.wait_for(state="visible")
+
+    def read_model_navigator_items(self) -> list[str]:
+        """Text of each model in the open Model Navigator menu, in order (for example 'GC Model', 'SDM Model')."""
+        items = self._loc(_MODEL_NAVIGATOR_ITEMS)
+        return [" ".join(text.split()) for text in items.all_inner_texts()]
+
+    def open_model_navigator_for(self, model: str) -> None:
+        """Click one model in the open Model Navigator menu and wait for its page to load.
+
+        model is the manifest handle the Hub uses in the item id (CDS for GC, SDM for SDM).
+        """
+        item = self._loc(_MODEL_NAVIGATOR_ITEM, name=model)
+        item.wait_for(state="visible")
+        item.click()
+        self.page.wait_for_url("**/model-navigator/**")
+
     def open_submission_requests(self) -> None:
         """Nav bar Submission Requests. Katalon clickTab SubmissionRequest-Tab."""
         tab = self._loc(_SUBMISSION_REQUESTS)
         tab.wait_for(state="visible")
         tab.click()
+
+    def is_api_token_button_visible(self) -> bool:
+        """True if API Token appears in the open user menu (PBAC ``data_submission:create``).
+
+        Call ``open_user_menu()`` first so dropdown entries are visible.
+        """
+        return self._loc(_API_TOKEN).first.is_visible()
+
+    def is_nav_manage_programs_visible(self) -> bool:
+        """User menu open — Manage Programs in dropdown (PBAC ``program:manage``)."""
+        return self._loc(_MANAGE_PROGRAMS).first.is_visible()
+
+    def is_nav_manage_studies_visible(self) -> bool:
+        """User menu open — Manage Studies in dropdown (PBAC ``study:manage``)."""
+        return self._loc(_MANAGE_STUDIES).first.is_visible()
+
+    def is_nav_manage_institutions_visible(self) -> bool:
+        """User menu open — Manage Institutions in dropdown (PBAC ``institution:manage``)."""
+        return self._loc(_MANAGE_INSTITUTIONS).first.is_visible()
+
+    def is_nav_manage_users_visible(self) -> bool:
+        """User menu open — Manage Users in dropdown (PBAC ``user:manage``)."""
+        return self._loc(_MANAGE_USERS).first.is_visible()
+
+    def is_nav_operation_dashboard_visible(self) -> bool:
+        """User menu open — Operation Dashboard in dropdown (PBAC ``dashboard:view``)."""
+        return self._loc(_OPERATION_DASHBOARD).first.is_visible()
+
+    def is_nav_data_submissions_visible(self) -> bool:
+        """True if the Data Submissions header tab is visible (PBAC ``data_submission:view`` / create)."""
+        return self._loc(_DATA_SUBMISSIONS).first.is_visible()
+
+    def is_nav_data_explorer_visible(self) -> bool:
+        """True if the Data Explorer header tab is visible (PBAC ``data_submission:view``)."""
+        return self._loc(_DATA_EXPLORER).first.is_visible()

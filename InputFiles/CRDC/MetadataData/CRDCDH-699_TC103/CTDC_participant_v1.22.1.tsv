@@ -1,0 +1,6 @@
+type	 study.study_short_name	 cohort.cohort_record_id	 consent_group.consent_group_id	participant_id	biomarker_results_available	radiology_report_available	radiology_images_available	histology_images_available
+participant	autoQA		grp id1	ctdc_part_1	yes	NO	unknown	YES
+participant	autoQA		grp id2	ctdc_part_2	yes	NO	unknown	YES
+participant	autoQA		grp id3	ctdc_part_3	yes	NO	unknown	YES
+participant	autoQA		grp id4	ctdc_part_4	yes	NO	unknown	YES
+participant	autoQA		grp id5	ctdc_part_5	yes	NO	unknown	YES

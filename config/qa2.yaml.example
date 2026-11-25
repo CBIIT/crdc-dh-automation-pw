@@ -28,6 +28,10 @@ MasterEmail:
 MasterPassword:
 MasterSecret:
 
+# Upload CLI (CRDCDH-1405 TC101). ApiUrl is optional (defaults to base_url + api/graphql).
+# SubmitterApiToken is a secret: copy it from the Katalon profile, never commit it.
+ApiUrl: https://hub-qa2.datacommons.cancer.gov/api/graphql
+SubmitterApiToken:
 excel_ds_validation:
   enabled: true
-  excel_cases_glob: tests/DataValidation/**/*.xlsx
+  excel_cases_glob: tests/DataValidation/**/TC*.tsv

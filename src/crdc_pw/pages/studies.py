@@ -22,7 +22,6 @@ log = logging.getLogger("crdc_pw.studies")
 _CONTAINER = "CRDC/AILocators/Studies/List/Container"
 _ADD_STUDY = "CRDC/AILocators/Studies/List/AddStudy-Btn"
 _TABLE_ROW = "CRDC/AILocators/GenericTable/TableRow"
-_LOADING_ROW = "CRDC/AILocators/GenericTable/LoadingRow"
 _STUDY_NAME = "CRDC/AILocators/Studies/List/Filters/StudyName-TxtBx"
 _PROGRAM_DDN = "CRDC/AILocators/Studies/List/Filters/Program-Ddn"
 _PROGRAM_OPTION = "CRDC/AILocators/Studies/List/Filters/Program-Option"
@@ -119,12 +118,12 @@ class StudiesListPage(BasePage):
             self.select_status(status)
         if access_type:
             self.select_access_type(access_type)
-        self._wait_for_table_settled(self._loc(_LOADING_ROW), rows, previous=before)
+        self.wait_for_generic_table_settled(rows, previous=before)
         log.info("Apply Manage Studies filters: completed")
 
     def wait_for_table_settled(self) -> None:
         """Wait until the table spinner is gone. Used after open when no filter ran."""
-        self._wait_for_table_settled(self._loc(_LOADING_ROW))
+        self.wait_for_generic_table_settled()
 
     def read_table_rows(self) -> list[list[str]]:
         """Each visible data row as a list of td text (header order). Empty list if none."""

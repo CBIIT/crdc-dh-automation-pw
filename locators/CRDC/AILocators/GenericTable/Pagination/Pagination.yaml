@@ -1,5 +1,11 @@
 # CRDC/AILocators/GenericTable/Pagination
 
+# Active page number button (aria-current, or the Mui-selected class on older markup).
+CurrentPage-Btn: "//nav[contains(@aria-label,'pagination actions')]//button[@aria-current='true' or contains(@class,'Mui-selected')]"
+# Page number button; fill ${page} (for example 2 gives aria-label 'Go to page 2').
+GoToPage-Btn: "//button[@aria-label='Go to page ${page}']"
+# Every button in the pagination nav; numeric text gives the page numbers.
+PaginationNav-Buttons: "//nav[contains(@aria-label,'pagination actions')]//button"
 DisplayedRows-Lbl: "//div[contains(@class,'MuiTablePagination-toolbar')]//p[contains(@class,'MuiTablePagination-displayedRows')]"
 NextPage-Btn: "//button[@aria-label='Go to next page']"
 PaginationActions-Container: "//nav[@aria-label='bottom pagination actions']"

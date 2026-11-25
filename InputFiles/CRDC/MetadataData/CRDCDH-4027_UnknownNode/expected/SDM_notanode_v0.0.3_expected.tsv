@@ -1,0 +1,2 @@
+type	expected_errors	prg_name
+notanode	"""SDM_notanode_v0.0.3.tsv: 2"": Node type ""notanode"" is not defined."	SDM Unknown Node

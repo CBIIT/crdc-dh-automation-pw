@@ -9,3 +9,5 @@ FullHistory-Btn: "//button[.='Full History']"
 Status-Lbl: "//*[@aria-label='Data Submission status']"
 SubmissionID-Lbl: "//*[@data-testid='data-submission-id-value']"
 SubmissionName-Lbl: "(//*[@data-testid='truncated-text-label'])[1]"
+# Ancestor of summary id + collaborators; scope label/value reads (not in Katalon repo)
+SummaryHeader-Root: "//*[@data-testid='data-submission-id-value']/ancestor::*[.//*[@data-testid='collaborators-button']][1]"

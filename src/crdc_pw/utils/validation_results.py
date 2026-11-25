@@ -1,15 +1,20 @@
-"""Validation Results expected-TSV oracle (Katalon DataSubmissions VR compare).
+"""Expected-TSV oracles under InputFiles/CRDC/MetadataData/<tc>/ (Katalon DataSubmissions compares).
 
-Discovers InputFiles/CRDC/MetadataData/<tc>/expected-ValidationResults TSVs,
-maps node → submitted-id column from DSV_ValidationResults-mappings.xlsx,
-and diffs UI rows to expected by submitted identifier. Pages filter and read;
-this module does not click Hub.
+Validation Results: discovers expected-ValidationResults TSVs, maps node → submitted-id
+column from DSV_ValidationResults-mappings.xlsx, and diffs UI rows to expected by submitted
+identifier.
+
+Upload Errors modal: reads the expected_errors column of the expected/ TSVs and diffs it
+with the errors the modal shows (see load_expected_upload_errors, diff_upload_errors).
+
+Pages filter and read; this module does not click Hub.
 """
 
 from __future__ import annotations
 
 import logging
 import re
+from collections import Counter
 from pathlib import Path
 
 from openpyxl import load_workbook
@@ -137,7 +142,7 @@ def list_nodes_from_expected_validation_results_folder(tc_name: str, root: Path 
     return nodes
 
 
-def _read_tsv_lines(path: Path) -> list[str]:
+def read_tsv_lines(path: Path) -> list[str]:
     """UTF-8 lines with the newline stripped. Empty file is an empty list."""
     return path.read_text(encoding="utf-8").splitlines()
 
@@ -150,7 +155,7 @@ def unique_severity_issue_type_pairs_from_expected_tsv(tsv_path: Path) -> list[t
     out: list[tuple[str, str]] = []
     if not tsv_path.is_file():
         return out
-    lines = _read_tsv_lines(tsv_path)
+    lines = read_tsv_lines(tsv_path)
     if len(lines) < 2:
         return out
     headers = [h.strip() for h in lines[0].split("\t")]
@@ -187,7 +192,7 @@ def load_expected_validation_results_tsv(
     out: list[tuple[str, str, str]] = []
     if not tsv_path.is_file():
         return out
-    lines = _read_tsv_lines(tsv_path)
+    lines = read_tsv_lines(tsv_path)
     if len(lines) < 2:
         return out
     headers = [h.strip() for h in lines[0].split("\t")]
@@ -210,6 +215,100 @@ def load_expected_validation_results_tsv(
         submitted_id = cells[idx_id].strip() if idx_id < len(cells) else ""
         out.append((submitted_id, row_issue, row_sev))
     return out
+
+
+def unquote_csv_style(value: str | None) -> str:
+    """Reverse Excel CSV quoting on Expected_Issues cells (Katalon unquoteCsvStyle)."""
+    if value is None:
+        return ""
+    text = value.strip()
+    if len(text) >= 2 and text.startswith('"') and text.endswith('"'):
+        text = text[1:-1].replace('""', '"')
+    return text
+
+
+def load_all_expected_error_detail_rows_from_tsv(
+    tsv_path: Path,
+    submitted_identifier_column: str,
+) -> list[tuple[str, str, str, str]]:
+    """All issue rows: (submitted_id, severity, issue_type, message).
+
+    Message uses Expected_Issues when present, else Issue_Type. Skips rows with
+    empty severity or issue type.
+    """
+    out: list[tuple[str, str, str, str]] = []
+    if not tsv_path.is_file():
+        return out
+    lines = read_tsv_lines(tsv_path)
+    if len(lines) < 2:
+        return out
+    headers = [h.strip() for h in lines[0].split("\t")]
+    idx_id = idx_issue = idx_sev = idx_expected_issues = -1
+    for i, header in enumerate(headers):
+        if header.lower() == submitted_identifier_column.lower():
+            idx_id = i
+        if header == "Issue_Type":
+            idx_issue = i
+        if header == "Expected_Severity":
+            idx_sev = i
+        if header == "Expected_Issues":
+            idx_expected_issues = i
+    if idx_id < 0 or idx_issue < 0 or idx_sev < 0:
+        return out
+    if idx_expected_issues < 0:
+        idx_expected_issues = idx_issue
+    for line in lines[1:]:
+        cells = line.split("\t")
+        row_issue = cells[idx_issue].strip() if idx_issue < len(cells) else ""
+        row_sev = cells[idx_sev].strip() if idx_sev < len(cells) else ""
+        if not row_sev or not row_issue:
+            continue
+        submitted_id = cells[idx_id].strip() if idx_id < len(cells) else ""
+        message = (
+            unquote_csv_style(cells[idx_expected_issues])
+            if idx_expected_issues < len(cells)
+            else ""
+        )
+        if not message:
+            message = row_issue
+        out.append((submitted_id, row_sev, row_issue, message))
+    return out
+
+
+def expected_error_detail_issues_for_row(
+    severity: str,
+    message: str,
+) -> list[dict[str, str]]:
+    """One expected TSV row as dialog issue list (single issue)."""
+    return [{"severity": severity.strip(), "message": message.strip()}]
+
+
+def diff_error_details_dialog_issues(
+    expected_issues: list[dict[str, str]],
+    actual_issues: list[dict[str, str]],
+) -> list[str]:
+    """Katalon verifyErrorDetailsDialogIssues: each expected must appear in actual.
+
+    Severity match is case-insensitive. Message: actual contains expected.
+    Extra actual issues are allowed.
+    """
+    errors: list[str] = []
+    for i, exp in enumerate(expected_issues):
+        exp_sev = (exp.get("severity") or "").strip()
+        exp_msg = (exp.get("message") or "").strip()
+        found = False
+        for act in actual_issues:
+            act_sev = (act.get("severity") or "").strip()
+            act_msg = (act.get("message") or "").strip()
+            if act_sev.lower() == exp_sev.lower() and exp_msg in act_msg:
+                found = True
+                break
+        if not found:
+            preview = exp_msg if len(exp_msg) <= 50 else exp_msg[:50] + "..."
+            errors.append(
+                f"Expected issue {i + 1} in dialog not found: {exp_sev}: {preview}"
+            )
+    return errors
 
 
 def diff_validation_results(
@@ -252,3 +351,228 @@ def diff_validation_results(
         if submitted_id not in expected_ids:
             errors.append(f"Submitted Identifier '{submitted_id}': present in UI but not in expected TSV")
     return errors
+
+
+# ---------------------------------------------------------------------------
+# Upload Errors modal oracle (Katalon verifyUploadActivitiesFailedErrorsModal)
+# ---------------------------------------------------------------------------
+
+_UPLOAD_ERRORS_SUBFOLDER = "expected"
+_EXPECTED_ERROR_COLUMNS = ("expected_errors", "expected_error")
+# Quote pairs that separate items inside a ['a', 'b'] list cell.
+_LIST_SEPARATORS = ("', '", '", "', "', \"", "\", '")
+_CURLY_DOUBLE_QUOTES = str.maketrans({"\u201c": '"', "\u201d": '"', "\u201e": '"', "\u201f": '"'})
+
+
+def expected_upload_errors_dir(tc_name: str, root: Path | None = None) -> Path:
+    """InputFiles/CRDC/MetadataData/<tcName>/expected (not expected-ValidationResults)."""
+    return metadata_dir(tc_name, root) / _UPLOAD_ERRORS_SUBFOLDER
+
+
+def normalize_quotes(text: str | None) -> str:
+    """Curly double quotes to straight ones, so UI text (curly) matches TSV text (straight)."""
+    return (text or "").translate(_CURLY_DOUBLE_QUOTES)
+
+
+def parse_expected_errors_cell(raw: str | None) -> list[str]:
+    """One expected_errors cell as a list of messages (Katalon parseExpectedErrorsToList).
+
+    Accepts a plain message, a CSV-style quoted message ("" for an inner quote), or a
+    list written as ['msg1', 'msg2']. A blank cell gives an empty list.
+    """
+    text = unquote_csv_style(raw)
+    if not text:
+        return []
+    text = text.strip()
+    if text.startswith("[") and text.endswith("]"):
+        inner = text[1:-1].strip()
+        if not inner:
+            return []
+        marker = "\x00"
+        for separator in _LIST_SEPARATORS:
+            inner = inner.replace(separator, marker)
+        segments = [segment.strip() for segment in inner.split(marker)]
+        # Separators consumed the quotes between items, so only the list's own first and
+        # last quote are left to remove.
+        if segments[0][:1] in ("'", '"'):
+            segments[0] = segments[0][1:]
+        if segments[-1][-1:] in ("'", '"'):
+            segments[-1] = segments[-1][:-1]
+        return [item.strip() for item in segments if item.strip()]
+    return [text]
+
+
+def load_expected_upload_errors(tc_name: str, root: Path | None = None) -> list[str]:
+    """Every expected error from expected/*.tsv for the TC (Katalon loadAggregatedExpectedErrorsForUi).
+
+    A TSV without an expected_errors or expected_error column is skipped, as in Katalon.
+    Raises FileNotFoundError if the folder or its TSVs are missing, and ValueError if the
+    files hold no errors at all.
+    """
+    folder = expected_upload_errors_dir(tc_name, root)
+    if not folder.is_dir():
+        raise FileNotFoundError(f"Upload Errors expected folder not found: {folder}")
+    files = sorted(p for p in folder.iterdir() if p.is_file() and p.suffix.lower() == ".tsv")
+    if not files:
+        raise FileNotFoundError(f"no .tsv files in {folder}")
+    errors: list[str] = []
+    for path in files:
+        lines = read_tsv_lines(path)
+        if len(lines) < 2:
+            continue
+        headers = [h.strip().lower() for h in lines[0].split("\t")]
+        index = next((headers.index(name) for name in _EXPECTED_ERROR_COLUMNS if name in headers), -1)
+        if index < 0:
+            continue
+        for line in lines[1:]:
+            cells = line.split("\t")
+            if index < len(cells):
+                errors.extend(parse_expected_errors_cell(cells[index]))
+    if not errors:
+        raise ValueError(f"no expected errors loaded from {folder}")
+    return errors
+
+
+def diff_upload_errors(expected: list[str], actual: list[str]) -> tuple[list[str], list[str]]:
+    """(missing, extra) after normalizing quotes; order is ignored, repeats are counted.
+
+    Both empty means the modal shows exactly the expected errors. Katalon requires the two
+    sorted lists to be equal, so extras fail here (unlike diff_error_details_dialog_issues).
+    """
+    want = Counter(normalize_quotes(item).strip() for item in expected)
+    got = Counter(normalize_quotes(item).strip() for item in actual)
+    return sorted((want - got).elements()), sorted((got - want).elements())
+
+
+# ---------------------------------------------------------------------------
+# Validation Results export file name (Katalon clickValidationResultsExportAndVerifyDownloadedFileName)
+# ---------------------------------------------------------------------------
+
+# {submissionName}-{YYYY-MM-DDThhmmss}, with .csv, .xlsx or no extension.
+_EXPORT_FILENAME = re.compile(r"^(.+)-(\d{4}-\d{2}-\d{2}T\d{6})(\.(csv|xlsx))?$")
+
+
+def normalize_submission_name_for_export(name: str | None) -> str:
+    """Submission name as it appears in the export file name: spaces to "-", other symbols dropped."""
+    return re.sub(r"[^a-zA-Z0-9-]", "", (name or "").strip().replace(" ", "-"))
+
+
+def check_export_filename(filename: str, expected_submission_name: str | None = None) -> str | None:
+    """None when filename looks like {name}-YYYY-MM-DDThhmmss[.csv|.xlsx], else why not.
+
+    When expected_submission_name is given, the name part must start with it after
+    normalize_submission_name_for_export (a prefix match, as in Katalon, because the Hub
+    label can be shorter than the name used in the file).
+    """
+    match = _EXPORT_FILENAME.match(filename)
+    if not match:
+        return f"file name {filename!r} does not match {{submissionName}}-YYYY-MM-DDThhmmss[.csv|.xlsx]"
+    if expected_submission_name and expected_submission_name.strip():
+        expected = normalize_submission_name_for_export(expected_submission_name)
+        if not match.group(1).startswith(expected):
+            return f"submission name {match.group(1)!r} in file name does not start with {expected!r}"
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Cross Validation Results (Katalon verifyCrossValidationResultsVsExpected)
+# ---------------------------------------------------------------------------
+
+_CV_EXPECTED_SUBFOLDER = "expected-CrossValidationResults"
+_CV_EXPECTED_SUFFIX = "_expected-CrossValidationResults.tsv"
+_CV_COLUMNS = ("submitted_id", "node_type", "severity", "issue")
+
+# One Cross Validation row: (submitted identifier, node type, severity, issue text).
+CrossValidationRow = tuple[str, str, str, str]
+
+
+def expected_cross_validation_dir(tc_name: str, root: Path | None = None) -> Path:
+    """InputFiles/CRDC/MetadataData/<tcName>/expected-CrossValidationResults."""
+    return metadata_dir(tc_name, root) / _CV_EXPECTED_SUBFOLDER
+
+
+def load_expected_cross_validation_rows(tc_name: str, root: Path | None = None) -> list[CrossValidationRow]:
+    """Rows of every *_expected-CrossValidationResults.tsv in the TC folder (empty submitted_id skipped).
+
+    Each TSV needs the columns submitted_id, node_type, severity and issue.
+    """
+    folder = expected_cross_validation_dir(tc_name, root)
+    if not folder.is_dir():
+        raise FileNotFoundError(f"expected-CrossValidationResults folder not found: {folder}")
+    files = sorted(p for p in folder.iterdir() if p.is_file() and p.name.endswith(_CV_EXPECTED_SUFFIX))
+    if not files:
+        raise FileNotFoundError(f"no *{_CV_EXPECTED_SUFFIX} files in {folder}")
+    rows: list[CrossValidationRow] = []
+    for path in files:
+        lines = read_tsv_lines(path)
+        headers = [h.strip().lower() for h in lines[0].split("\t")] if lines else []
+        missing = [name for name in _CV_COLUMNS if name not in headers]
+        if missing:
+            raise ValueError(f"{path.name}: missing column(s) {missing}; headers are {headers}")
+        index = {name: headers.index(name) for name in _CV_COLUMNS}
+        for line in lines[1:]:
+            if not line.strip():
+                continue
+            cells = line.split("\t")
+
+            def cell(name: str, cells: list[str] = cells) -> str:
+                i = index[name]
+                return cells[i].strip() if i < len(cells) else ""
+
+            if cell("submitted_id"):
+                rows.append((cell("submitted_id"), cell("node_type"), cell("severity"), cell("issue")))
+    return rows
+
+
+def normalize_cross_validation_issue(text: str | None) -> str:
+    """Trim, drop trailing dots and lower-case, so "Conflict Data found." equals "conflict data found"."""
+    return re.sub(r"[.]+$", "", (text or "").strip()).lower()
+
+
+def cross_validation_issue_matches(expected_issue: str, actual_issue: str) -> bool:
+    """True when the normalized issues are equal or the expected text is contained in the actual one."""
+    want = normalize_cross_validation_issue(expected_issue)
+    got = normalize_cross_validation_issue(actual_issue)
+    return got == want or bool(want and want in got)
+
+
+def diff_cross_validation_rows(
+    expected: list[CrossValidationRow], actual: list[CrossValidationRow]
+) -> list[str]:
+    """Mismatch messages; empty means every expected row is in the UI rows.
+
+    Rows are matched by submitted identifier. Node type and severity are compared ignoring
+    case. The issue matches when the normalized texts are equal or the expected text is
+    contained in the actual one. A row that satisfies all three comparisons is preferred
+    when one id has several UI rows (Katalon prefers an exact issue string only).
+    UI rows with ids that are not expected are not reported (the UI rows were read for one
+    peer submission only), as in Katalon's anchored mode.
+    """
+    by_id: dict[str, list[CrossValidationRow]] = {}
+    for row in actual:
+        if row[0].strip():
+            by_id.setdefault(row[0].strip(), []).append(row)
+
+    problems: list[str] = []
+    for exp_id, exp_node, exp_sev, exp_issue in expected:
+        candidates = by_id.get(exp_id)
+        if not candidates:
+            problems.append(f"Submitted ID {exp_id!r}: expected in UI but not found")
+            continue
+        best = candidates[0]
+        for row in candidates:
+            if (
+                row[1].lower() == exp_node.lower()
+                and row[2].lower() == exp_sev.lower()
+                and cross_validation_issue_matches(exp_issue, row[3])
+            ):
+                best = row
+                break
+        _id, act_node, act_sev, act_issue = best
+        if act_node.lower() != exp_node.lower():
+            problems.append(f"Submitted ID {exp_id!r}: Node Type expected {exp_node!r}, actual {act_node!r}")
+        if act_sev.lower() != exp_sev.lower():
+            problems.append(f"Submitted ID {exp_id!r}: Severity expected {exp_sev!r}, actual {act_sev!r}")
+        if not cross_validation_issue_matches(exp_issue, act_issue):
+            problems.append(f"Submitted ID {exp_id!r}: Issue expected {exp_issue!r}, actual {act_issue!r}")
+    return problems

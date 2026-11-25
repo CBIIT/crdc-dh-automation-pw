@@ -19,10 +19,10 @@ from playwright.sync_api import Locator, expect
 from crdc_pw.locators.loader import repo_root
 from crdc_pw.pages.base import BasePage
 from crdc_pw.pages.submission_requests_list import SubmissionRequestsListPage
-from crdc_pw.utils.submission_request_excel import get_sheet_row
+from crdc_pw.utils.submission_request_excel import find_cell_containing, get_sheet_row
 from crdc_pw.utils.ui_helpers import (
     assert_button_enabled,
-    verify_tooltip_on_hover,
+    verify_tooltip_on_hover_page,
     wait_for_button_stable,
 )
 
@@ -32,7 +32,6 @@ log = logging.getLogger("crdc_pw.submission_request_form")
 SR_SAVE_DISABLED_TOOLTIP = (
     "No changes have been made. Please make edits to the form then click save."
 )
-SR_SAVE_DISABLED_TOOLTIP_SUBSTRING = "No changes have been made"
 SR_IMPORT_NO_CHANGES_MESSAGE = (
     "No changes were applied. The imported file matches the current form."
 )
@@ -88,6 +87,9 @@ _SECTION_D_TARGETED_DELIVERY = (
 )
 _PROGRESS_REVIEW = "CRDC/AILocators/SubmissionRequests/Form/Review/ProgressBar-Review"
 _APPROVE_BTN = "CRDC/AILocators/SubmissionRequests/Form/Navigation/Approve-Btn"
+_REJECT_BTN = "CRDC/AILocators/SubmissionRequests/Form/Navigation/Reject-Btn"
+# Still used by review_decision_button_flags (PBAC); the Return request modal uses role locators.
+_INQUIRE_BTN = "CRDC/AILocators/SubmissionRequests/Form/Navigation/Inquire-Btn"
 _REVIEW_COMMENT_TESTID = "[data-testid='review-comment']"
 _APPROVE_COMMENT = "CRDC/AILocators/SubmissionRequests/ApproveDialog/ReviewComment-TxtBx"
 _APPROVE_CONFIRM = "CRDC/AILocators/SubmissionRequests/ApproveDialog/ConfirmApprove-Btn"
@@ -134,6 +136,29 @@ _D_COMMENT = "CRDC/SubmissionRequest/Section-D/AdditionalComnt-TxtBx"
 _DD_VALUE = "CRDC/SubmissionRequest/CrdcDdValue"
 _TOGGLE = "CRDC/SubmissionRequest/Toggle-Btn"
 
+# Additional contact, publications and repository (Section A and B optional blocks)
+_SECTION_A = "CRDC/SubmissionRequest/Section-A/"
+_SECTION_B = "CRDC/SubmissionRequest/Section-B/"
+_REVIEW = "CRDC/SubmissionRequest/ReviewSubmit/"
+_A_ADD_CONTACT = _SECTION_A + "AddContact-Btn"
+_B_ADD_PUBLICATION = _SECTION_B + "AddExistingPublication-Btn"
+_B_ADD_PLANNED_PUBLICATION = _SECTION_B + "AddPlannedPublication-Btn"
+_B_PLANNED_PUB_TITLE = _SECTION_B + "PlannedPublicationTitle-Txtbx"
+_B_PLANNED_PUB_DATE = _SECTION_B + "ExpectedPubDate-Clndr"
+_B_ADD_REPOSITORY = _SECTION_B + "AddRepository-Btn"
+_B_REPO_DATA_TYPES = _SECTION_B + "DataTypesSubmitd-Dd"
+_B_REPO_OTHER_DATA_TYPES = _SECTION_B + "OtherDataTypes-Txtbx"
+
+# Review and Submit: Section D data type label -> (Review locator, section-d column).
+_REVIEW_DATA_TYPES = {
+    "clinical": ("ClinicalTrial-Txt", "clinical-trial"),
+    "immunology": ("Imunology-Txt", "immunology"),
+    "genomics": ("Genomics-Txt", "genomics"),
+    "proteomics": ("Proteomics-Txt", "proteomics"),
+    "imaging": ("Imaging-Txt", "imaging"),
+    "epidemiologic": ("EpidemilogicCohort-Txt", "epide-cohort"),
+}
+
 _DOWNLOAD_DIR = repo_root() / "test-results" / "downloads"
 
 
@@ -168,18 +193,37 @@ def _field_label(yaml_path: str) -> str:
     return yaml_path.rsplit("/", 1)[-1]
 
 
+def _cell_text(value: Any) -> str:
+    """Excel cell as the text the Review page shows (whole numbers without a decimal point)."""
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return _s(value)
+
+
+def _squash(text: str) -> str:
+    """Collapse runs of whitespace so line wraps on the Review page do not fail a compare."""
+    return " ".join((text or "").split())
+
+
+def _digits(text: str) -> str:
+    """Digits only, so 404-588-3432 and (404)588-3432 compare equal."""
+    return "".join(ch for ch in (text or "") if ch.isdigit())
+
+
 class SubmissionRequestFormPage(BasePage):
     """SR form page — read top-to-bottom in four layers:
 
     1. Form UI — locators, status/Save asserts, navigation, review dialogs, import/export.
     2. Section fill — Katalon enter_* / select_* (Excel-driven fields on this screen).
     3. Orchestration — fill_submission_request_all_sections (A–D with Save/Next).
-    4. Cross-screen workflows — list + form keywords (inquire, approve, open by study).
+    4. Review and Submit verification — Katalon verify* keywords (Review page text vs Excel).
+    5. Cross-screen workflows — list + form keywords (inquire, approve, open by study).
     """
 
     last_entered_study_title: str | None = None
     last_entered_study_abbreviation: str | None = None
     last_entered_program_name: str | None = None
+    last_entered_program_abbreviation: str | None = None
 
     # -------------------------------------------------------------------------
     # Form UI — status bar, navigation, field edits, import/export, review
@@ -227,11 +271,10 @@ class SubmissionRequestFormPage(BasePage):
 
     def assert_save_disabled_tooltip(self) -> None:
         """Hover Save wrapper and assert the no-changes disabled tooltip (CRDCDH-3948)."""
-        verify_tooltip_on_hover(
-            self.page,
+        verify_tooltip_on_hover_page(
+            self,
             self._loc(_SAVE_TOOLTIP),
             SR_SAVE_DISABLED_TOOLTIP,
-            SR_SAVE_DISABLED_TOOLTIP_SUBSTRING,
         )
         log.info("Save disabled tooltip verified")
 
@@ -334,6 +377,22 @@ class SubmissionRequestFormPage(BasePage):
     def return_request_to_user(self) -> None:
         """Fed Lead: Return request to user on Review (CRDCDH-4007 confirm modal)."""
         self._confirm_return_request_modal()
+
+    def is_submit_button_visible(self, *, timeout_ms: int = 40_000) -> bool:
+        """True when Submit is visible on the questionnaire (PBAC submission_request:submit)."""
+        btn = self._loc(_SUBMIT_BTN).first
+        try:
+            btn.wait_for(state="visible", timeout=timeout_ms)
+        except Exception:
+            return False
+        return btn.is_visible()
+
+    def review_decision_button_flags(self) -> tuple[bool, bool, bool]:
+        """Approve, Reject, Inquire visibility (PBAC submission_request:review)."""
+        approve = self._loc(_APPROVE_BTN).first
+        reject = self._loc(_REJECT_BTN).first
+        inquire = self._loc(_INQUIRE_BTN).first
+        return approve.is_visible(), reject.is_visible(), inquire.is_visible()
 
     def approve_with_comment(self, comment: str = _DEFAULT_APPROVAL_COMMENT) -> None:
         """Fed Lead: Approve with comment (form must be on Review with Approve visible)."""
@@ -474,7 +533,10 @@ class SubmissionRequestFormPage(BasePage):
             base_title = _s(row.get("program-title"))
             SubmissionRequestFormPage.last_entered_program_name = base_title + ts
             self._fill(_B_PROG_TITLE, SubmissionRequestFormPage.last_entered_program_name)
-            self._fill(_B_PROG_ABBR, _s(row.get("prog-abbreviation")) + ts)
+            SubmissionRequestFormPage.last_entered_program_abbreviation = (
+                _s(row.get("prog-abbreviation")) + ts
+            )
+            self._fill(_B_PROG_ABBR, SubmissionRequestFormPage.last_entered_program_abbreviation)
             self._fill(_B_PROG_DESC, _s(row.get("prog-description")))
         elif any(x in dd_value for x in ("CCDI", "CPTAC", "DCCPS", "HTAN")):
             SubmissionRequestFormPage.last_entered_program_name = None
@@ -502,6 +564,121 @@ class SubmissionRequestFormPage(BasePage):
         self._fill(_B_FUND_AGENCY, _s(row.get("funding-agency")))
         self._fill(_B_GRANT, _s(row.get("grant-number")))
         self._fill(_B_NCI_OFF, _s(row.get("nci-prog-officer")))
+
+    def enter_additional_contact_info(self, data_row_num: int) -> None:
+        """Section A: add one additional contact and fill it from the section-a row."""
+        log.info("SR Section A: additional contact (excel row %s)", data_row_num)
+        row = get_sheet_row("section-a", data_row_num)
+        add_btn = self._loc(_A_ADD_CONTACT).first
+        add_btn.scroll_into_view_if_needed()
+        add_btn.click()
+        for name, key in [
+            ("AC_FirstName-Txtbx", "ac-first-name"),
+            ("AC_LastName-Txtbx", "ac-last-name"),
+            ("AC_Position-Txtbx", "ac-position"),
+            ("AC_Email-Txtbx", "ac-email"),
+            ("AC_Institution-Dd", "ac-institution"),
+            ("AC_Phone-Txtbx", "ac-phone"),
+        ]:
+            self._fill(_SECTION_A + name, _s(row.get(key)))
+
+    def enter_existing_and_planned_publications_info(self, data_row_num: int) -> None:
+        """Section B: add one existing and one planned publication from the section-b row."""
+        log.info("SR Section B: publications (excel row %s)", data_row_num)
+        row = get_sheet_row("section-b", data_row_num)
+
+        add_pub = self._loc(_B_ADD_PUBLICATION).first
+        add_pub.scroll_into_view_if_needed()
+        add_pub.click()
+        self.page.wait_for_timeout(1000)
+        for name, key in [
+            ("PublicationTitle-TxtBx", "publication-title"),
+            ("PubMedID-Txtbx", "pubmed-id"),
+            ("DOI-Txtbx", "doi"),
+        ]:
+            self._fill(_SECTION_B + name, _cell_text(row.get(key)))
+
+        self._loc(_B_ADD_PLANNED_PUBLICATION).first.click()
+        self.page.wait_for_timeout(500)
+        self._loc(_B_PLANNED_PUB_TITLE).first.scroll_into_view_if_needed()
+        self._fill(_B_PLANNED_PUB_TITLE, _s(row.get("pland-publictn-title")))
+
+        # The planned publication date always uses the shared future date, never the Excel cell.
+        # The field is a sectioned MM/DD/YYYY date input. fill() made it reset to today, and
+        # typing the slashes shifted the sections (05/12/2036 became 12/01/2036). Click the
+        # month section, clear, then type the digits only so each section advances by itself.
+        log.info("SR fill: %s", _field_label(_B_PLANNED_PUB_DATE))
+        date_field = self._loc(_B_PLANNED_PUB_DATE).first
+        date_field.wait_for(state="visible", timeout=20_000)
+        date_field.click(position={"x": 5, "y": 5})
+        self.page.keyboard.press("ControlOrMeta+A")
+        self.page.keyboard.press("Backspace")
+        date_field.press_sequentially(SR_QUESTIONNAIRE_FUTURE_DATE.replace("/", ""), delay=50)
+        log.info(
+            "SR Section B: planned publication date after typing %r",
+            date_field.input_value(),
+        )
+        self.page.keyboard.press("Tab")
+        actual = self._loc(_B_PLANNED_PUB_DATE).first.input_value().strip()
+        log.info(
+            "SR Section B: planned publication date intended %s, field value %r",
+            SR_QUESTIONNAIRE_FUTURE_DATE,
+            actual,
+        )
+        if actual != SR_QUESTIONNAIRE_FUTURE_DATE:
+            raise AssertionError(
+                f"Planned publication Expected Publication Date is {actual!r}; "
+                f"expected {SR_QUESTIONNAIRE_FUTURE_DATE!r}"
+            )
+
+    def enter_repository_info(
+        self, data_row_num: int, data_type_when_no_other_text: str = "Clinical"
+    ) -> None:
+        """Section B: add one repository (name, study id, data types submitted).
+
+        When other-data-types in the row has text, pick Other in Data Type(s) Submitted and
+        fill Other Data Type(s). If the menu has no Other option (older UI) it picks Clinical
+        and still fills the text. With no text it picks data_type_when_no_other_text only.
+        """
+        log.info("SR Section B: repository (excel row %s)", data_row_num)
+        row = get_sheet_row("section-b", data_row_num)
+        other_text = _s(row.get("other-data-types"))
+
+        add_repo = self._loc(_B_ADD_REPOSITORY).first
+        add_repo.scroll_into_view_if_needed()
+        add_repo.click()
+        self.page.wait_for_timeout(1000)
+        self._fill(_SECTION_B + "RepositoryName-Txtbx", _s(row.get("repository-name")))
+        self._fill(_SECTION_B + "StudyID-Txtbx", _cell_text(row.get("study-id")))
+
+        def listbox_option(label: str) -> Locator:
+            return self.page.locator(
+                f"(//*[@role='listbox'])[last()]//li[normalize-space()={_xpath_literal(label)}]"
+            ).first
+
+        self._loc(_B_REPO_DATA_TYPES).first.click()
+        self.page.wait_for_timeout(500)
+        if other_text:
+            option = listbox_option("Other")
+            try:
+                option.wait_for(state="visible", timeout=10_000)
+            except Exception:
+                log.info('Data Type(s) Submitted: "Other" not found; selecting "Clinical"')
+                option = listbox_option("Clinical")
+                option.wait_for(state="visible", timeout=10_000)
+            option.click()
+            self.page.keyboard.press("Escape")
+            self.page.wait_for_timeout(1000)
+            other_field = self._loc(_B_REPO_OTHER_DATA_TYPES).first
+            other_field.wait_for(state="visible", timeout=10_000)
+            other_field.scroll_into_view_if_needed()
+            self._fill(_B_REPO_OTHER_DATA_TYPES, other_text)
+            self.page.keyboard.press("Tab")
+        else:
+            option = listbox_option(data_type_when_no_other_text)
+            option.wait_for(state="visible", timeout=10_000)
+            option.click()
+            self.page.keyboard.press("Escape")
 
     def enter_data_access_type_and_dbgap_reg_info(
         self, access_type: str, db_gap_registered: str
@@ -675,6 +852,286 @@ class SubmissionRequestFormPage(BasePage):
         self.click_save()
         self.click_next()
         log.info("SR fill: completed Sections A–D")
+
+    # -------------------------------------------------------------------------
+    # Review and Submit verification — Katalon verify* keywords
+    # -------------------------------------------------------------------------
+
+    def _verify_review_text(
+        self, label: str, key: str, expected: str, *, digits_only: bool = False
+    ) -> None:
+        """Compare one Review page value with the expected text (whitespace-insensitive).
+
+        With digits_only the compare ignores punctuation, for phone numbers that the Review
+        page formats differently from the Excel cell.
+        """
+        field = self._loc(_REVIEW + key).first
+        field.wait_for(state="visible", timeout=30_000)
+        clean = _digits if digits_only else _squash
+        actual = clean(field.inner_text())
+        want = clean(expected)
+        log.info("SR review %s: actual %r expected %r", label, actual, want)
+        if actual != want:
+            raise AssertionError(
+                f"Review page {label}: actual {actual!r} does not match expected {want!r}"
+            )
+
+    def verify_principal_investigator_info(self, data_row_num: int) -> None:
+        """Review: PI name, position, email, institution and address vs section-a row.
+
+        Assumes the signed-in user's profile PI details equal that section-a row, because
+        enter_principal_investigator_info keeps non-empty fields (only email is always
+        overwritten). Same as Katalon. If the profile changes, this check fails with both
+        values in the message.
+        """
+        row = get_sheet_row("section-a", data_row_num)
+        self._verify_review_text(
+            "PI name",
+            "PI_Name-Txt",
+            f"{_s(row.get('pi-last-name'))}, {_s(row.get('pi-first-name'))}",
+        )
+        self._verify_review_text("PI position", "PI_Position-Txt", _s(row.get("position")))
+        self._verify_review_text("PI email", "PI_Email-Txt", _s(row.get("pi-email")))
+        self._verify_review_text(
+            "PI institution", "PI_InstitName-Txt", _s(row.get("pi-institution"))
+        )
+        self._verify_review_text(
+            "PI institution address", "PI_InstitAddress-Txt", _s(row.get("pi-instit-address"))
+        )
+
+    def verify_primary_contact_info(self, data_row_num: int) -> None:
+        """Review: primary contact name, position, email, institution and phone vs section-a row.
+
+        Katalon verifyPrimaryContactInfo labels a phone check but reads the institution field
+        a second time (copy error). Here the phone is compared for real, digits only, because
+        the Review page shows (404)588-3432 for the Excel value 404-588-3432.
+        """
+        row = get_sheet_row("section-a", data_row_num)
+        self._verify_review_text(
+            "primary contact name",
+            "PC_Name-Txt",
+            f"{_s(row.get('pc-last-name'))}, {_s(row.get('pc-first-name'))}",
+        )
+        self._verify_review_text(
+            "primary contact position", "PC_Position-Txt", _s(row.get("pc-position"))
+        )
+        self._verify_review_text(
+            "primary contact email", "PC_Email-Txt", _s(row.get("pc-email"))
+        )
+        self._verify_review_text(
+            "primary contact institution",
+            "PC_InstitName-Txt",
+            _s(row.get("pc-institution")),
+        )
+        self._verify_review_text(
+            "primary contact phone",
+            "PC_Phone-Txt",
+            _s(row.get("pc-phone")),
+            digits_only=True,
+        )
+
+    def verify_additional_contact_info(self, data_row_num: int) -> None:
+        """Review: additional contact name, position, email, institution and phone vs section-a row.
+
+        Katalon has the phone check commented out (format differs); here it is compared digits only.
+        """
+        row = get_sheet_row("section-a", data_row_num)
+        self._verify_review_text(
+            "additional contact name",
+            "AC_Name-Txt",
+            f"{_s(row.get('ac-last-name'))}, {_s(row.get('ac-first-name'))}",
+        )
+        self._verify_review_text(
+            "additional contact position", "AC_Position-Txt", _s(row.get("ac-position"))
+        )
+        self._verify_review_text(
+            "additional contact email", "AC_Email-Txt", _s(row.get("ac-email"))
+        )
+        self._verify_review_text(
+            "additional contact institution",
+            "AC_InstitName-Txt",
+            _s(row.get("ac-institution")),
+        )
+        self._verify_review_text(
+            "additional contact phone",
+            "AC_Phone-Txt",
+            _s(row.get("ac-phone")),
+            digits_only=True,
+        )
+
+    def verify_program_info(self, data_row_num: int) -> None:
+        """Review: program title, abbreviation and description for the Other program entered earlier."""
+        row = get_sheet_row("section-b", data_row_num)
+        title = SubmissionRequestFormPage.last_entered_program_name
+        abbreviation = SubmissionRequestFormPage.last_entered_program_abbreviation
+        if not title or not abbreviation:
+            raise RuntimeError(
+                "verify_program_info needs enter_program_info with the Other program first"
+            )
+        self._verify_review_text("program title", "ProgramTitle-Txt", title)
+        self._verify_review_text("program abbreviation", "ProgAbbre-Txt", abbreviation)
+        self._verify_review_text(
+            "program description", "ProgDescrptn-Txt", _s(row.get("prog-description"))
+        )
+
+    def verify_study_info(self, data_row_num: int) -> None:
+        """Review: study title, abbreviation and description entered earlier."""
+        row = get_sheet_row("section-b", data_row_num)
+        title = SubmissionRequestFormPage.last_entered_study_title
+        abbreviation = SubmissionRequestFormPage.last_entered_study_abbreviation
+        if not title or not abbreviation:
+            raise RuntimeError("verify_study_info needs enter_study_info first")
+        self._verify_review_text("study title", "StudyTitle-Txt", title)
+        self._verify_review_text("study abbreviation", "StudyAbbre-Txt", abbreviation)
+        self._verify_review_text(
+            "study description", "StudyDscrptin-Txt", _s(row.get("study-description"))
+        )
+
+    def verify_funding_agency_and_dbgap_info(self, data_row_num: int) -> None:
+        """Review: funding agency, grant or contract number and NCI program officer."""
+        row = get_sheet_row("section-b", data_row_num)
+        self._verify_review_text(
+            "funding agency", "FndngAgncy-Txt", _s(row.get("funding-agency"))
+        )
+        self._verify_review_text(
+            "grant number", "GrantCntractNum-Txt", _cell_text(row.get("grant-number"))
+        )
+        self._verify_review_text(
+            "NCI program officer", "NCIProgOficer-Txt", _s(row.get("nci-prog-officer"))
+        )
+
+    def verify_publications_info(self, data_row_num: int) -> None:
+        """Review: existing publication (title, PubMed id, DOI) and planned publication."""
+        row = get_sheet_row("section-b", data_row_num)
+        self._verify_review_text(
+            "publication title", "PublictnTitle-Txt", _s(row.get("publication-title"))
+        )
+        self._verify_review_text(
+            "PubMed id", "PubMedID-Txt", _cell_text(row.get("pubmed-id"))
+        )
+        self._verify_review_text("DOI", "DOI-Txt", _cell_text(row.get("doi")))
+        self._verify_review_text(
+            "planned publication title",
+            "PlnedPublTitle-Txt",
+            _s(row.get("pland-publictn-title")),
+        )
+        self._verify_review_text(
+            "planned publication date", "ExpctdPubDate-Txt", SR_QUESTIONNAIRE_FUTURE_DATE
+        )
+
+    def verify_repository_info(self, data_row_num: int) -> None:
+        """Review: repository name, study id and other data types text."""
+        row = get_sheet_row("section-b", data_row_num)
+        self._verify_review_text(
+            "repository name", "RepoName-Txt", _s(row.get("repository-name"))
+        )
+        self._verify_review_text(
+            "repository study id", "StudyID-Txt", _cell_text(row.get("study-id"))
+        )
+        self._verify_review_text(
+            "repository other data types",
+            "RepositoryOtherDataTypes-Txt",
+            _s(row.get("other-data-types")),
+        )
+
+    def verify_data_access_and_disease_info(
+        self,
+        cancer_type: str,
+        pre_cancer_type: str,
+        species_of_subjects: str,
+        data_row_num: int,
+    ) -> None:
+        """Review: access type, cancer, pre-cancer, species, subject count, cell lines, de-identified.
+
+        Katalon mapped each short dropdown word to a fixed data row with a switch. Here the
+        expected text is the section-c list cell that contains the word (for example
+        Cholangiocarcinoma gives the Bile Duct, Cholangiocarcinoma cell).
+        """
+        row = get_sheet_row("section-c", data_row_num)
+        self._verify_review_text("access types", "AccessTypes-Txt", _s(row.get("access-types")))
+        self._verify_review_text(
+            "cancer type",
+            "CancerTypes-Txt",
+            find_cell_containing("section-c", "cancer-type", cancer_type),
+        )
+        self._verify_review_text(
+            "pre-cancer type",
+            "PreCancerTypes-Txt",
+            find_cell_containing("section-c", "pre-cancer-type", pre_cancer_type),
+        )
+        self._verify_review_text(
+            "species of subject",
+            "SpeciesOfSubject-Txt",
+            find_cell_containing("section-c", "species-of-subject", species_of_subjects),
+        )
+        self._verify_review_text(
+            "number of subjects",
+            "NumOfSubjInclud-Txt",
+            _cell_text(row.get("num-of-subjects-included")),
+        )
+        self._verify_review_text("cell lines", "CellLines-Txt", _s(row.get("cell-lines")))
+        self._verify_review_text(
+            "data de-identified", "DataDeIdentified-Txt", _s(row.get("data-de-identified"))
+        )
+
+    def verify_data_types(self, *labels: str) -> None:
+        """Review: Section D dates, then each toggled data type shows Yes (section-d row 2).
+
+        Supports the data types that have a Review locator in the repository: clinical,
+        immunology, genomics, proteomics, imaging, epidemiologic.
+        """
+        self._verify_review_text(
+            "targeted delivery date", "TragetSubmDelivryDate-Txt", SR_QUESTIONNAIRE_FUTURE_DATE
+        )
+        self._verify_review_text(
+            "expected publication date",
+            "ExpctdPubliDateSec-D-RevPage-Txt",
+            SR_QUESTIONNAIRE_FUTURE_DATE,
+        )
+        yes_row = get_sheet_row("section-d", 2)
+        for raw in labels:
+            label = raw.lower()
+            if label not in _REVIEW_DATA_TYPES:
+                raise ValueError(
+                    f"No Review locator for data type {raw!r}; "
+                    f"supported: {', '.join(sorted(_REVIEW_DATA_TYPES))}"
+                )
+            key, column = _REVIEW_DATA_TYPES[label]
+            self._verify_review_text(f"data type {label}", key, _s(yes_row.get(column)))
+
+    def verify_file_types(
+        self,
+        file_type_row: int,
+        file_extension_row: int,
+        num_of_files_row: int,
+        estimated_data_size_row: int,
+    ) -> None:
+        """Review: first file-type row (type, extension, count, size) and additional comment."""
+        self._verify_review_text(
+            "file type",
+            "FileType-RowOne-Txt",
+            _s(get_sheet_row("section-d", file_type_row).get("file-type")),
+        )
+        self._verify_review_text(
+            "file extension",
+            "FileExtension-Txt",
+            _s(get_sheet_row("section-d", file_extension_row).get("file-extension")),
+        )
+        self._verify_review_text(
+            "number of files",
+            "NumOfFiles-RowOne-Txt",
+            _cell_text(get_sheet_row("section-d", num_of_files_row).get("num-of-file")),
+        )
+        self._verify_review_text(
+            "estimated data size",
+            "EstimDtaSiz-RowOne-Txt",
+            _s(get_sheet_row("section-d", estimated_data_size_row).get("estimtd-data-size")),
+        )
+        self._verify_review_text(
+            "additional comment",
+            "AdditionalComnt-Txt",
+            _s(get_sheet_row("section-d", 1).get("addit-comnt")),
+        )
 
     # -------------------------------------------------------------------------
     # Cross-screen workflows — list + form (SubmissionRequestsListPage + self)

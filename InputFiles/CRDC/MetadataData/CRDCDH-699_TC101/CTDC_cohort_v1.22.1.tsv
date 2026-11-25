@@ -1,0 +1,2 @@
+type	 study_arm.study_arm_record_id	 study.study_short_name	cohort_record_id	cohort_name	cohort_dose	cohort_dose_uom	cohort_description
+cohort		autoQA	co_rec_1	co name	co dose	co uom	co des

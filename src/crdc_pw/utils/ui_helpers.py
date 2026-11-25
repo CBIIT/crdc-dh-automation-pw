@@ -6,7 +6,7 @@ import logging
 import re
 import time
 
-from typing import Protocol
+from typing import Protocol, Sequence
 
 from playwright.sync_api import Locator, Page
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -16,11 +16,24 @@ log = logging.getLogger("crdc_pw.ui_helpers")
 
 __all__ = [
     "assert_button_enabled",
+    "assert_button_selected",
+    "assert_element_text",
+    "diff_history_statuses",
+    "normalize_history_status",
     "verify_tooltip_on_click",
+    "verify_tooltip_on_click_page",
     "verify_tooltip_on_click_path",
     "verify_tooltip_on_hover",
+    "verify_tooltip_on_hover_page",
     "wait_for_button_stable",
 ]
+
+# Tooltip layering (Hub-backed tests should not pass raw Page):
+# - verify_tooltip_on_click / verify_tooltip_on_hover — internal primitives (Page + Locator).
+#   Prefer these inside page object methods that already hold self.page.
+# - verify_tooltip_on_click_page / verify_tooltip_on_hover_page — test-facing when you have a
+#   Hub-backed page object and a Locator (property or dynamic sibling), same tab as page_obj.
+# - verify_tooltip_on_click_path — test-facing when the trigger is only a YAML locator path.
 
 
 class _HubPageLike(Protocol):
@@ -57,32 +70,67 @@ def _dismiss_click_tooltip(page: Page, trigger: Locator) -> None:
         log.warning("Tooltip still visible after dismiss attempt")
 
 
-def verify_tooltip_on_hover(
-    page: Page,
-    trigger: Locator,
-    expected_full: str,
-    substring: str,
-) -> None:
-    """Hover trigger and assert a MUI tooltip matches expected_full (Katalon verifyTooltipOnHover)."""
+def verify_tooltip_on_hover(page: Page, trigger: Locator, expected: str) -> None:
+    """Internal primitive: hover trigger; assert a visible tooltip equals expected (whitespace-normalized).
+
+    Picks among visible [role='tooltip'] nodes by full text match (no substring disambiguation).
+    Tests should call verify_tooltip_on_hover_page instead.
+    """
     trigger.first.hover()
     page.wait_for_timeout(1000)
+    expected_norm = _normalize_whitespace(expected)
     tooltips = page.locator("[role='tooltip']")
-    count = tooltips.count()
-    match_text: str | None = None
-    for i in range(count):
-        text = tooltips.nth(i).inner_text()
-        if substring in text:
-            match_text = _normalize_whitespace(text)
-            break
-    if match_text is None:
-        found = [tooltips.nth(i).inner_text() for i in range(count)]
-        raise AssertionError(
-            f"Tooltip with substring {substring!r} not found. Visible tooltips: {found!r}"
-        )
-    expected = _normalize_whitespace(expected_full)
-    assert match_text == expected, (
-        f"verify_tooltip_on_hover: expected {expected!r}, actual {match_text!r}"
+    visible_texts: list[str] = []
+    for i in range(tooltips.count()):
+        tip = tooltips.nth(i)
+        try:
+            if not tip.is_visible():
+                continue
+        except Exception:
+            continue
+        actual_norm = _normalize_whitespace(tip.inner_text() or "")
+        if actual_norm:
+            visible_texts.append(actual_norm)
+        if actual_norm == expected_norm:
+            log.info(
+                "Tooltip hover | expected: %s | actual: %s | Pass",
+                expected_norm or "(empty)",
+                actual_norm or "(empty)",
+            )
+            return
+    if not visible_texts:
+        actual_log = "(none visible)"
+    elif len(visible_texts) == 1:
+        actual_log = visible_texts[0] or "(empty)"
+    else:
+        actual_log = str(visible_texts)
+    log.info(
+        "Tooltip hover | expected: %s | actual: %s | Fail",
+        expected_norm or "(empty)",
+        actual_log,
     )
+    raise AssertionError(
+        f"verify_tooltip_on_hover: expected {expected_norm!r}, "
+        f"visible tooltips: {visible_texts!r}"
+    )
+
+
+def verify_tooltip_on_hover_page(
+    page_obj: _HubPageLike,
+    trigger: Locator,
+    expected: str,
+) -> None:
+    """Hub page object + Locator: hover tooltip assert (see module comment on layering)."""
+    verify_tooltip_on_hover(page_obj.page, trigger, expected)
+
+
+def verify_tooltip_on_click_page(
+    page_obj: _HubPageLike,
+    trigger: Locator,
+    expected: str,
+) -> None:
+    """Hub page object + Locator: click tooltip assert (see module comment on layering)."""
+    verify_tooltip_on_click(page_obj.page, trigger, expected)
 
 
 def verify_tooltip_on_click_path(
@@ -90,16 +138,19 @@ def verify_tooltip_on_click_path(
     yaml_path: str,
     expected: str,
 ) -> None:
-    """Click a YAML-backed trigger on a Hub page and assert tooltip copy."""
-    verify_tooltip_on_click(
-        page_obj.page,
+    """Hub page object + YAML path: click tooltip assert (CRDCDH-3952 Section D info icons)."""
+    verify_tooltip_on_click_page(
+        page_obj,
         page_obj.page.locator(page_obj.locators.get(yaml_path)),
         expected,
     )
 
 
 def verify_tooltip_on_click(page: Page, trigger: Locator, expected: str) -> None:
-    """Click trigger, assert full tooltip text, then dismiss (Section D info icons, CRDCDH-3952)."""
+    """Internal primitive: click trigger, assert tooltip, dismiss (Katalon verifyTooltipOnClick).
+
+    Tests should call verify_tooltip_on_click_page or verify_tooltip_on_click_path.
+    """
     expected_norm = _normalize_whitespace(expected)
     trigger.first.click()
     tooltips = page.locator("[role='tooltip']")
@@ -171,3 +222,38 @@ def assert_button_enabled(button: Locator, expected_enabled: bool) -> None:
         expect(button.first).to_be_enabled()
     else:
         expect(button.first).to_be_disabled()
+
+
+def assert_button_selected(control: Locator, expected_selected: bool) -> None:
+    """Assert a radio, checkbox or toggle is selected or not (Katalon verifyButtonSelected)."""
+    if expected_selected:
+        expect(control.first).to_be_checked()
+    else:
+        expect(control.first).not_to_be_checked()
+
+
+def assert_element_text(element: Locator, expected: str) -> None:
+    """Assert the element text equals expected, waiting for it to update (Katalon verifyElementText).
+
+    Whitespace is collapsed on both sides, as in Katalon.
+    """
+    expect(element.first).to_have_text(_normalize_whitespace(expected))
+
+
+def normalize_history_status(text: str) -> str:
+    """Strip all whitespace and upper-case, so "In Progress" and "INPROGRESS" compare equal."""
+    return re.sub(r"\s+", "", text or "").upper()
+
+
+def diff_history_statuses(
+    expected_newest_first: Sequence[str], actual_newest_first: Sequence[str]
+) -> str | None:
+    """None when the Full History statuses match in order and length, else a reason string.
+
+    Katalon verifyFullSubmissionHistory: whitespace and case are ignored.
+    """
+    expected = [normalize_history_status(s) for s in expected_newest_first]
+    actual = [normalize_history_status(s) for s in actual_newest_first]
+    if expected == actual:
+        return None
+    return f"history (newest first): expected {', '.join(expected)}; actual {', '.join(actual)}"

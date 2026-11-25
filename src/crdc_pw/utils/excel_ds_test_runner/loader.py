@@ -1,7 +1,8 @@
-"""Load Settings and Steps from CRDC Excel test case workbooks."""
+"""Load Settings and Steps from CRDC test case files (Excel workbooks or TSV)."""
 
 from __future__ import annotations
 
+import csv
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -52,9 +53,43 @@ def _cell_str(value: object) -> str:
     return str(value).strip()
 
 
+def _read_tsv_rows(path: Path, sheet: str) -> list[tuple[object, ...]]:
+    """Read one logical sheet from a TSV case file.
+
+    Layout: leading lines starting with # are Settings (key TAB value, for example
+    "# role<TAB>Submitter"). The first line that is not a # line is the Steps header.
+    Settings returns the # lines as (key, value) rows. Steps returns the table rows, so
+    row numbers match the Steps sheet of the equivalent workbook.
+    """
+    settings_rows: list[tuple[object, ...]] = []
+    steps_rows: list[tuple[object, ...]] = []
+    in_header = True
+    with path.open(newline="", encoding="utf-8-sig") as handle:
+        for cells in csv.reader(handle, delimiter="\t"):
+            first = cells[0].strip() if cells else ""
+            if in_header and first.startswith("#"):
+                key = first.lstrip("#").strip()
+                value = cells[1].strip() if len(cells) > 1 else ""
+                if key:
+                    settings_rows.append((key, value))
+                continue
+            in_header = False
+            steps_rows.append(tuple(c.strip() for c in cells))
+    # Drop trailing blank lines (a final newline or editor padding).
+    while steps_rows and not any(steps_rows[-1]):
+        steps_rows.pop()
+    if sheet == SETTINGS_SHEET:
+        return settings_rows
+    if sheet == STEPS_SHEET:
+        return steps_rows
+    raise ExcelLoadError(f"Missing sheet '{sheet}'", path=path)
+
+
 def _read_workbook_rows(path: Path, sheet: str) -> list[tuple[object, ...]]:
     if not path.is_file():
         raise ExcelLoadError("Workbook not found", path=path)
+    if path.suffix.lower() == ".tsv":
+        return _read_tsv_rows(path, sheet)
     wb = load_workbook(path, read_only=True, data_only=True)
     try:
         if sheet not in wb.sheetnames:

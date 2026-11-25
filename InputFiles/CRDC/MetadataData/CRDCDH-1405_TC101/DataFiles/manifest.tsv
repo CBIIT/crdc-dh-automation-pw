@@ -1,0 +1,4 @@
+type	study.study_id	participant.study_participant_id	sample.sample_id	file_name	file_type	file_description	file_size	md5sum	experimental_strategy_and_data_subtypes
+file	st_id1	Key_4	CDS2009_DNA	demo3.txt	SVS	sofia des3	21	a7d4af526e370c1853465f229734335b	Radiology
+file	st_id1	Key_4	CDS2014_DNA	demo4.csv	TAR	sofia des4	13	ecb7b3574e76b8993f953b7c51ef41c0	Immunofluorescence
+file	st_id1	Key_1	CDS2016_DNA	demo5.tsv	VCF	sofia des5	30	c28a24012f6e1b753508eab9644e6ec9	DNA Sequencing

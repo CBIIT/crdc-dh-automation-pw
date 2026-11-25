@@ -1,0 +1,6 @@
+type	sample_id	sample_type	sample_description	sample_type_category	sample_tumor_status	sample_anatomic_site	sample_age_at_collection	derived_from_specimen	biosample_accession	tumor_classification	participant.study_participant_id	pdx.pdx_id
+sample	auto_sample3	Bone Marrow	samdescription	Central Nervous System	Tumor	Vulva|Wrist|Abdominal Wall	54	derived from speci		Progression	partsof3	auto_pdx_3
+sample	auto_sample4	Cells	samdescription	Body Fluid or Substance	Peritumoral	Vulva|Wrist|Acetabulum	65	derived from speci		Prior Primary	partsof4	auto_pdx_4
+sample	auto_sample1	Cells	samdescription	Blood	Normal	Vulva|Wrist|Adenoid	45	derived from speci		Premalignant	partsof1	auto_pdx_1
+sample	auto_sample2	Mouth Rinse	samdescription	Skin	Not Reported	Vulva|Wrist|Adrenal	43	derived from speci		Metastatic	partsof2	auto_pdx_2
+sample	auto_sample5	Tissue	samdescription	Skin	Unknown	Vulva|Wrist|Venous	65	derived from speci		Recurrent	partsof5	auto_pdx_5

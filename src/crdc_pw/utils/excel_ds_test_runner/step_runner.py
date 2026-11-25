@@ -6,7 +6,8 @@ import logging
 from pathlib import Path
 
 from crdc_pw.hub import Hub
-from crdc_pw.pages.data_submissions import DataSubmissionDetailPage, DataSubmissionsListPage
+from crdc_pw.pages.data_submission_details import DataSubmissionDetailPage
+from crdc_pw.pages.data_submissions_list import DataSubmissionsListPage
 from crdc_pw.utils.excel_ds_test_runner.loader import ExcelLoadError, load_steps
 
 log = logging.getLogger("crdc_pw.utils.excel_ds_test_runner")
@@ -16,6 +17,7 @@ KNOWN_ACTIONS = (
     "create_data_submission",
     "upload_metadata_folder",
     "click_validate",
+    "verify_error_details",
     "verify_validation_results",
 )
 
@@ -70,6 +72,18 @@ def run_testcase_excel(hub: Hub, excel_path: Path) -> None:
             if detail is None:
                 detail = DataSubmissionDetailPage(hub)
             detail.click_validate()
+        elif action == "verify_error_details":
+            tc_name = step.params
+            model = step.model
+            if not tc_name or not model:
+                raise ExcelLoadError(
+                    "verify_error_details needs case id in Params and model in Model",
+                    path=path,
+                    row=step.excel_row,
+                )
+            if detail is None:
+                detail = DataSubmissionDetailPage(hub)
+            detail.verify_error_details_for_submitted_id_for_tc(tc_name, model=model)
         elif action == "verify_validation_results":
             tc_name = step.params
             model = step.model

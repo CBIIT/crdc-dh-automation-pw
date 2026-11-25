@@ -1,0 +1,10 @@
+# role	Submitter
+# enabled	Y
+Input Excel	Action	Params	Model
+InputFiles/CRDC/MetadataData/TC35			
+	open_data_submissions		
+	create_data_submission	New|metadata only|ICDC|autoQA - AutomationQA_Study	
+	upload_metadata_folder	TC35	
+	click_validate		
+	verify_error_details	TC35	ICDC
+	verify_validation_results	TC35	ICDC

@@ -1,0 +1,2 @@
+type	Issue_Type	Expected_Severity	Expected_Issues	program_name	program_acronym	program_short_description	program_full_description	program_external_url	program_sort_order
+program	Invalid integer value	Error	"[ICDC_program_v2.0.0.tsv: line 2] Property ""program_sort_order"": ""Test"" is not a valid integer type."	auto_program	AUTOPROGRAM	short dec	ICDC_pgm_full desx	test.com	Test

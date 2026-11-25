@@ -25,6 +25,24 @@ CANONICAL_VR_SEQUENCE = (
     "verify_validation_results",
 )
 
+CANONICAL_VR_SEQUENCE_WITH_ERROR_DETAILS = (
+    "open_data_submissions",
+    "create_data_submission",
+    "upload_metadata_folder",
+    "click_validate",
+    "verify_error_details",
+    "verify_validation_results",
+)
+
+
+def _expected_step_sequence(path: Path, normalized: list[str]) -> tuple[str, ...]:
+    """686-Partial stays 5-step; 699/ICDC/CTDC Excel cases use error-details step."""
+    if "686-Partial" in path.as_posix():
+        return CANONICAL_VR_SEQUENCE
+    if "verify_error_details" in normalized:
+        return CANONICAL_VR_SEQUENCE_WITH_ERROR_DETAILS
+    return CANONICAL_VR_SEQUENCE
+
 
 def _norm_action(action: str) -> str:
     return action.strip().lower().replace(" ", "_").replace("-", "_")
@@ -34,7 +52,8 @@ def _discover_committed_excel_cases() -> list[Path]:
     root = repo_root()
     paths = sorted(
         p
-        for p in root.glob("tests/DataValidation/**/TC*.xlsx")
+        for suffix in ("xlsx", "tsv")
+        for p in root.glob(f"tests/DataValidation/**/TC*.{suffix}")
         if p.is_file()
         and not p.name.startswith("~$")
         and not p.name.startswith("TC_Template")
@@ -43,21 +62,24 @@ def _discover_committed_excel_cases() -> list[Path]:
 
 
 def _validate_case_workbook(path: Path) -> None:
-    """Offline checks for committed TC*.xlsx (same Params/Model rules as step_runner)."""
+    """Offline checks for committed TC*.xlsx or TC*.tsv (same Params/Model rules as step_runner)."""
     read_settings_role(path)
     input_root, steps = load_steps(path)
     if not steps:
         pytest.fail(f"{path}: Steps sheet has no action rows")
 
     normalized = [_norm_action(s.action) for s in steps]
-    if normalized != list(CANONICAL_VR_SEQUENCE):
+    expected_sequence = _expected_step_sequence(path, normalized)
+    if normalized != list(expected_sequence):
         pytest.fail(
-            f"{path}: expected VR step sequence {CANONICAL_VR_SEQUENCE}, got {tuple(normalized)}"
+            f"{path}: expected VR step sequence {expected_sequence}, got {tuple(normalized)}"
         )
 
     upload_folder: str | None = None
     verify_case_id: str | None = None
     verify_model: str | None = None
+    error_details_case_id: str | None = None
+    error_details_model: str | None = None
     create_commons: str | None = None
 
     for step in steps:
@@ -85,6 +107,11 @@ def _validate_case_workbook(path: Path) -> None:
             if not params:
                 pytest.fail(f"{loc}: Params must be the MetadataData folder name (e.g. TC08)")
             upload_folder = params
+        elif action == "verify_error_details":
+            if not params or not model:
+                pytest.fail(f"{loc}: Params = case folder id, Model = commons (GC, ICDC, CTDC)")
+            error_details_case_id = params
+            error_details_model = model
         elif action == "verify_validation_results":
             if not params or not model:
                 pytest.fail(f"{loc}: Params = case folder id, Model = commons (GC, ICDC, CTDC)")
@@ -97,6 +124,11 @@ def _validate_case_workbook(path: Path) -> None:
             f"{path}: upload_metadata_folder Params {upload_folder!r} "
             f"must match verify_validation_results Params {verify_case_id!r}"
         )
+    if error_details_case_id is not None:
+        if error_details_case_id != verify_case_id or error_details_model != verify_model:
+            pytest.fail(
+                f"{path}: verify_error_details Params/Model must match verify_validation_results"
+            )
     expected_suffix = f"MetadataData/{verify_case_id}".replace("\\", "/")
     if not input_root.replace("\\", "/").endswith(expected_suffix):
         pytest.fail(
@@ -149,7 +181,7 @@ def test_excel_collection_applies_settings_role_to_hub_fixture() -> None:
     """Excel File collector must expand @parametrize(hub) — otherwise hub defaults to Admin."""
     case = (
         repo_root()
-        / "tests/DataValidation/GC/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx"
+        / "tests/DataValidation/GC/CRDCDH-686-Partial/TC08_CRDCDH-686_VerifyInvalidIntegerValue.tsv"
     )
     env = {**os.environ, "CRDC_EXCEL_DS_VALIDATION": "1"}
     proc = subprocess.run(
@@ -169,6 +201,102 @@ def test_excel_collection_applies_settings_role_to_hub_fixture() -> None:
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "[Submitter]" in proc.stdout, proc.stdout
+
+
+@pytest.mark.unit
+def test_excel_smoke_allowlist_matches_committed_workbooks() -> None:
+    """Each smoke stem must be a committed TC*.xlsx or TC*.tsv, so a rename cannot drop a smoke case."""
+    from crdc_pw.utils.excel_ds_test_runner.test_collector import _SMOKE_CASE_STEMS
+
+    committed = {p.stem for p in _discover_committed_excel_cases()}
+    missing = sorted(_SMOKE_CASE_STEMS - committed)
+    assert not missing, f"smoke stems with no workbook under tests/DataValidation: {missing}"
+
+
+@pytest.mark.unit
+def test_excel_collection_smoke_marker() -> None:
+    """Only the Katalon CRDC_Smoke Excel workbooks are collected under -m CRDC_Smoke."""
+    from crdc_pw.utils.excel_ds_test_runner.test_collector import _SMOKE_CASE_STEMS
+
+    env = {**os.environ, "CRDC_EXCEL_DS_VALIDATION": "1"}
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/DataValidation",
+            "-m",
+            "CRDC_Smoke",
+            "--collect-only",
+            "-q",
+        ],
+        cwd=repo_root(),
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    collected = {
+        line.split("::", 1)[1].split("[", 1)[0]
+        for line in proc.stdout.splitlines()
+        if ".xlsx::" in line or ".tsv::" in line
+    }
+    assert collected == set(_SMOKE_CASE_STEMS), proc.stdout
+
+
+# PW-only CTDC 699 case: original TC101 data with participant NO1 expected as Value not permitted.
+# It depends on STS having values for the Hub's CTDC model version, so it stays out of smoke.
+_CTDC_NO1_CASE_STEM = "TC104_CRDCDH-699_VerifyCdePermissibleValueErrorsCTDC"
+
+
+@pytest.mark.unit
+def test_ctdc_no1_case_is_committed_but_not_smoke() -> None:
+    """TC104 is a committed workbook, collected as a normal Excel case, and not a smoke member."""
+    from crdc_pw.utils.excel_ds_test_runner.test_collector import _SMOKE_CASE_STEMS
+
+    committed = {p.stem for p in _discover_committed_excel_cases()}
+    assert _CTDC_NO1_CASE_STEM in committed
+    assert _CTDC_NO1_CASE_STEM not in _SMOKE_CASE_STEMS
+
+    env = {**os.environ, "CRDC_EXCEL_DS_VALIDATION": "1"}
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/DataValidation",
+            "-m",
+            "CRDC_DataValidation_Excel and not CRDC_Smoke",
+            "--collect-only",
+            "-q",
+        ],
+        cwd=repo_root(),
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    collected = {
+        line.split("::", 1)[1].split("[", 1)[0]
+        for line in proc.stdout.splitlines()
+        if ".xlsx::" in line or ".tsv::" in line
+    }
+    assert _CTDC_NO1_CASE_STEM in collected, proc.stdout
+
+
+@pytest.mark.unit
+def test_ctdc_no1_case_input_has_participant_no1_expectation() -> None:
+    """TC104 keeps the original NO1 participant row and its expected Value not permitted TSV."""
+    root = repo_root() / "InputFiles" / "CRDC" / "MetadataData" / "CRDCDH-699_TC104"
+    participant = (root / "CTDC_participant_v1.22.1.tsv").read_text(encoding="utf-8")
+    assert "\tNO1\t" in participant
+    expected = (
+        root / "expected-ValidationResults" / "CTDC_participant_v1.22.1_expected-ValidationResults.tsv"
+    ).read_text(encoding="utf-8")
+    assert "Value not permitted" in expected
+    assert '""NO1"" is not a permissible value for property ""radiology_report_available""' in expected
 
 
 @pytest.mark.unit
@@ -237,6 +365,9 @@ def test_run_testcase_excel_dispatches_steps(tmp_path: Path) -> None:
         def click_validate(self) -> None:
             calls.append(("validate",))
 
+        def verify_error_details_for_submitted_id_for_tc(self, tc: str, *, model: str) -> None:
+            calls.append(("error_details", tc, model))
+
         def verify_validation_results_vs_expected_for_tc(self, tc: str, *, model: str) -> None:
             calls.append(("verify", tc, model))
 
@@ -263,6 +394,68 @@ def test_run_testcase_excel_dispatches_steps(tmp_path: Path) -> None:
     assert ("upload", "TC08") in calls
     assert ("validate",) in calls
     assert calls[-1] == ("verify", "TC08", "GC")
+
+
+@pytest.mark.unit
+def test_run_testcase_excel_dispatches_error_details_step(tmp_path: Path) -> None:
+    path = tmp_path / "TC99_error_details.xlsx"
+    _write_minimal_excel_case(
+        path,
+        role="Submitter",
+        input_root="InputFiles/CRDC/MetadataData/TC04",
+        steps=[
+            ("open_data_submissions", "", ""),
+            (
+                "create_data_submission",
+                "New|metadata only|GC|autoQA - AutomationQA_Study",
+                "",
+            ),
+            ("upload_metadata_folder", "TC04", ""),
+            ("click_validate", "", ""),
+            ("verify_error_details", "TC04", "GC"),
+            ("verify_validation_results", "TC04", "GC"),
+        ],
+    )
+    calls: list[tuple[str, ...]] = []
+
+    class StubList:
+        def open(self) -> None:
+            calls.append(("open",))
+
+        def create_data_submission(self, a: str, b: str, c: str, d: str) -> None:
+            calls.append(("create", a, b, c, d))
+
+    class StubDetail:
+        def upload_folder(self, folder: str) -> None:
+            calls.append(("upload", folder))
+
+        def click_validate(self) -> None:
+            calls.append(("validate",))
+
+        def verify_error_details_for_submitted_id_for_tc(self, tc: str, *, model: str) -> None:
+            calls.append(("error_details", tc, model))
+
+        def verify_validation_results_vs_expected_for_tc(self, tc: str, *, model: str) -> None:
+            calls.append(("verify", tc, model))
+
+    class StubHub:
+        page = object()
+        locators = object()
+
+    import crdc_pw.utils.excel_ds_test_runner.step_runner as sr
+
+    orig_list = sr.DataSubmissionsListPage
+    orig_detail = sr.DataSubmissionDetailPage
+    sr.DataSubmissionsListPage = lambda *a, **k: StubList()  # type: ignore[misc, assignment]
+    sr.DataSubmissionDetailPage = lambda *a, **k: StubDetail()  # type: ignore[misc, assignment]
+    try:
+        run_testcase_excel(StubHub(), path)  # type: ignore[arg-type]
+    finally:
+        sr.DataSubmissionsListPage = orig_list
+        sr.DataSubmissionDetailPage = orig_detail
+
+    assert ("error_details", "TC04", "GC") in calls
+    assert calls.index(("error_details", "TC04", "GC")) < calls.index(("verify", "TC04", "GC"))
 
 
 @pytest.mark.unit
@@ -298,6 +491,17 @@ def test_excel_ds_enabled_from_example_yaml(
 
 
 @pytest.mark.unit
+def test_default_cases_glob_is_a_valid_glob_matching_committed_cases() -> None:
+    """The default glob is a real pattern (no 'and') and finds the committed TSV cases."""
+    from crdc_pw.utils.excel_ds_test_runner.config_helpers import _DEFAULT_GLOB
+
+    assert " and " not in _DEFAULT_GLOB
+    matched = {p for p in repo_root().glob(_DEFAULT_GLOB) if p.is_file()}
+    committed = {p for p in _discover_committed_excel_cases() if p.suffix == ".tsv"}
+    assert matched and matched == committed
+
+
+@pytest.mark.unit
 def test_excel_ds_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     settings = Settings(
         profile="qa",
@@ -307,3 +511,125 @@ def test_excel_ds_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     monkeypatch.setenv("CRDC_EXCEL_DS_VALIDATION", "1")
     assert excel_ds_enabled(settings) is True
+
+
+# TSV case files.
+
+_TSV_STEPS = (
+    "Input Excel\tAction\tParams\tModel\n"
+    "InputFiles/CRDC/MetadataData/TC08\t\t\t\n"
+    "\topen_data_submissions\t\t\n"
+    "\tcreate_data_submission\tNew|metadata only|GC|autoQA - Study\t\n"
+    "\tupload_metadata_folder\tTC08\t\n"
+    "\tclick_validate\t\t\n"
+    "\tverify_validation_results\tTC08\tGC\n"
+)
+
+
+def _write_tsv_case(path: Path, *, settings: str = "# role\tSubmitter\n# enabled\tY\n", steps: str = _TSV_STEPS) -> Path:
+    path.write_text(settings + steps, encoding="utf-8")
+    return path
+
+
+@pytest.mark.unit
+def test_tsv_case_loads_settings_and_steps(tmp_path: Path) -> None:
+    from crdc_pw.utils.excel_ds_test_runner.loader import read_settings
+
+    path = _write_tsv_case(tmp_path / "TC99_tsv.tsv")
+    assert read_settings(path) == {"role": "Submitter", "enabled": "Y"}
+    assert read_settings_role(path) == "Submitter"
+    input_root, steps = load_steps(path)
+    assert input_root == "InputFiles/CRDC/MetadataData/TC08"
+    assert [s.action for s in steps] == [
+        "open_data_submissions",
+        "create_data_submission",
+        "upload_metadata_folder",
+        "click_validate",
+        "verify_validation_results",
+    ]
+    assert steps[1].params == "New|metadata only|GC|autoQA - Study"
+    assert steps[-1].model == "GC"
+    assert steps[0].excel_row == 3
+
+
+@pytest.mark.unit
+def test_tsv_case_tolerates_bom_short_rows_and_trailing_blank_lines(tmp_path: Path) -> None:
+    path = tmp_path / "TC99_tsv_bom.tsv"
+    body = (
+        "# role\tSubmitter\n"
+        "Input Excel\tAction\tParams\tModel\n"
+        "InputFiles/CRDC/MetadataData/TC08\n"
+        "\topen_data_submissions\n"
+        "\n\n"
+    )
+    path.write_text(body, encoding="utf-8-sig")
+    _, steps = load_steps(path)
+    assert [(s.action, s.params, s.model) for s in steps] == [("open_data_submissions", "", "")]
+
+
+@pytest.mark.unit
+def test_tsv_case_errors(tmp_path: Path) -> None:
+    bad_role = _write_tsv_case(tmp_path / "TC99_badrole.tsv", settings="# role\tNope\n")
+    with pytest.raises(ExcelLoadError, match="Invalid Settings role"):
+        read_settings_role(bad_role)
+
+    no_role = _write_tsv_case(tmp_path / "TC99_norole.tsv", settings="# enabled\tY\n")
+    with pytest.raises(ExcelLoadError, match="must include role"):
+        read_settings_role(no_role)
+
+    bad_header = _write_tsv_case(tmp_path / "TC99_header.tsv", steps="Wrong\tAction\tParams\tModel\nx\n")
+    with pytest.raises(ExcelLoadError, match="Steps row 1"):
+        load_steps(bad_header)
+
+    with pytest.raises(ExcelLoadError, match="not found"):
+        load_steps(tmp_path / "TC99_missing.tsv")
+
+
+@pytest.mark.unit
+def test_collector_accepts_tsv_and_rejects_duplicate_formats(tmp_path: Path) -> None:
+    from crdc_pw.utils.excel_ds_test_runner.test_collector import (
+        _duplicate_format_error,
+        _is_excel_case_path,
+    )
+
+    dv = repo_root() / "tests" / "DataValidation"
+    assert _is_excel_case_path(dv / "GC" / "TC01_example.tsv")
+    assert _is_excel_case_path(dv / "GC" / "TC01_example.xlsx")
+    assert not _is_excel_case_path(dv / "GC" / "TC_Template.tsv")
+    assert not _is_excel_case_path(dv / "GC" / "notes.tsv")
+    assert not _is_excel_case_path(dv / "GC" / "TC01_example.csv")
+
+    tsv = _write_tsv_case(tmp_path / "TC99_dup.tsv")
+    assert _duplicate_format_error(tsv) is None
+    (tmp_path / "TC99_dup.xlsx").write_bytes(b"")
+    assert "more than one format" in (_duplicate_format_error(tsv) or "")
+
+
+@pytest.mark.unit
+def test_tsv_case_is_collected_with_role_and_smoke_marker() -> None:
+    """A committed TSV smoke case is collected with its role param under -m CRDC_Smoke."""
+    smoke_stem = "TC36_CRDCDH-699_RequiredRelatedPropertyMissingICDC"
+    source = next(p for p in _discover_committed_excel_cases() if p.stem == smoke_stem)
+    assert source.suffix == ".tsv"
+    env = {**os.environ, "CRDC_EXCEL_DS_VALIDATION": "1"}
+    proc = subprocess.run(
+        [sys.executable, "-m", "pytest", str(source), "-m", "CRDC_Smoke", "--collect-only", "-q"],
+        cwd=repo_root(),
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert f"{smoke_stem}.tsv::{smoke_stem}[Submitter]" in proc.stdout, proc.stdout
+
+
+@pytest.mark.unit
+def test_duplicate_format_detected_with_mixed_case_suffix(tmp_path: Path) -> None:
+    """A TC01.TSV next to TC01.xlsx is a duplicate even on a case-sensitive filesystem."""
+    from crdc_pw.utils.excel_ds_test_runner.test_collector import _duplicate_format_error
+
+    tsv = _write_tsv_case(tmp_path / "TC98_mixed.TSV")
+    assert _duplicate_format_error(tsv) is None
+    (tmp_path / "TC98_mixed.xlsx").write_bytes(b"")
+    assert "more than one format" in (_duplicate_format_error(tsv) or "")

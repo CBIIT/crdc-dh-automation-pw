@@ -1,0 +1,2 @@
+type	 cohort.cohort_record_id	 study.clinical_study_designation	 consent_group.consent_group_record_id	 study_arm.arm_id	 adverse_event.adverse_event_record_id	 canine_individual.canine_individual_id	case_id	patient_id	patient_first_name
+case	ICDC_co_1	autoQA	ICDC_Consent1				icdc_case1	icdc_pat1	

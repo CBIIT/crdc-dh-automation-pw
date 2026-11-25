@@ -1,0 +1,38 @@
+# Katalon profile CRDC_Dev.
+# Copy to dev.yaml and fill Email / Password / Secret from that .glbl.
+# dev.yaml is gitignored. Do not commit secrets.
+name: dev
+base_url: https://hub-dev.datacommons.cancer.gov/
+
+AdminEmail:
+AdminPassword:
+AdminSecret:
+
+FedleadEmail:
+FedleadPassword:
+FedleadSecret:
+
+DcpEmail:
+DcpPassword:
+DcpSecret:
+
+SubmitterEmail:
+SubmitterPassword:
+SubmitterSecret:
+
+UserEmail:
+UserPassword:
+UserSecret:
+
+MasterEmail:
+MasterPassword:
+MasterSecret:
+
+# Upload CLI (CRDCDH-1405 TC101). ApiUrl is optional (defaults to base_url + api/graphql).
+# SubmitterApiToken is a secret: copy it from the Katalon profile, never commit it.
+ApiUrl: https://hub-dev.datacommons.cancer.gov/api/graphql
+SubmitterApiToken:
+# Excel-driven metadata VR cases (tests/DataValidation/**/TC*.tsv). See docs/excel-ds-validation.md.
+excel_ds_validation:
+  enabled: true
+  excel_cases_glob: tests/DataValidation/**/TC*.tsv

@@ -1,0 +1,2 @@
+type	Issue_Type	Expected_Severity	Expected_Issues	program_name	program_acronym	program_short_description	program_full_description	program_external_url	program_short_name	institution	
+program	Invalid string pattern	Error	"[GC_program_v11.0.3.tsv: line 2] ""study.com"" does not comply to string pattern for property ""program_external_url""."	auto_program	AUTOPROGRAM	test pgm	full desc	study.com	short name	NCI	

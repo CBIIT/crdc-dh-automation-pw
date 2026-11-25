@@ -1,0 +1,2 @@
+type	Issue_Type	Expected_Severity	Expected_Issues	program_name	program_name1	program_acronym	program_short_description	program_full_description	program_external_url	program_sort_order
+program	Invalid Property	Warning	"[ICDC_program_v2.0.0.tsv: line 2] Property ""program_name1"" is not defined in the model."	auto_program	auto_program	AUTOPROGRAM	short dec	ICDC_pgm_full desx	test.com	3

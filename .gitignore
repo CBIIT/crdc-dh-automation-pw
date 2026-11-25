@@ -15,9 +15,7 @@ build/
 .env.*
 
 # One file per Katalon profile (URL + Login.gov secrets). Copy from *.yaml.example.
-config/qa.yaml
-config/qa2.yaml
-config/stage.yaml
+config/*.yaml
 
 auth/
 
@@ -29,6 +27,4 @@ traces/
 .DS_Store
 reports/
 OutputFiles/
-
-# Local Excel DS porting checklist (not shared)
-docs/excel-ds-validation-katalon-todo.md
+uv.lock

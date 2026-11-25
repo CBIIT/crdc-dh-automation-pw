@@ -102,6 +102,47 @@ def write_expected(role: str, root: Path | None = None) -> Path:
     return out
 
 
+def sheet_name_for_scenario(role: str, scenario: str) -> str:
+    """Output workbook sheet key, same as Katalon userRole + '-' + scenario."""
+    return f"{role}-{scenario}"
+
+
+def list_internal_names_for_scenario(
+    role: str,
+    scenario: str,
+    root: Path | None = None,
+) -> list[str]:
+    """Read PBAC functional driver from output xlsx after write_expected(role-scenario).
+
+    Mirrors Katalon getPermissionsByStatus: collect Permission Internal Name values
+    where Expected is checked/fixed_checked (positive) or unchecked/fixed_unchecked (negative).
+    """
+    sheet = sheet_name_for_scenario(role, scenario)
+    out = output_path(root)
+    if not out.is_file():
+        raise FileNotFoundError(f"Expected output workbook missing: {out}. Call write_expected first.")
+    wb = load_workbook(out)
+    if sheet not in wb.sheetnames:
+        raise KeyError(f"Sheet {sheet!r} not found in {out}; run write_expected({sheet!r})")
+    ws = wb[sheet]
+    internal_names: list[str] = []
+    for excel_row in range(2, ws.max_row + 1):
+        internal = _cell_str(ws.cell(excel_row, 1))
+        if not internal:
+            continue
+        expected = _cell_str(ws.cell(excel_row, 2)).lower()
+        if scenario == "positive":
+            if expected in ("checked", "fixed_checked"):
+                internal_names.append(internal)
+        elif scenario == "negative":
+            if expected in ("unchecked", "fixed_unchecked"):
+                internal_names.append(internal)
+        else:
+            raise ValueError(f"Unknown scenario {scenario!r}; use 'positive' or 'negative'")
+    wb.close()
+    return internal_names
+
+
 def compare_actual(
     role: str,
     actual_rows: list[tuple[str, str]],
