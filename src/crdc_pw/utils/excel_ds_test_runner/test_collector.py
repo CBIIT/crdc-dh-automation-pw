@@ -48,11 +48,13 @@ _SMOKE_CASE_STEMS = frozenset(
 
 def _duplicate_format_error(case_path: Path) -> str | None:
     """Message when the same case stem exists as both .xlsx and .tsv in one folder."""
-    siblings = [
-        case_path.with_suffix(suffix)
-        for suffix in CASE_SUFFIXES
-        if case_path.with_suffix(suffix).is_file()
-    ]
+    siblings = sorted(
+        p
+        for p in case_path.parent.iterdir()
+        if p.stem == case_path.stem
+        and p.suffix.lower() in CASE_SUFFIXES
+        and p.is_file()
+    )
     if len(siblings) > 1:
         names = ", ".join(p.name for p in siblings)
         return f"Case {case_path.stem} exists in more than one format ({names}); keep only one"
