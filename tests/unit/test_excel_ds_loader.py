@@ -62,7 +62,7 @@ def _discover_committed_excel_cases() -> list[Path]:
 
 
 def _validate_case_workbook(path: Path) -> None:
-    """Offline checks for committed TC*.xlsx (same Params/Model rules as step_runner)."""
+    """Offline checks for committed TC*.xlsx or TC*.tsv (same Params/Model rules as step_runner)."""
     read_settings_role(path)
     input_root, steps = load_steps(path)
     if not steps:
@@ -181,7 +181,7 @@ def test_excel_collection_applies_settings_role_to_hub_fixture() -> None:
     """Excel File collector must expand @parametrize(hub) — otherwise hub defaults to Admin."""
     case = (
         repo_root()
-        / "tests/DataValidation/GC/CRDCDH-686-Partial/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx"
+        / "tests/DataValidation/GC/CRDCDH-686-Partial/TC08_CRDCDH-686_VerifyInvalidIntegerValue.tsv"
     )
     env = {**os.environ, "CRDC_EXCEL_DS_VALIDATION": "1"}
     proc = subprocess.run(
@@ -575,17 +575,30 @@ def test_tsv_case_errors(tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("case_path", [p for p in _discover_committed_excel_cases() if p.suffix == ".xlsx"], ids=lambda p: p.stem)
-def test_tsv_conversion_matches_workbook(case_path: Path, tmp_path: Path) -> None:
-    """Converting a committed workbook to TSV loads to identical settings and steps."""
+def test_tsv_conversion_matches_workbook(tmp_path: Path) -> None:
+    """Converting a workbook to TSV loads to identical settings and steps."""
     from crdc_pw.utils.excel_ds_test_runner.convert import convert_workbook
     from crdc_pw.utils.excel_ds_test_runner.loader import read_settings
 
-    tsv = convert_workbook(case_path, tmp_path)
-    assert tsv.suffix == ".tsv" and tsv.stem == case_path.stem
-    assert read_settings(tsv) == read_settings(case_path)
-    assert load_steps(tsv) == load_steps(case_path)
-    _validate_case_workbook(tsv)
+    workbook = tmp_path / "TC99_parity.xlsx"
+    _write_minimal_excel_case(
+        workbook,
+        role="Submitter",
+        input_root="InputFiles/CRDC/MetadataData/TC08",
+        steps=[
+            ("open_data_submissions", "", ""),
+            ("create_data_submission", "New|metadata only|GC|autoQA - Study", ""),
+            ("upload_metadata_folder", "TC08", ""),
+            ("click_validate", "", ""),
+            ("verify_error_details", "TC08", "GC"),
+            ("verify_validation_results", "TC08", "GC"),
+        ],
+    )
+    out_dir = tmp_path / "out"
+    tsv = convert_workbook(workbook, out_dir)
+    assert tsv.suffix == ".tsv" and tsv.stem == workbook.stem
+    assert read_settings(tsv) == read_settings(workbook)
+    assert load_steps(tsv) == load_steps(workbook)
 
 
 @pytest.mark.unit
@@ -609,27 +622,19 @@ def test_collector_accepts_tsv_and_rejects_duplicate_formats(tmp_path: Path) -> 
 
 
 @pytest.mark.unit
-def test_tsv_case_is_collected_with_role_and_smoke_marker(tmp_path: Path) -> None:
-    """A TSV placed under tests/DataValidation is collected like its workbook (role param, smoke)."""
-    from crdc_pw.utils.excel_ds_test_runner.convert import convert_workbook
-
+def test_tsv_case_is_collected_with_role_and_smoke_marker() -> None:
+    """A committed TSV smoke case is collected with its role param under -m CRDC_Smoke."""
     smoke_stem = "TC36_CRDCDH-699_RequiredRelatedPropertyMissingICDC"
     source = next(p for p in _discover_committed_excel_cases() if p.stem == smoke_stem)
-    tmp_dir = repo_root() / "tests" / "DataValidation" / "_tsv_collect_tmp"
-    tmp_dir.mkdir()
-    try:
-        convert_workbook(source, tmp_dir)
-        # Collecting the temp folder alone avoids the duplicate-stem guard.
-        env = {**os.environ, "CRDC_EXCEL_DS_VALIDATION": "1"}
-        proc = subprocess.run(
-            [sys.executable, "-m", "pytest", str(tmp_dir), "-m", "CRDC_Smoke", "--collect-only", "-q"],
-            cwd=repo_root(),
-            env=env,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    finally:
-        shutil.rmtree(tmp_dir, ignore_errors=True)
+    assert source.suffix == ".tsv"
+    env = {**os.environ, "CRDC_EXCEL_DS_VALIDATION": "1"}
+    proc = subprocess.run(
+        [sys.executable, "-m", "pytest", str(source), "-m", "CRDC_Smoke", "--collect-only", "-q"],
+        cwd=repo_root(),
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert f"{smoke_stem}.tsv::{smoke_stem}[Submitter]" in proc.stdout, proc.stdout
