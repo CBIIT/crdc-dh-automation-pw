@@ -7,7 +7,7 @@ from typing import Any
 
 from crdc_pw.config import Settings
 
-_DEFAULT_GLOB = "tests/DataValidation/**/*.xlsx"
+_DEFAULT_GLOB = "tests/DataValidation/**/TC*.xlsx and tests/DataValidation/**/TC*.tsv"
 _ENV_ENABLE = "CRDC_EXCEL_DS_VALIDATION"
 
 
@@ -33,7 +33,7 @@ def excel_ds_enabled(settings: Settings) -> bool:
 
 
 def excel_ds_cases_glob(settings: Settings) -> str:
-    """Glob relative to repo root for Excel test case workbooks (documentation / tooling)."""
+    """Glob relative to repo root for case files (documentation / tooling)."""
     block = _excel_block(settings)
     for key in ("excel_cases_glob", "scenarios_glob"):
         value = block.get(key)

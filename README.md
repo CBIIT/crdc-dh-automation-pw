@@ -52,7 +52,7 @@ pytest -m CRDC_PBAC   # TC01–TC05 defaults, TC06–TC10 positives, TC11–TC15
 pytest -m CRDC_SubmissionRequests -k 3948
 ```
 
-Excel Data Validation (`.xlsx` under `tests/DataValidation/`; see [docs/excel-ds-validation.md](docs/excel-ds-validation.md)):
+Excel Data Validation (`.xlsx` or `.tsv` case files under `tests/DataValidation/`; see [docs/excel-ds-validation.md](docs/excel-ds-validation.md)):
 
 ```bash
 pytest tests/DataValidation -m CRDC_DataValidation_Excel

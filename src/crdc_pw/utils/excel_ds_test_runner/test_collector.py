@@ -1,4 +1,4 @@
-"""Pytest plugin: collect tests/DataValidation/**/TC*.xlsx when excel_ds_validation is enabled."""
+"""Pytest plugin: collect tests/DataValidation/**/TC*.xlsx and TC*.tsv when excel_ds_validation is enabled."""
 
 from __future__ import annotations
 
@@ -15,8 +15,11 @@ from crdc_pw.utils.excel_ds_test_runner.loader import read_settings, read_settin
 from crdc_pw.utils.excel_ds_test_runner.step_runner import run_testcase_excel
 
 
+CASE_SUFFIXES = (".xlsx", ".tsv")
+
+
 def _is_excel_case_path(path: Path) -> bool:
-    if path.suffix.lower() != ".xlsx" or path.name.startswith("~$"):
+    if path.suffix.lower() not in CASE_SUFFIXES or path.name.startswith("~$"):
         return False
     if not path.name.startswith("TC"):
         return False
@@ -41,6 +44,19 @@ _SMOKE_CASE_STEMS = frozenset(
         "TC36_CRDCDH-699_RequiredRelatedPropertyMissingICDC",
     }
 )
+
+
+def _duplicate_format_error(case_path: Path) -> str | None:
+    """Message when the same case stem exists as both .xlsx and .tsv in one folder."""
+    siblings = [
+        case_path.with_suffix(suffix)
+        for suffix in CASE_SUFFIXES
+        if case_path.with_suffix(suffix).is_file()
+    ]
+    if len(siblings) > 1:
+        names = ", ".join(p.name for p in siblings)
+        return f"Case {case_path.stem} exists in more than one format ({names}); keep only one"
+    return None
 
 
 def _make_test_fn(case_path: Path, role: str):
@@ -95,10 +111,13 @@ def _yield_parametrized_functions(
 
 
 class ExcelCaseFile(pytest.File):
-    """One TC*.xlsx → one pytest test."""
+    """One TC*.xlsx or TC*.tsv gives one pytest test."""
 
     def collect(self):
         case_path = Path(str(self.path))
+        duplicate = _duplicate_format_error(case_path)
+        if duplicate:
+            raise pytest.UsageError(duplicate)
         settings = read_settings(case_path)
         if settings.get("enabled", "y").strip().lower() in ("n", "no", "false", "0"):
             return

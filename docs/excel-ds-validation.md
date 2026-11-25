@@ -61,6 +61,41 @@ Add `--headed` to watch the browser. Create step assigns a **25-character** name
 
 **TSV naming (upload + expected):** Put upload files in the case folder root (not under `expected-ValidationResults/`). Use the same pattern as TC08—`<model>_<node>_v<version>.tsv` (example: `GC_diagnosis_v11.0.3.tsv`). For each node you assert in Validation Results, add a matching file under `expected-ValidationResults/` named `<model>_<node>_v<version>_expected-ValidationResults.tsv` (example: `GC_diagnosis_v11.0.3_expected-ValidationResults.tsv`). When adding a case, copy an existing folder for your model and change file contents only; keep upload and expected names paired the same way TC08 does.
 
+---
+
+## TSV case files (alternative to Excel)
+
+A case can be a `TC*.tsv` instead of a `TC*.xlsx`. Both formats are collected from `tests/DataValidation/`, use the same markers (`CRDC_DataValidation_Excel`, and `CRDC_Smoke` by stem) and run the same steps. TSV files diff cleanly in git, so use them when a case changes often.
+
+One TSV holds both sheets. Leading lines that start with `#` are Settings (`# key<TAB>value`). The first line without `#` is the Steps header, then row 2 is the input root and rows 3+ are actions. Separate columns with a tab.
+
+```
+# role	Submitter
+# enabled	Y
+Input Excel	Action	Params	Model
+InputFiles/CRDC/MetadataData/TC36
+	open_data_submissions		
+	create_data_submission	New|metadata only|ICDC|autoQA - AutomationQA_Study	
+	upload_metadata_folder	TC36	
+	click_validate		
+	verify_error_details	TC36	ICDC
+	verify_validation_results	TC36	ICDC
+```
+
+- Rows in an error message are the row of the Steps table (the `#` lines are not counted), so they match the Excel version.
+- A case stem must exist in only one format. If `TC36_x.xlsx` and `TC36_x.tsv` are in the same folder, collection fails with a clear error. Delete the workbook when you switch a case to TSV.
+- Convert an existing workbook (the workbook is not changed):
+
+```bash
+python -m crdc_pw.utils.excel_ds_test_runner.convert tests/DataValidation/ICDC/<folder>/TC36_....xlsx
+python -m crdc_pw.utils.excel_ds_test_runner.convert --all --out-dir /tmp/tsv-cases   # preview all
+```
+
+- A unit test converts every committed workbook and checks the TSV loads to identical Settings and Steps.
+- `DSV_ValidationResults-mappings.xlsx` is still Excel.
+
+---
+
 A test is available to check your test cases are written in the right format **(Steps/Settings are correct)**:
 
 ```bash
@@ -71,7 +106,7 @@ pytest tests/unit/test_excel_ds_loader.py -m unit
 
 ## How it works
 
-Each `TC*.xlsx` has **Steps** (Hub actions) and **Settings** (`role`, `enabled`).
+Each `TC*.xlsx` (or `TC*.tsv`) has **Steps** (Hub actions) and **Settings** (`role`, `enabled`).
 
 ```
                          ┌──────────────────────┐
@@ -80,7 +115,7 @@ Each `TC*.xlsx` has **Steps** (Hub actions) and **Settings** (`role`, `enabled`)
                                     │
               ┌─────────────────────┴─────────────────────┐
               │               test_collector              │
-              │     tests/DataValidation/**/TC*.xlsx      │
+              │     tests/DataValidation/**/TC*.xlsx|tsv  │
               └─────────────────────┬─────────────────────┘
                                     │
                          ┌──────────▼────────────┐
