@@ -14,16 +14,16 @@ It is a **behavior-preserving port**, not a rewrite of the product under test:
 
 - Same Hub environments (Dev, QA, QA2)
 - Same Login.gov accounts and roles
-- Same test intent, case IDs (`TC##_CRDCDH-…`), and input files (Excel / TSV) as we bring suites over
+- Same test intent, case IDs (`TC##_CRDCDH-…`), and input files (TSV, plus Excel where a sheet drives a suite) as we bring suites over
 - New engine, locators stored as YAML, tests written as pytest
 
-The sibling Katalon project is still the live suite until we cut over area by area. Do not freeze Katalon globally; a suite moves here when that slice is green.
+The sibling Katalon project is still the live suite for areas not yet ported; Smoke is ported and audited, and the rest cut over area by area. Do not freeze Katalon globally; a suite moves here when that slice is green.
 
 ---
 
 ## Where we are vs the end goal
 
-### Today (Phase 0 — scaffold plus first cases)
+### Today
 
 The framework can:
 
@@ -32,9 +32,18 @@ The framework can:
 - Sign in through Login.gov with TOTP (one-time password)
 - Reuse a saved browser session so the next run does not pay OTP every time
 - Sign in as **Admin, Fedlead, Dcp, Submitter, User, and Master** and land on Hub (TC18)
-- Run **TC08** Manage Studies, **TC09** Manage Programs, PBAC **TC01–TC05** defaults, **TC06–TC10** checked permissions (positive functional), and **TC11–TC15** unchecked permissions (negative functional), **CRDCDH-4006** Release Notes, **TC08** GC invalid-integer Data Submission (metadata VR), and **CRDCDH-3948** Submission Request TC01–TC04 (SRF Save / import-export / list reopen / Fed Lead inquire & reopen). The maintainer reported all PBAC positive cases passing in individual live runs on 2026-11-09; a combined run remains to be verified. Negative live dual-run vs Katalon is still the maintainer’s audit.
+- Run the live suites below, using the same suite markers as Katalon
 
-That is the floor everything else builds on. Other Submission Request suites, emails, Mongo, and GraphQL are **not** here yet.
+| Area | Marker(s) | Ported |
+|---|---|---|
+| Smoke | `CRDC_Smoke` | All 20 cases linked in Katalon `CRDC_Smoke.ts`, audited against Katalon |
+| Auxiliary | `CRDC_Auxiliary` | 6 of 13 runnable Katalon cases (lists and filters, sorting, pagination), plus PW-only Release Notes (CRDCDH-4006), six-role login (TC18) and SDM (CRDCDH-4027). Backlog: [auxiliary-suite-port-plan.md](auxiliary-suite-port-plan.md) |
+| PBAC | `CRDC_PBAC` | TC01-TC05 defaults, TC06-TC10 positives, TC11-TC15 negatives, then EnableAllPermissions |
+| Data Submissions | `CRDC_DSFlow`, `CRDC_DataFileUpload` | 10 cases under `tests/DataSubmissions/GC/`, including the upload CLI case (CRDCDH-1405) |
+| Data validation | `CRDC_DataValidation_Excel` | 15 GC / ICDC / CTDC cases defined as TSV under `tests/DataValidation/` |
+| Submission Requests | `CRDC_SubmissionRequests` | CRDCDH-332 TC01, CRDCDH-3948 TC01-TC04, CRDCDH-3952 TC01 |
+
+Not here yet: notification emails, GraphQL/API cases, the Mongo case, PBAC manage-scope (TC16-TC17), the rest of the Auxiliary backlog, and the remaining Data Submissions and Submission Request cases. `pytest --collect-only -q -m <marker>` shows exactly what a marker selects.
 
 ### End goal (after the port)
 
@@ -51,15 +60,14 @@ Replace the Katalon Hub suites with this repo so QA and CI run Playwright instea
 
 **Cutover rule:** dual-run a suite on QA until it matches Katalon, then retire that Katalon suite. Not a big-bang switch.
 
-Planned order after this scaffold:
+Where the remaining work stands:
 
-1. **PBAC defaults** TC01–TC05 ported; **TC06–TC10** positive functional and **TC11–TC15** negative/unchecked functional implemented; remaining are manage-scope (TC16–TC17), notifications, and story tests
-2. **Shared UI helpers on BasePage** — tables, MUI dropdowns, snackbars (done; unblocks every list page)
-3. **Submission Requests**
-4. **Data Submissions** (upload, validate, results tables)
-5. **Non-browser oracles** — Mongo, GraphQL, CLI uploader, Gmail (`utils/` already holds Excel and GitHub-raw helpers)
-6. **Notifications and remaining admin**
-7. **CI on GitHub Actions** for smoke + suites; Katalon retired suite by suite
+1. **Done:** login and session reuse, shared UI helpers on `BasePage` (tables, MUI dropdowns, snackbars), PBAC TC01-TC15, the Smoke suite, TSV-driven data validation, the upload CLI, and CI on GitHub Actions (manual trigger)
+2. **Next:** the Auxiliary backlog ([auxiliary-suite-port-plan.md](auxiliary-suite-port-plan.md)): Manage Studies CSV export, Data View deletes, then Manage Studies / Programs create and edit
+3. **Then:** the rest of Data Submissions and Submission Requests
+4. **Non-browser oracles:** Mongo, GraphQL, Gmail (`utils/` already holds Excel, TSV, GitHub-raw and CLI helpers)
+5. **Notifications and remaining admin**
+6. **CI on every PR and on a schedule;** Katalon retired suite by suite
 
 If you are joining during the port, expect new tests to show up as pytest files that still mention the Katalon case name in a comment.
 
@@ -167,12 +175,13 @@ flowchart LR
 crdc-dh-automation-pw/
 ├── tests/                  # pytest files (Katalon Test Case / Script)
 │   ├── conftest.py         # builds `hub`: browser + login  ← start here if login fails
-│   ├── AuxiliaryTests/     # TC08 studies, TC09, TC18, CRDCDH-4006
+│   ├── AuxiliaryTests/     # lists and filters, sorting, pagination, TC18, CRDCDH-4006, CRDCDH-4027 (SDM)
 │   ├── Pbac/               # TC01–TC05 defaults; TC06–TC10 positives; TC11–TC15 UncheckedPermissions (orchestration in src/crdc_pw/utils/pbac_helpers.py)
 │   ├── SuiteSetup/         # EnableAllPermissions (CRDC_PBAC restore, Master)
-│   ├── DataSubmissions/    # DS flow (e.g. CRDCDH-697 summary headers); metadata VR is Excel under DataValidation/
-│   ├── DataValidation/     # Excel VR: GC|ICDC|CTDC/<ticket>/TC*.xlsx (mirrors Katalon DataSubmissions tree)
+│   ├── DataSubmissions/    # DS flow by ticket folder (GC/CRDCDH-####/); metadata VR cases are under DataValidation/
+│   ├── DataValidation/     # TSV VR cases (Excel also supported): GC|ICDC|CTDC/<ticket>/TC*.tsv (mirrors Katalon DataSubmissions tree)
 │   ├── SubmissionRequest/
+│   │   ├── CRDCDH-332/     # TC01 all fields
 │   │   ├── CRDCDH-3948/    # TC01–TC04 SRF Save / import / Fed Lead (mirrors Katalon folder)
 │   │   └── CRDCDH-3952/    # TC01 Section D date tooltips (may fail until CRDCDH-3978 on QA)
 │   └── unit/               # no browser (locator, config, sheet, notes helpers)
@@ -184,11 +193,12 @@ crdc-dh-automation-pw/
 │   ├── locators/loader.py  # Katalon path → XPath string
 │   └── utils/              # pbac_sheet, validation_results, static_content, otp
 ├── locators/CRDC/          # YAML catalog (was Object Repository/*.rs)
-├── InputFiles/CRDC/        # PBAC Excel, MetadataData/TC08, DSV_ValidationResults-mappings.xlsx
+├── InputFiles/CRDC/        # PBACPermissions.xlsx, MetadataData/<case>/ (upload + expected TSVs), DSV_ValidationResults-mappings.xlsx
+├── tools/                  # vendored crdc-datahub-cli-uploader (upload CLI case)
 ├── config/                 # dev / qa / qa2 (was Profiles/*.glbl)
 ├── auth/                   # saved Login.gov cookies (gitignored)
 ├── reports/                # HTML + failure screenshots (gitignored)
-└── docs/onboarding.md
+└── docs/                   # onboarding, validation framework, port plans
 ```
 
 | If you used this in Katalon | Look here instead |
@@ -207,7 +217,7 @@ crdc-dh-automation-pw/
 | Test Suite `CRDC_PBAC.ts` | `pytest -m CRDC_PBAC` — TC01–TC05 defaults, TC06–TC10 positives, TC11–TC15 negatives, then **EnableAllPermissions** last (conftest order); serial, no `-n` |
 | `Test Cases/CRDC/SuiteSetup/EnableAllPermissions` | `tests/SuiteSetup/test_EnableAllPermissions.py` |
 | Test Suite `CRDC_DataValidation.ts` | `pytest -m CRDC_DataValidation` |
-| `Test Cases/CRDC/DataSubmissions/GC/CRDCDH-686-Partial/TC08_...` | Excel: `tests/DataValidation/GC/CRDCDH-686-Partial/TC08_CRDCDH-686_VerifyInvalidIntegerValue.xlsx` |
+| `Test Cases/CRDC/DataSubmissions/GC/CRDCDH-686-Partial/TC08_...` | TSV: `tests/DataValidation/GC/CRDCDH-686-Partial/TC08_CRDCDH-686_VerifyInvalidIntegerValue.tsv` |
 | `Test Cases/CRDC/DataSubmissions/GC/CRDCDH-697/TC01_...` | `tests/DataSubmissions/GC/CRDCDH-697/test_TC01_CRDC-VerifyDataSubmissionHeaders.py` |
 
 ### Fixture, page, test (no keyword layer)
@@ -357,7 +367,7 @@ pytest
 | TC09 | Submitter | 30 | 9 | 21 | `CRDC_PBAC`, `CRDC_Regression`, `CRDC_Smoke` |
 | TC10 | User | 18 | 6 | 12 | `CRDC_PBAC`, `CRDC_Regression` |
 
-Dcp and Admin exercise the existing `data_submission:admin_submit` handler; Submitter and User exercise `access:request`. The workbook selects each role's checks. Offline validation covers unit tests, collection, and linting. On 2026-11-09, the maintainer reported all five positive cases passing in individual live runs after the save/visibility fixes and providing the required User SR data. A combined serial run remains to be verified.
+Dcp and Admin exercise the existing `data_submission:admin_submit` handler; Submitter and User exercise `access:request`. The workbook selects each role's checks. Offline validation covers unit tests, collection, and linting.
 
 **PBAC negatives TC11–TC15** (`tests/Pbac/test_TC1*_CRDC-PbacUncheckedPermissions-*.py`): Admin runs `edit_pbac_permissions(hub, role, "negative")` (reset, uncheck enabled boxes twice, Save, `write_expected(f"{role}-negative")`), then switches to the tested role and calls `verify_permissions_functional(..., "negative")`. Negative PASS is `correctly *not* accessible.` Notification/email keys skip with the same info log as positive. **TC13** parametrizes `hub` as **Master** (Admin cannot uncheck Admin without losing Manage Users) and restores Admin **positive** in `try`/`finally`.
 
@@ -383,7 +393,7 @@ Run selections containing PBAC **serially**, including Smoke and Regression; do 
 
 **Upload CLI cases** (`CRDCDH-1405 TC101` in smoke, `CRDCDH-697 TC13` in `CRDC_DataFileUpload`): the test creates a submission, then `upload_files_via_cli(hub, tc_name, "datafile")` (reads the submission id from the page URL, as Katalon does) (`pages/cli_uploader.py`) runs the vendored upload CLI in `tools/crdc-datahub-cli-uploader/`, the same job as Katalon's `CliUploader.uploadFilesViaCli`. It reads the data files straight from `InputFiles/CRDC/MetadataData/<tc>/DataFiles`, copies only the manifest folder's `.tsv`/`.txt` files to the test's temp folder (the CLI writes `<manifest>-final.tsv` there, so `InputFiles` stays clean), and checks the CLI output. A case that expects the CLI to reject files passes `expect_validation_errors=True` and then calls `verify_cli_error_messages(upload, tc_name)` (`utils/cli_verifications.py`), which compares the CLI's upload report errors per file with `<tc>/expected/*.tsv`. Needs `SubmitterApiToken` in your yaml (the test fails, not skips, without it), Python 3.13 or newer, and network access: each run does `pip install -r tools/crdc-datahub-cli-uploader/requirements.txt` first, as Katalon does. `CRDC_CLI_RETRIES`, `CRDC_CLI_OVERWRITE` and `CRDC_CLI_DRYRUN` are optional yaml keys.
 
-**Excel Data Validation** cases (commons-style `Steps` sheet, `TC*.xlsx` under `tests/DataValidation/`): collected when `excel_ds_validation.enabled` is true (default in profile examples). See [excel-ds-validation.md](excel-ds-validation.md). After validate, **699 / ICDC / CTDC** workbooks run `verify_error_details` then `verify_validation_results` (686-Partial is table-only). DS create uses 25-char `auto-test_yyyyMMdd_HHxxxx` names (Hub max length; hex in the time segment for parallel `-n 4`). Run all: `pytest tests/DataValidation -m CRDC_DataValidation_Excel`; one case: add `-k TC08`. GC metadata VR (e.g. TC08 invalid integer) lives here only—not under `tests/DataSubmissions/`.
+**Data validation** cases (one `TC*.tsv` per case, a Steps table plus `# role` / `# enabled` settings lines, under `tests/DataValidation/`; `.xlsx` workbooks also load): collected when `excel_ds_validation.enabled` is true (default in profile examples). See [excel-ds-validation.md](excel-ds-validation.md). After validate, **699 / ICDC / CTDC** cases run `verify_error_details` then `verify_validation_results` (686-Partial is table-only). The marker is still named `CRDC_DataValidation_Excel`. DS create uses 25-char `auto-test_yyyyMMdd_HHxxxx` names (Hub max length; hex in the time segment for parallel `-n 4`). Run all: `pytest tests/DataValidation -m CRDC_DataValidation_Excel`; one case: add `-k TC08`. GC metadata VR (e.g. TC08 invalid integer) lives here only—not under `tests/DataSubmissions/`.
 
 ---
 
@@ -501,10 +511,10 @@ Always activate the venv first (`source .venv/bin/activate`).
 | PBAC TC13 Admin unchecked (Master) | `pytest tests/Pbac/test_TC13_CRDC-PbacUncheckedPermissions-Admin.py -m CRDC_PBAC` |
 | EnableAllPermissions only (Master) | `pytest tests/SuiteSetup/test_EnableAllPermissions.py` |
 | Katalon Data Validation suite | `pytest -m CRDC_DataValidation` |
-| TC08 invalid integer (GC metadata VR, Excel) | `pytest tests/DataValidation -m CRDC_DataValidation_Excel -k TC08` |
+| TC08 invalid integer (GC metadata VR) | `pytest tests/DataValidation -m CRDC_DataValidation_Excel -k TC08` |
 | TC01 DS summary headers (CRDCDH-697) | `pytest -m CRDC_Smoke -k VerifyDataSubmissionHeaders` |
-| **All Excel DS validation cases** | `pytest tests/DataValidation -m CRDC_DataValidation_Excel` |
-| **One Excel case** (e.g. TC08) | `pytest tests/DataValidation -m CRDC_DataValidation_Excel -k TC08` |
+| **All DS validation cases** | `pytest tests/DataValidation -m CRDC_DataValidation_Excel` |
+| **One DS validation case** (e.g. TC08) | `pytest tests/DataValidation -m CRDC_DataValidation_Excel -k TC08` |
 | CRDCDH-4006 Release Notes | `pytest -m CRDC_Auxiliary -k 4006` |
 | CRDCDH-3948 SR TC01–TC04 | `pytest -m CRDC_SubmissionRequests -k 3948` |
 | CRDCDH-3952 Section D date tooltips | `pytest -m CRDC_SubmissionRequests -k 3952` |
@@ -557,7 +567,7 @@ A **FileLock** on `auth/<profile>/<Role>.json.lock` serializes OTP for the same 
 
 ---
 
-## Porting a Katalon case (later)
+## Porting a Katalon case
 
 When you copy a case over:
 
@@ -572,7 +582,7 @@ When you copy a case over:
 
 ## GitHub Actions (CI)
 
-CI is **GitHub Actions**, not Jenkins. The workflow is still `workflow_dispatch` only (not on every PR yet). Default integration branch is **`develop`**.
+CI is **GitHub Actions**, not Jenkins. The workflow is `workflow_dispatch` only for now (not on every PR or on a schedule). Default integration branch is **`develop`**.
 
 Because `qa.yaml` is gitignored, a checkout does **not** contain passwords.
 

@@ -1,0 +1,9 @@
+# role	Submitter
+# enabled	Y
+Input Excel	Action	Params	Model
+InputFiles/CRDC/MetadataData/TC09			
+	open_data_submissions		
+	create_data_submission	New|metadata only|GC|autoQA - AutomationQA_Study	
+	upload_metadata_folder	TC09	
+	click_validate		
+	verify_validation_results	TC09	GC

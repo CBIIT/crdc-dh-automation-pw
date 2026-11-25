@@ -34,4 +34,4 @@ ApiUrl: https://hub-qa2.datacommons.cancer.gov/api/graphql
 SubmitterApiToken:
 excel_ds_validation:
   enabled: true
-  excel_cases_glob: tests/DataValidation/**/*.xlsx
+  excel_cases_glob: tests/DataValidation/**/TC*.tsv
